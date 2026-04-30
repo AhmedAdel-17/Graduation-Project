@@ -1,0 +1,819 @@
+{
+  "generated_at": "2026-04-25T01:04:44.332564+00:00",
+  "n_posts": 38,
+  "aggregate_egx": {
+    "n": 38,
+    "positive_pct": 2.6,
+    "neutral_pct": 71.1,
+    "negative_pct": 26.3,
+    "avg_score": -0.222
+  },
+  "aggregate_vader": {
+    "n": 38,
+    "positive_pct": 21.1,
+    "neutral_pct": 57.9,
+    "negative_pct": 21.1,
+    "avg_score": 0.048
+  },
+  "label_disagreement": 14,
+  "items": [
+    {
+      "text": "Thundr/EGX fake 20 year-survey\nثاندر كررت كتير جدا في فيديوهات كتير جدا ([اهمهم](https://www.youtube.com/watch?v=jM5-dJ99LfU)) وبيستخدموها ف الدعاية للبورصة المصرية وناس كتير (انا منهم) دخلوا البورصة بناءا ع الدعاية دي  \n[الدراسة الخاصة بالبورصة المصرية خلال 20 عام (1998-2018) ](https://www.youm7.com/story/2018/8/8/%D8%A7%D9%84%D8%A8%D9%88%D8%B1%D8%B5%D8%A9-%D8%AA%D9%83%D8%B3%D8%A8-%D8%AF%D8%B1%D8%A7%D8%B3%D8%A9-%D8%B3%D9%88%D9%82-%D8%A7%D9%84%D9%85%D8%A7%D9%84-%D8%A3%D8%B9%D9%84%D9%89-%D8%B9%D8%A7%D8%A6%D8%AF-%D9%85%D9%86-%D8%A7%D9%84%D8%A8%D9%86%D9%88%D9%83-%D9%88%D8%A7%D9%84%D8%B0%D9%87%D8%A8/3903125)و علي حد كلامه انهم مدوها ل2021  \nو المختصر بتاعها لو كان معاك 1000ج بتحطه كل شهر لمدة 20 سنة كان هيبقي\n\nلو بتحوش بس: 288K\n\nشهادات استثمار: 977K\n\nذهب: 2.7M\n\nEGX30: 3M مؤشر\n\nبعت لThundr اكتر من مره اطلب منها الدراسة نفسها و بيتهربوا من الرد او ميردوش خالص\n\nلما قارنت الارقام دي بالواقع لقيتها مخالفة للارقام الموجودة   \n[الذهب 24 في 1998](https://arraf.app/gold/price/egypt/1998-09-24) : 32  \n[الذهب 24 في 2018](https://arraf.app/gold/price/egypt/2018-09-24) : 742  \nزيادة 23x  \n[EGX 30](https://www.tradingview.com/chart/8IhwuahM/?symbol=EGX%3AEGX30):  \n1998: 1000 pt  \n2018:  15200  \nزيادة 15x\n\nبالاستعانة ب Deep Research AIK، بيأكدوا وجهه نظري ان الدراسة فيها اخطاء [ChatGPT](https://chatgpt.com/share/68b2acf5-b4bc-8000-9a22-824fc7dad87f)، [Perplexity](https://www.perplexity.ai/search/egx-egypt-stock-exchange-publi-ILn6GBzkR4iXuU1FJ1CN4g)، [Gemini](https://docs.google.com/document/d/",
+      "username": "Rosaldivo",
+      "timestamp": "2025-08-30T08:01:41+00:00",
+      "url": "https://www.reddit.com/r/PersonalFinanceEgypt/comments/1n3w17j/thundregx_fake_20_yearsurvey/",
+      "platform": "reddit",
+      "source": "reddit:search:EGX stock buy sell",
+      "engagement": 7,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9101,
+        "model_used": "xlmr"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "TASI DFM ADX QE EGX30 Analysis for 06.19.2025\nDear traders,\n\nToday TASI main resistance is 10600 if it will be broken then we will have confirmation that 10800 will be broken for sure. After the break of 10800 TSAI will open move to 12000. Main target still 15000. Main support 10500 and 10400. GCC Markets Mixed.\n\nGCC Markets DFM-.1.23%, ADX-0.90%, QE-0.61%, EGX30+0.37%\n\n[$TASI](https://preview.redd.it/wso3l3azpt7f1.png?width=1515&amp;format=png&amp;auto=webp&amp;s=8f0eb7776118350dfe6ad50d7ca952477b7f2017)",
+      "username": "Prestigious-Drawer94",
+      "timestamp": "2025-06-19T05:56:43+00:00",
+      "url": "https://www.reddit.com/r/SarasinRulez/comments/1lf3a2f/tasi_dfm_adx_qe_egx30_analysis_for_06192025/",
+      "platform": "reddit",
+      "source": "reddit:search:EGX30 index analysis",
+      "engagement": 1,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.537,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "$TASI $DFM $ADX $QE Analysis for 04.22.2026\nDear traders,\n\nToday $TASI main resistance is 11355 if it will be broken then we will have confirmation that 11500 will be broken for sure. After the break of 11500 $TASI will open move to 11800. Main target still 15000. Main support 11200 and 11000. GCC Markets GREEN.\n\nGCC Markets DFM+0.10%, ADX+0.05%, QE+0.11%, EGX30+0.32%\n\n[$TASI](https://preview.redd.it/ueid48x21pwg1.png?width=1835&amp;format=png&amp;auto=webp&amp;s=47038abceba531ad7b0fec6218096d19611cd042)",
+      "username": "Prestigious-Drawer94",
+      "timestamp": "2026-04-22T07:22:12+00:00",
+      "url": "https://www.reddit.com/r/SarasinRulez/comments/1ssean9/tasi_dfm_adx_qe_analysis_for_04222026/",
+      "platform": "reddit",
+      "source": "reddit:search:EGX30 index analysis",
+      "engagement": 1,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9173,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "$TASI $DFM $ADX $QE Analysis for 04.21.2026\nDear traders,\n\nToday $TASI Main resistance is 11400 if it will be broken then we will have confirmation that 11600 will be broken for sure. After the break of 11600 $TASI will open move to 13000. Main support 11300 and 11000. GCC Markets MIXED.\n\nGCC Markets DFM+0.61%, ADX+0.71%, QE-0.43%, EGX30-1.07%\n\n[$TASI](https://preview.redd.it/n0c6xmganhwg1.png?width=1835&amp;format=png&amp;auto=webp&amp;s=f183e39b91e9983b31ef50cdbb22c1669c416d13)",
+      "username": "Prestigious-Drawer94",
+      "timestamp": "2026-04-21T06:32:25+00:00",
+      "url": "https://www.reddit.com/r/SarasinRulez/comments/1srfnvf/tasi_dfm_adx_qe_analysis_for_04212026/",
+      "platform": "reddit",
+      "source": "reddit:search:EGX30 index analysis",
+      "engagement": 1,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.5124,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "$TASI $DFM $ADX $QE Analysis for 04.20.2026\nDear traders,\n\nToday $TASI main resistance is 11500 if it will be broken then we will have confirmation that 11800 will be broken for sure. After the break of 11800 $TASI will open move to 12000. Main target still 15000. Main support 11400 and 11300. GCC Markets RED.\n\nGCC Markets DFM-1.36%, ADX-1.55%, QE-0.33%, EGX30+1.82%\n\n[$TASI](https://preview.redd.it/3yz6o50wqawg1.png?width=1835&amp;format=png&amp;auto=webp&amp;s=3a127c1e60adee37f6a93645a254aea482df2f98)",
+      "username": "Prestigious-Drawer94",
+      "timestamp": "2026-04-20T07:20:13+00:00",
+      "url": "https://www.reddit.com/r/SarasinRulez/comments/1sqi70a/tasi_dfm_adx_qe_analysis_for_04202026/",
+      "platform": "reddit",
+      "source": "reddit:search:EGX30 index analysis",
+      "engagement": 1,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9156,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "$TASI $DFM $ADX $QE Analysis for 04.19.2026\nDear traders,\n\nToday $TASI main resistance is 11600 if it will be broken then we will have confirmation that 11800 will be broken for sure. After the break of 11800 $TASI will open move to 12000. Main target still 15000. Main support 11500 and 11300. GCC Markets GREEN.\n\nGCC Markets DFM+0.98%, ADX+1.10%, QE+0.10%, EGX30+2.41%\n\n[$TASI](https://preview.redd.it/ow27ofdc44wg1.png?width=1835&amp;format=png&amp;auto=webp&amp;s=afaf7535af47a58b9af583c5a3c1d0833f310bd2)",
+      "username": "Prestigious-Drawer94",
+      "timestamp": "2026-04-19T09:04:10+00:00",
+      "url": "https://www.reddit.com/r/SarasinRulez/comments/1spnvf2/tasi_dfm_adx_qe_analysis_for_04192026/",
+      "platform": "reddit",
+      "source": "reddit:search:EGX30 index analysis",
+      "engagement": 1,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9171,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "$TASI $DFM $ADX $QE Analysis for 04.16.2026\nDear traders,\n\nToday $TASI main resistance is 11600 if it will be broken then we will have confirmation that 11800 will be broken for sure. After the break of 11800 $TASI will open move to 13000. Main target still 15000. Main support 11500 and 11400. GCC Markets GREEN.\n\nGCC Markets DFM+1.02%, ADX+1.33%, QE+0.45%, EGX30+1.51%\n\n[$TASI](https://preview.redd.it/oi55ld6cyhvg1.png?width=1515&amp;format=png&amp;auto=webp&amp;s=a49ea9a750a0f60898b54a3ea71d891f05082a53)",
+      "username": "Prestigious-Drawer94",
+      "timestamp": "2026-04-16T06:30:14+00:00",
+      "url": "https://www.reddit.com/r/SarasinRulez/comments/1smviw6/tasi_dfm_adx_qe_analysis_for_04162026/",
+      "platform": "reddit",
+      "source": "reddit:search:EGX30 index analysis",
+      "engagement": 1,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9207,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "$TASI $DFM $ADX $QE Analysis for 04.14.2026\nDear traders,\n\nToday $TASI Main resistance is 11450 if it will be broken then we will have confirmation that 11500 will be broken for sure. After the break of 11500 $TASI will open move to 11700. Main target still 15000. Main support 11400 and 11300. GCC Markets GREEN.\n\nGCC Markets DFM+1.43%, ADX+.1.50%, QE+0.61%, EGX30+1.00%\n\n[$TASI](https://preview.redd.it/k4rpt4uaz3vg1.png?width=1515&amp;format=png&amp;auto=webp&amp;s=6c206fc795e36d37d8770eb11cf39f37766d04dd)",
+      "username": "Prestigious-Drawer94",
+      "timestamp": "2026-04-14T07:30:47+00:00",
+      "url": "https://www.reddit.com/r/SarasinRulez/comments/1sl1o36/tasi_dfm_adx_qe_analysis_for_04142026/",
+      "platform": "reddit",
+      "source": "reddit:search:EGX30 index analysis",
+      "engagement": 1,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9171,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "$TASI $DFM $ADX $QE Analysis for 04.13.2026\nDear traders,\n\nToday $TASI main resistance is 11350 if it will be broken then we will have confirmation that 11500 will be broken for sure. After the break of 11500 $TASI will open move to 13000. Main target still 15000.  Main support 11300 and 11200. GCC Markets RED.\n\nGCC Markets DFM-1.35%, ADX-1.11%, QE-0.17%, EGX30+1.00%\n\n[$TASI](https://preview.redd.it/1d7mz2mepwug1.png?width=1515&amp;format=png&amp;auto=webp&amp;s=a2690b71ad7b6c033d5dc4e1798c4294ba75b51b)",
+      "username": "Prestigious-Drawer94",
+      "timestamp": "2026-04-13T07:02:43+00:00",
+      "url": "https://www.reddit.com/r/SarasinRulez/comments/1sk3c6i/tasi_dfm_adx_qe_analysis_for_04132026/",
+      "platform": "reddit",
+      "source": "reddit:search:EGX30 index analysis",
+      "engagement": 1,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9218,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "$TASI $DFM $ADX $QE Analysis for 04.12.2026\nDear traders,\n\nToday $TASI main resistance is 11400 if it will be broken then we will have confirmation that 11600 will be broken for sure. After the break of 11600 $TASI will open move to 12000. Main target stilll 15000. Main support 11300 and 11280. GCC Markets MIXED.\n\nGCC Markets DFM+0.38%, ADX+0.35%, QE-0.13%, EGX30+1.00%\n\n[$TASI](https://preview.redd.it/53k265n7cqug1.png?width=1515&amp;format=png&amp;auto=webp&amp;s=d8a55e66a44e30f1b4fcc9eae0bd777eeefc5963)",
+      "username": "Prestigious-Drawer94",
+      "timestamp": "2026-04-12T09:38:09+00:00",
+      "url": "https://www.reddit.com/r/SarasinRulez/comments/1sja1vw/tasi_dfm_adx_qe_analysis_for_04122026/",
+      "platform": "reddit",
+      "source": "reddit:search:EGX30 index analysis",
+      "engagement": 1,
+      "egx": {
+        "score": -0.7487,
+        "label": "bearish",
+        "confidence": 0.7487,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "$TASI $DFM $ADX $QE Analysis for 04.09.2026\nDear traders,\n\nToday $TASI main resistance is 11350 if it will be broken then we will have confirmation that 11450 will be broken for sure. After the break of 11450 $TASI will open move to 13350. Main target still 15000. Main support 11300 and 11200. GCC Markets RED.\n\nGCC Markets DFM-0.95%, ADX-0.81%, QE-0.45%, EGX30-0.47%\n\n[$TASI](https://preview.redd.it/qa6g82qan4ug1.png?width=1515&amp;format=png&amp;auto=webp&amp;s=c5e71627aa8af2d441e42f5d8ae67ed630fd3c03)",
+      "username": "Prestigious-Drawer94",
+      "timestamp": "2026-04-09T08:41:01+00:00",
+      "url": "https://www.reddit.com/r/SarasinRulez/comments/1sgjzuo/tasi_dfm_adx_qe_analysis_for_04092026/",
+      "platform": "reddit",
+      "source": "reddit:search:EGX30 index analysis",
+      "engagement": 1,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9134,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "$TASI $DFM $ADX $QE Analysis for 04.08.2026\nDear traders,\n\nToday $TASI Main resistance is 11311 if it will be broken then we will have confirmation that 11500 will be broken for sure. After the break of 11500 $TASI will open move to 13000. Man target still 15000. Main support 11200 and 11100. GCC Markets GREEN.\n\nGCC Markets DFM+6.51%, ADX+5.55%, QE+3.67%, EGX30+3.41%\n\n[$TASI](https://preview.redd.it/0x1ficyt8ytg1.png?width=1515&amp;format=png&amp;auto=webp&amp;s=83a7430aa84e694c452cdaa630e8a279e08439e7)",
+      "username": "Prestigious-Drawer94",
+      "timestamp": "2026-04-08T11:09:14+00:00",
+      "url": "https://www.reddit.com/r/SarasinRulez/comments/1sfpq7p/tasi_dfm_adx_qe_analysis_for_04082026/",
+      "platform": "reddit",
+      "source": "reddit:search:EGX30 index analysis",
+      "engagement": 1,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9248,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "$TASI $DFM $ADX $QE Analysis for 04.07.2026\nDear traders,\n\nToday $TASI main resistance is 11200 if it will be broken then we will have confirmation that 11400 will be broken for sure. After the break of 11400 $TASI will open move to 13000. Main target still 15000. Main support 11100 and 11000. GCC Markets RED.\n\nGCC Markets DFM-0.55%, ADX-0.77%, QE-0.45%, EGX30-1.33%\n\n[$TASI](https://preview.redd.it/nqg311jfqqtg1.png?width=1515&amp;format=png&amp;auto=webp&amp;s=17a83d7a196d1d0f330c2e8befb8da8feed9a56b)",
+      "username": "Prestigious-Drawer94",
+      "timestamp": "2026-04-07T09:53:39+00:00",
+      "url": "https://www.reddit.com/r/SarasinRulez/comments/1serhu8/tasi_dfm_adx_qe_analysis_for_04072026/",
+      "platform": "reddit",
+      "source": "reddit:search:EGX30 index analysis",
+      "engagement": 1,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9178,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "ADTRAN Holdings (ADTN) — The AI Infrastructure Play Disguised as a Telecom Stock\nEquity Research Analysis: ADTRAN Holdings, Inc. — Navigating the AI Optical Transition and the Global Fiber Super-Cycle\nThe global telecommunications landscape is currently defined by a confluence of structural shifts that are repositioning legacy hardware providers as critical software-defined infrastructure partners. ADTRAN Holdings, Inc. (ADTN) stands at the epicenter of this transformation, having evolved from a regional American provider of digital data service products into a vertically integrated global leader in open, disaggregated networking solutions. This transition is not merely a technological upgrade but a strategic pivot aimed at capturing the high-margin opportunities emerging from the \"last mile\" of fiber deployment and the massive bandwidth requirements of the generative artificial intelligence era. This report provides an exhaustive, expert-level analysis of ADTRAN’s current market position, its product-led growth strategy, and the leadership of CEO Tom Stanton, whose long-tenured management of the company’s capital and innovation pipeline is now facing its most significant test following the transformative 2022 merger with ADVA Optical Networking.\n1. INVESTMENT THESIS\nThe core investment thesis for ADTRAN Holdings, Inc. rests upon the successful convergence of three distinct tailwinds: the unprecedented injection of government capital into broadband infrastructure, the geopoli",
+      "username": "vedse7",
+      "timestamp": "2026-04-20T18:54:50+00:00",
+      "url": "https://www.reddit.com/r/stockinvestingideas/comments/1sqywhv/adtran_holdings_adtn_the_ai_infrastructure_play/",
+      "platform": "reddit",
+      "source": "reddit:search:Telecom Egypt ETEL stock forecast",
+      "engagement": 1,
+      "egx": {
+        "score": 0.5196,
+        "label": "bullish",
+        "confidence": 0.5196,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": 1.0,
+        "label": "bullish",
+        "confidence": 1.0,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "Egyptian billionare tried to scam the retail investors and lost.\n**TL;DR (this time no random biotech):**\n\nOCI (Euronext: OCI / OCI.AS) spent \\~18 months selling big assets for real money... Then the controlling shareholder (Naguib Sawiris) tried to roll the company into his other company (Orascom Construction) via a share-swap in one big scam: he undervalued OCI and overvalued Orascom. The Dutch court just stopped the vote on the merger and appointed temporary and independent directors to check on whether retail investors got hosed. If the market stops pricing OCI like a controlled-family discount dumpster, you can get a quick return.\n\nFYI: this is my first DD, so bare with me here.\n\n**What OCI is (now):**\n\nOCI used to be a bigger fertilizer/methanol empire based in the Netherlands. However, they sold a lot of their assets. OCI produces nitrogen fertilizers (ammonia, urea, nitrates) and methanol. The company has roots in Egypt’s Orascom empire and still has a footprint in Egyptian fertilizer plants (though much was spun into Fertiglobe) . Over 2019–2025, OCI transformed via major asset sales and restructuring:\n\n**Receipts: OCI actually sold stuff for huge numbers**\n\nBelow a list of everything they sold the last few years:\n\n* Sold **Fertiglobe stake** to ADNOC for **$3.62B**; ADNOC ended up at **86.2%** of Fertiglobe. \n* Sold **Iowa Fertilizer Company (IFCO)** to Koch for **$3.6B**. \n* Agreed to sell **Clean Ammonia project (Beaumont, TX)** to Woodside for **$2.35B**; **80% p",
+      "username": "aexbets249",
+      "timestamp": "2026-01-20T19:50:40+00:00",
+      "url": "https://www.reddit.com/r/pennystocks/comments/1qibgs2/egyptian_billionare_tried_to_scam_the_retail/",
+      "platform": "reddit",
+      "source": "reddit:search:Orascom OCI stock buy",
+      "engagement": 15,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.917,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": -1.0,
+        "label": "bearish",
+        "confidence": 1.0,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "Should I invest in EG Stocks (Thndr)or BTC?\nI’m still young and I plan to save 400 egp every week. Idk if I should dump them on Egyptian stocks… I usually buy bitcoin with any savings cuz it crashed recently to 67k. \n\nBut I’ve been getting a lot of videos on Egyptian stocks… I really wanted to invest in US stocks but it’s too expensive for a student like me :)\n\nWhat advice would u give me",
+      "username": "Straight_Year_9226",
+      "timestamp": "2026-02-20T18:24:47+00:00",
+      "url": "https://www.reddit.com/r/PersonalFinanceEgypt/comments/1ra37ng/should_i_invest_in_eg_stocks_thndror_btc/",
+      "platform": "reddit",
+      "source": "reddit:search:Egyptian stocks investment",
+      "engagement": 6,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9193,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "Did you know that you can invest in the Egyptian Stock Market on Telda?\nTelda has launched a new feature.  \nYou can now invest in the Egyptian Stocks Market using your Telda App.  \nTelda takes no fees but some fees may apply for some stocks.\n\nCheck your app for more info.\n\nFor any questions or if you want to share your feedback about this feature, feel free to use the comments section.",
+      "username": "amrr2006",
+      "timestamp": "2026-04-02T18:20:18+00:00",
+      "url": "https://www.reddit.com/r/teldaegypt/comments/1sapauy/did_you_know_that_you_can_invest_in_the_egyptian/",
+      "platform": "reddit",
+      "source": "reddit:search:Egyptian stocks investment",
+      "engagement": 1,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9283,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "📈 Why Now Is the Time to Invest in the Egyptian Stock Market 🇪🇬\nI see a real opportunity in the Egyptian stock market right now.\n\nMany strong companies are currently undervalued their stock prices don't reflect their actual performance or potential.\nThe market isn't getting the attention it deserves, but for smart investors, that's where the upside lies .\n\nI don't deal in hype \nI work with solid technical and fundamental analysis to identify real opportunity.\nIf you're thinking about investing or even starting small to test the waters, let's talk.\n\nWe'll follow a clear plan \nTrack the market step by step \nAnd focus on real, calculated gains not just guesses \n\n\nThis market rewards smart risk-takers, not random speculators.\nStart right and start with someone who knows the game.",
+      "username": "yousab-youssry",
+      "timestamp": "2025-08-02T14:30:37+00:00",
+      "url": "https://www.reddit.com/r/ValueInvesting/comments/1mfrxpf/why_now_is_the_time_to_invest_in_the_egyptian/",
+      "platform": "reddit",
+      "source": "reddit:search:Egyptian stocks investment",
+      "engagement": 0,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9079,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": 1.0,
+        "label": "bullish",
+        "confidence": 1.0,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "Investing in the egyptian stock exchange as a foreigner\nHello everyone.\n\nI am interested in investing in the Egyptian stock exchange exchange as a foreigner.\n\nWhat I am looking for is a broker that has:\n\nLow commissions\nMobile application where I can buy and sell on my own\nGreat customer support \nEasy withdrawal/deposit\n\nCan anyone recommend a good brokerage service that I can open an account with them online\n\nThanks in advance",
+      "username": "Euphoric_Clock2366",
+      "timestamp": "2025-11-04T11:05:06+00:00",
+      "url": "https://www.reddit.com/r/askegypt/comments/1oo4k9c/investing_in_the_egyptian_stock_exchange_as_a/",
+      "platform": "reddit",
+      "source": "reddit:search:Egyptian stocks investment",
+      "engagement": 1,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9008,
+        "model_used": "finbert"
+      },
+      "vader": {
+        "score": -0.3333333333333333,
+        "label": "bearish",
+        "confidence": 0.7333333333333334,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "How do I learn the stock market?\nانا عايز ابتدي ادخل في الstock trading و حابب اني في المستقبل (٥ او ١٠ سنين من دلوقتي) اعرف اعتمد على دخلها كلياً، مش لازم يبقى دخلي الوحيد بس يبقى الاساسي.\n\nانا صابر و بالي طويل و عارف اني لازم اقع ١٠٠ مرة قبل اما ابتدي اشوف ربح ثابت.\n\nعايز ابتدي استثمر جزء من دخلي الشهري في الموضوع ده و بدأت ب اني عملت حساب على EFG Hermes.\n\nايه الطرق الي ممكن ترشحوهالي عشان اتعلم الحوار ده صح؟",
+      "username": "mmmm696969123",
+      "timestamp": "2026-03-16T03:27:22+00:00",
+      "url": "https://www.reddit.com/r/PersonalFinanceEgypt/comments/1ruymbw/how_do_i_learn_the_stock_market/",
+      "platform": "reddit",
+      "source": "reddit:search:EFG Hermes Egypt stock",
+      "engagement": 1,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.7095,
+        "model_used": "camelbert"
+      },
+      "vader": {
+        "score": 1.0,
+        "label": "bullish",
+        "confidence": 1.0,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "كل ما يكون في سهم هيضرب و الحقه من اوله عشان الحق البمب الاقي حجج كتير الابليكشن بيعملها عشان يلغي الاوردرات بتاعتي و ابقي شايف السهم بيعلي و انا مش عارف اشتري .. البورصة المصرية مطبوخة؟",
+      "username": "Outrageous_One1647",
+      "timestamp": "2026-03-16T12:12:47+00:00",
+      "url": "https://www.reddit.com/r/PersonalFinanceEgypt/comments/1rv7q9q/كل_ما_يكون_في_سهم_هيضرب_و_الحقه_من_اوله_عشان_الحق/",
+      "platform": "reddit",
+      "source": "reddit:search:سهم البورصة المصرية",
+      "engagement": 9,
+      "egx": {
+        "score": -0.8466,
+        "label": "bearish",
+        "confidence": 0.8466,
+        "model_used": "camelbert"
+      },
+      "vader": {
+        "score": -1.0,
+        "label": "bearish",
+        "confidence": 1.0,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "مؤشر EGX 35-LV: هل هو الحل لإنقاذ محفظتك من \"تذبذب\" البورصة المصرية؟\nيا شباب، فيه مؤشر في البورصة المصرية اسمه **EGX 35-LV** (Low Volatility)، والمؤشر ده مش واخد حقه في الكلام رغم إنه \"كنز\" للمستثمر اللي بيخاف من المرجحة العنيفة.\n\nالمؤشر ده ببساطة بيجمع أهدى وأرصن 35 شركة في السوق، والهدف منه إنه يقيس أداء الأسهم اللي حركتها \"رزينة\" (مش أسهم الجيمات والمضاربات). يعني لو السوق وقع، الأسهم دي بتعرف تمسك نفسها، ولو طلع بتطلع باتزان.\n\nالشركات اللي جواه هي \"عصب\" الاقتصاد (بنوك، عقارات، أسمدة) بس بفلترة خاصة جداً للسيولة والأمان السعري.\n\n**تفتكروا ليه المؤشر ده هو المفضل عند المؤسسات والصناديق؟ وإيه هي الشركات الـ 35 اللي البورصة اختارتهم بالاسم عشان تمثل \"الاستقرار\"؟**\n\nالإجابة والتحليل الفني الكامل لفلسفة عمل المؤشر هتلاقوها في المقال الجديد بـ (فلوس مصر): **(مؤشر EGX 35-LV: دليلك الشامل لأقوى 35 سهم رزين في البورصة المصرية 2026)**\n\nعايزين نتناقش.. هل حد فيكم بيبني محفظته بناءً على \"معيار التذبذب\" ولا بتجروا وراء أسهم الـ High Growth؟",
+      "username": "Royal_Treat_4607",
+      "timestamp": "2026-04-01T06:55:16+00:00",
+      "url": "https://www.reddit.com/r/PersonalFinanceEgypt/comments/1s9d2fg/مؤشر_egx_35lv_هل_هو_الحل_لإنقاذ_محفظتك_من_تذبذب/",
+      "platform": "reddit",
+      "source": "reddit:search:سهم البورصة المصرية",
+      "engagement": 0,
+      "egx": {
+        "score": -0.8373,
+        "label": "bearish",
+        "confidence": 0.8373,
+        "model_used": "camelbert"
+      },
+      "vader": {
+        "score": 1.0,
+        "label": "bullish",
+        "confidence": 1.0,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "سيكولوجية السوق ليه أغلب الناس بتشتري في القمة وتبيع في القاع في البورصة المصرية\n \n\n# سيكولوجية الثراء والخسارة: لماذا تنتصر \"الخطة\" دائماً على \"المشاعر\" في البورصة المصرية؟\n\nفي أروقة البورصة المصرية وبين شاشات التداول اللحظية، هناك محرك خفي يدير مليارات الجنيهات يومياً، وهو ليس التحليل الفني أو المالي فحسب، بل هي \"السيكولوجية\" التي تحكم قرارات المستثمرين. السؤال الذي يطرحه كل متداول على نفسه بعد فوات الأوان: لماذا أجد نفسي دائماً أشتري في القمة وأبيع في القاع؟ الإجابة تكمن في كيمياء الدماغ البشري التي تندفع وراء الطمع وتفر من الخوف، مسببةً خسائر كان يمكن تجنبها بلمسة من الانضباط.\n\n# فخ الطمع: كيف تقودك الـ FOMO إلى اتخاذ قرارات كارثية؟\n\nأكبر عدو للمستثمر في سوق المال هو ما يسمى \"خوف فوات الفرصة\" (Fear of Missing Out). عندما يبدأ سهم معين في الصعود الصاروخي، وتشتعل جروبات التوصيات ومنصات التواصل الاجتماعي بالحديث عن أرباحه الخيالية، يبدأ عقلك في تصوير سيناريو واحد: أنت الوحيد الذي يتخلف عن قطار الثراء.\n\nهنا يبدأ الطمع في حجب الحقائق الرقمية. المستثمر في هذه اللحظة لا يشتري السهم بناءً على قيمته العادلة أو نمو أرباح الشركة، بل يشتري \"الزخم\". الحقيقة المرة هي أن القمم السعرية تُصنع عندما يدخل آخر مشترٍ متفائل إلى السوق، وفي تلك اللحظة تحديداً تكون \"السيولة الذكية\" أو المؤسسات الكبرى قد بدأت بالفعل في عمليات التصريف التدريجي وجني الأرباح. الدخول في هذه المرحلة يعني أنك ارتضيت أن تحمل \"البضاعة الغالية\" من يد المحترفين الذين اشتروها في صمت، وهذا ما نلاحظه أحياناً في تحركات **سهم أوراسكوم للاستثمار** التي تجذب الأفراد في قمم سعرية غير مبررة.\n\n# سيمفونية الخوف: لماذا يرمي المتداولون",
+      "username": "Royal_Treat_4607",
+      "timestamp": "2026-03-28T05:49:01+00:00",
+      "url": "https://www.reddit.com/r/PersonalFinanceEgypt/comments/1s5s6zp/سيكولوجية_السوق_ليه_أغلب_الناس_بتشتري_في_القمة/",
+      "platform": "reddit",
+      "source": "reddit:search:سهم البورصة المصرية",
+      "engagement": 0,
+      "egx": {
+        "score": -0.9961,
+        "label": "bearish",
+        "confidence": 0.9961,
+        "model_used": "camelbert"
+      },
+      "vader": {
+        "score": -0.25,
+        "label": "bearish",
+        "confidence": 0.65,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "من دكتور لمستثمر في البورصة المصرية\nأنا عمري ما اتعلمت في المدرسة او الجامعة حتي يعني إيه فلوس أصلا.\nلا حد قالنا يعني إيه استثمار، ولا إزاي نحافظ على قيمة الجنيه، ولا إزاي نزود دخلنا من غير ما نزود ساعات شغلنا.\nوالقليلين بس اللي درسوا اقتصاد او تجارة هم اللي عارفين يطبقوا الكلام ده في حياتهم.\n\nأنا خلفيتي طبية، مفيش أي علاقة ببورصة ولا اقتصاد.\nبس وقت الكورونا، لما الدنيا وقفت، قررت أتعلم حاجة جديدة وأشوف إزاي أعمل فلوس أونلاين ... إزاي أخلّي فلوسي تشتغل مش بس أصرفها\n\n🎧 لحظة التحوّل كانت بودكاست “كلام ينور”\n\nوأنا بدوّر، صادفت بودكاست اسمه كلام ينور بتاع عمر شمس.\nالبودكاست ده حرفيًا غيّرلي نظرتي للفلوس.\nفجأة بقيت شايف الفلوس مش كمرتب ييجي يتصرف لكن كحاجة ممكن تكبر وتشتغل وتجيب فلوس تانية.\n\nفي نفس الوقت تقريبًا ظهر أبلكيشن جديد ساعتها اسمه Thndr.\nنزّلته، وقعدت سنة كاملة بلعب عليه بفلوس بنك الحظ …\nأشتري، أبيع، من غير ما أكون فاهم أنا بعمل إيه.\nكان مجرد لعب و مديتوش اهتمام.\n\nلحد ما في يوم شفت حلقة للدحيح عن الاستثمار.\nكان واضح إنه هو نفسه لسه متعلم المجال و بينقل خبرته.\nفي نص الحلقة تقريبًا، اتكلم عن كورس على يوديمي في ٣ ثواني كده…\nبس أنا دماغي مسكت في الجملة دي.\n\nدي أول مرة أشوف الدحيح بيعلن عن حاجة، فقلت أجرب.\nو اشتريت الكورس…\nمالآخر، ده كان أحسن استثمار عملته في حياتي.\nبعد ما خلصته، حسيت لأول مرة إني شايف الصورة:\nإيه الاستثمار؟\nإيه المخاطرة؟\nإزاي أقيّم شركة؟\nإزاي السوق بيشتغل؟\n\nواكتشفت بعد كده إن فيه مصريين و أجانب كتير عملوا زيي بالظبط، والكورس ده كان نقطة بداية لناس كتير.\n\nبعد ما فهمت التيتة (أو كنت فاكر كده)، قلت لنفسي بس يا معلم… كده هنلعب بالفلوس لعب و لادم اشوف اجيب مكنة ع",
+      "username": "oarizk",
+      "timestamp": "2025-12-09T17:05:58+00:00",
+      "url": "https://www.reddit.com/r/EGX100/comments/1picwpe/من_دكتور_لمستثمر_في_البورصة_المصرية/",
+      "platform": "reddit",
+      "source": "reddit:search:سهم البورصة المصرية",
+      "engagement": 4,
+      "egx": {
+        "score": -0.8725,
+        "label": "bearish",
+        "confidence": 0.8725,
+        "model_used": "camelbert"
+      },
+      "vader": {
+        "score": -1.0,
+        "label": "bearish",
+        "confidence": 1.0,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "أهلاً بيكم في EGX100 – مجتمع البورصة المصرية\nأهلاً بكل واحد دخل هنا بالصدفة… أو بهدف… أو بفضول يشوف الناس بتتكلم في البورصة إزاي\nده أول وأهم بوست في المجتمع. هنا هنشرح احنا مين، بنعمل إيه، وإزاي تمشي معانا خطوة بخطوة.\n\n\n🟩 ليه عملنا EGX100؟\n\nلأن البورصة المصرية محتاجة مكان:\n•\tفيه معلومات بسيطة ومفهومة\n•\tمن غير تعقيد ولا فتي\n•\tمن غير التنمّر على المبتدئين\n•\tوفيه ناس فعلاً عايزة تتعلم وتفهم وتستثمر صح\n\nاتعمل علشان يكون مساحة مصرية للكلام عن الأسهم…\nمن غير هري… ومن غير دوشة… ومن غير ما تحس انك جي متأخر\n\n🟦 المجتمع ده مناسب لمين؟\n\n✔️ اللي عمره ما اشترى سهم قبل كده\n✔️ اللي مستثمر وماشي على خطة\n✔️ اللي بيحب التحليل الفني\n✔️ اللي بيحب التحليل الأساسي\n✔️ اللي عايز يتابع أخبار السوق\n✔️ اللي بيدوّر على ناس تفهمه بدل ما يفضل تايه\n\nولو إنت فاكر إنك “حوت” — أهلاً بيك برضه…\nهنستفيد منك، وهتستفيد من اللي حواليك.\n\n🟧 إيه اللي هتلاقيه هنا؟\n•\tشروحات بسيطة للمبتدئين\n•\tتحليل فني خفيف\n•\tأخبار السوق المهمة من غير أفورة\n•\tمناقشات عامة ووجهات نظر مختلفة\n•\tميمز  \n•\tملخص أسبوعي و اقتراحات شخصية\n•\tأسئلة وأجوبة من الناس فعليًا بتتداول كل يوم \n\n🔥 قواعد سريعة (أقراها مرة وخلاص)\n\n1️⃣ الاحترام خط أحمر ... الاختلاف مسموح، قلة الأدب لأ.\n2️⃣ البورصة المصرية وبس ... يعني مفيش كريبتو.\n3️⃣ ممنوع الدعاية ... جروبات، قنوات، خدمات… كله لأ.\n4️⃣ هتشارك معلومة؟ يبقى يا مصدر يا رأي شخصي.\n5️⃣ اللي هنا تعليم وتجارب… مش توصيات إلزامية.\n‏6️⃣ Pumping مقصود = Ban مباشر.\n7️⃣ كلنا هنا بنتعلم… مفيش “سؤال غبي”.\n\n🟨 قبل ما تبدأ… اعمل 3 حاجات بس\n\n1️⃣ اعمل Join\nواضح… بس للتأكيد\n\n2️⃣ قدم نفسك في الكومنتات:\n•\tبتستثمر بقالك قد إيه؟\n•\tانهي ",
+      "username": "oarizk",
+      "timestamp": "2025-12-09T13:25:47+00:00",
+      "url": "https://www.reddit.com/r/EGX100/comments/1pi7co8/أهلا_بيكم_في_egx100_مجتمع_البورصة_المصرية/",
+      "platform": "reddit",
+      "source": "reddit:search:سهم البورصة المصرية",
+      "engagement": 2,
+      "egx": {
+        "score": -0.7334,
+        "label": "bearish",
+        "confidence": 0.7334,
+        "model_used": "camelbert"
+      },
+      "vader": {
+        "score": 1.0,
+        "label": "bullish",
+        "confidence": 1.0,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "ايه الي حصل للCIB و مؤشر الثلاثيني EGX30 ؟!\n**في** **اول** **ساعة** **من** **الجلسة** (10:40) **يوم** **الأربع** 4/3/2026.\n\n**التجاري** **الدولي** **نفذ** **صفقة** **ماركت** 550 **الف** **سهم** **تقريبا** **نزل** **السهم** **للدون** \\-10% **ونزل** **المؤشر** **الثلاثيني** **معاه** **حوالي** 2000 **نقطة** **لتحت** **من** 46,450 **لحد** 44,588.\n\n**التجاري** **بعد** **ما** **فتح** **بعد** **تعطيل** **التداول** 10 **دقايق** **رجع** **تاني** **لنفس** **مستوياته** **والثلاثيني** **كمان** **رجع** **لنفس** **المستوي**.\n\n**التجاري** **اغلق** **علي** **تراجع** 2% **تقريبا** **والثلاثيني** 0.5%.\n\n**ليه** **ده** **مهم** **؟**\n\n**لان** **التجاري** **وزنه** **النسبي** **عالي** **تقريبا** 32% **من** **قيمة** **المؤشر** **الثلاثيني** **لك** **ان** **تتخيل،** **شركه** **عملاقه** **قيمتها** **السوقية** **في** **حدود** **النص** **تريليون** **وحجم** **أصول** **تخطي** **ال** 1.2 **تريليون** **جنيه** **وهي** **اكبر** **شركه** **في** **البورصة** **المصرية** **وواحده** **من** **اكبر** **شركتين** **علي** **مستوي** **الجمهورية**.\n\n**طيب** **ده** **حصل** **ليه؟**\n\n**في** **إفصاح** **ان** **شركه** **سمسرة** **اخطاءت** **وباعت** **الكمية** **بالغلط** **علي** **الشاشة** **وحصل** **خسائر** **للعملاء** **حوالي** 6.2 **مليون** **فرق** **سعر** **ال**10%.\n\n**وهيتم** **تغريم** **الشركه** **وتعويض** **العملاء** **حوالي** 50 **مليون**.\n\n**طبعا** **التغريم** **ده** **لم** **يتم** **الإعلان** **عن** **أسبابه** **حتي** **الآن،** **ولاكن** **اعتقد** **علشان** **ده** **يعتبر** **تلاعب** **لأنه** **اثر** **علي** **السو",
+      "username": "MCKVAY",
+      "timestamp": "2026-03-05T06:21:00+00:00",
+      "url": "https://www.reddit.com/r/PersonalFinanceEgypt/comments/1rla3q7/ايه_الي_حصل_للcib_و_مؤشر_الثلاثيني_egx30/",
+      "platform": "reddit",
+      "source": "reddit:search:سهم البورصة المصرية",
+      "engagement": 6,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9284,
+        "model_used": "camelbert"
+      },
+      "vader": {
+        "score": -1.0,
+        "label": "bearish",
+        "confidence": 1.0,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "هو ازاي احتراق اهم مبني للاتصالات فى البلد ميأثرش على أسهم الشركات المتضررة أم أنه اثر ولكن ممنوع اي حد يتكلم عن الخساره للشركات دي؟\nلم يتم ذكر انخفاض محدد في أسعار أسهم شركات الاتصالات (فودافون مصر، وأورانج مصر، واتصالات، وWE) نتيجة حريق مبنى رمسيس. إليك ما حدث بالفعل:\n\n\n---\n\n🔥 ما حدث في سوق الأوراق المالية:\n\nتعطّل التداول في البورصة المصرية: يوم الثلاثاء الموافق 8 يوليو، توقف التداول بالكامل في البورصة بسبب انقطاع الاتصالات بين الوسطاء، نتيجة توقف خدمات الإنترنت والمحمول إثر الحريق  .\n\nاستئناف التداول بعد توقف الحريق: بعد عودة الاتصال وتحصيل الخدمات، استؤنفت التداولات. حتى الآن، لا توجد تقارير رسمية تفيد بأن أسهم شركات الاتصالات شهدت انخفاضًا كبيرًا أو حادًا بشكل خاص  .\n\nموجة مضاربات محتملة: بعد كارثة الحريق، رُصد نشاط مضاربين يركز على أسهم التكنولوجيا والشركات المتصلة بالبنية التحتية الرقمية، لكن هذه لم تُترجم بعد إلى اتجاه هبوط واضح أو مستقر  .\n\n\n\n---\n\n📌 تقييم سريع لحالة الأسهم:\n\nالعنصر\tالواقع حتى الآن\n\nانقطاع التداول\tحدث يوم الثلاثاء ولم يخلُّص في تراجع دائم لأسهم الاتصالات\nنشاط المضاربة\tبدأ، لكن غير مؤكد حتى الآن كسبب لهبوط في الأسهم\nانخفاض ملموس\tلا يوجد تقرير بوجود فقدان كبير أو مستمر في سعر سهم أي من الشركات المذكورة\n\n\n\n---\n\n✅ الخلاصة:\n\nلا، لم تُسجّل معلومات رسمية تفيد بأن أسعار أسهم فودافون، أو أورانج، واتصالات، أو WE انخفضت بشكل ملحوظ بسبب الحريق.\n\nالتأثير الأكبر كان على تعطّل التداول بنفسه أكثر من تأثير على أسعار الأسهم.\n\nمن المحتمل عند استئناف التداول نشاهد حركة غير مستقرة (تقلبات)، لكن لا توجد بيانات حتى الآن تشير إلى خسارة معتبرة في القيمة السوقية.",
+      "username": "3BDO____",
+      "timestamp": "2025-07-10T12:57:02+00:00",
+      "url": "https://www.reddit.com/r/PersonalFinanceEgypt/comments/1lwc1nk/هو_ازاي_احتراق_اهم_مبني_للاتصالات_فى_البلد_ميأثرش/",
+      "platform": "reddit",
+      "source": "reddit:search:سهم البورصة المصرية",
+      "engagement": 36,
+      "egx": {
+        "score": -0.9767,
+        "label": "bearish",
+        "confidence": 0.9767,
+        "model_used": "camelbert"
+      },
+      "vader": {
+        "score": -0.6,
+        "label": "bearish",
+        "confidence": 1.0,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "فكّر بشكل مختلف\nعدّلت البوست بحيث إنه يبقى حيادي أكتر | 21/8/2025.\n\n---\n\nالمواضيع إللي هنقاشها في البوست ده : ليه لازم تستثمر؟ | الأسواق المتاحة للاستثمار. | تستثمر فين؟ | تشتري امتى؟ | البيتكوين. | ازاي تشتري بيتكوين؟ | ازاي تخزّن البيتكوين؟\n\n---\n\n# ليه لازم تستثمر؟\nلأن العملات الورقية هم مجرد ورق ملوش قيمة حقيقية و قيمتهم الوهمية موجودة لأن الحكومات بتقولك إن لهم قيمة و مفيش أي حاجة وراهم بتدعم قيمتهم ، لا دهب ولا فضة ولا أي أصل حقيقي. يعني لو بكرة الحكومة فقدت السيطرة أو الناس فقدت الثقة في العملة فا الورق إللي في جيبك مش هيعمل حاجة و المثال ده مش خيال علمي ، شوف ڤنزويلا أو لبنان أو زمبابوي هتلاقي إن الفلوس فعلاً بقت شبه منعدمة القيمة لأن نظامهم المالي انهار.\n\nفا ده ليه الاستثمار مش رفاهية. الاستثمار وسيلة دفاع عن نفسك و عن مستقبلك المالي.\n\n---\n\n# الأسواق المتاحة للاستثمار.\nالأسواق و الأصول إللي ممكن تستثمر فيها كتير. عندك البورصة ، الدهب ، الفضة ، البيتكوين.\n\nالسندات ، أذون الخزانة ، الشهادات ، أي كريبتو غير البيتكوين ، الدولار أو أي عملية ورقية مش استثمار.\n\n#### البورصة\nالبورصة مرتبطة بشكل مباشر بالأداء الاقتصادي للدولة. لو الاقتصاد بيكبر و بيتطور فا الشركات بتقدر تشتغل و تكسب و بالتالي أسعار أسهمها بتزيد. لكن لو في مشاكل في الاقتصاد فا ده بيأثر بالسلب على البورصة كلها. مثلًا ، البورصة المصرية رغم إن فيها شركات عندها إمكانيات كويسة إلا إن الأداء العام للبورصة سئ على المدى الطويل و السبب الأساسي هو البيئة الاقتصادية إللي الشركات دي شغالة فيها. التذبذب المستمر في سعر الصرف ، نقص السيولة ، غياب الشفافية ، سياسات اقتصادية غير مستقرة فا كل دي عوامل بتخلي الشركات مش قادرة تخطط",
+      "username": "AllTalksExpert",
+      "timestamp": "2025-06-10T18:58:58+00:00",
+      "url": "https://www.reddit.com/r/u_AllTalksExpert/comments/1l875b0/فكر_بشكل_مختلف/",
+      "platform": "reddit",
+      "source": "reddit:search:سهم البورصة المصرية",
+      "engagement": 64,
+      "egx": {
+        "score": -0.9955,
+        "label": "bearish",
+        "confidence": 0.9955,
+        "model_used": "camelbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "هو ازاي احتراق اهم مبني للاتصالات فى البلد ميأثرش على أسهم الشركات المتضررة أم أنه اثر ولكن ممنوع اي حد يتكلم عن الخساره للشركات دي؟\nلم يتم ذكر انخفاض محدد في أسعار أسهم شركات الاتصالات (فودافون مصر، وأورانج مصر، واتصالات، وWE) نتيجة حريق مبنى رمسيس. إليك ما حدث بالفعل:\n\n\n---\n\n🔥 ما حدث في سوق الأوراق المالية:\n\nتعطّل التداول في البورصة المصرية: يوم الثلاثاء الموافق 8 يوليو، توقف التداول بالكامل في البورصة بسبب انقطاع الاتصالات بين الوسطاء، نتيجة توقف خدمات الإنترنت والمحمول إثر الحريق  .\n\nاستئناف التداول بعد توقف الحريق: بعد عودة الاتصال وتحصيل الخدمات، استؤنفت التداولات. حتى الآن، لا توجد تقارير رسمية تفيد بأن أسهم شركات الاتصالات شهدت انخفاضًا كبيرًا أو حادًا بشكل خاص  .\n\nموجة مضاربات محتملة: بعد كارثة الحريق، رُصد نشاط مضاربين يركز على أسهم التكنولوجيا والشركات المتصلة بالبنية التحتية الرقمية، لكن هذه لم تُترجم بعد إلى اتجاه هبوط واضح أو مستقر  .\n\n\n\n---\n\n📌 تقييم سريع لحالة الأسهم:\n\nالعنصر\tالواقع حتى الآن\n\nانقطاع التداول\tحدث يوم الثلاثاء ولم يخلُّص في تراجع دائم لأسهم الاتصالات\nنشاط المضاربة\tبدأ، لكن غير مؤكد حتى الآن كسبب لهبوط في الأسهم\nانخفاض ملموس\tلا يوجد تقرير بوجود فقدان كبير أو مستمر في سعر سهم أي من الشركات المذكورة\n\n\n\n---\n\n✅ الخلاصة:\n\nلا، لم تُسجّل معلومات رسمية تفيد بأن أسعار أسهم فودافون، أو أورانج، واتصالات، أو WE انخفضت بشكل ملحوظ بسبب الحريق.\n\nالتأثير الأكبر كان على تعطّل التداول بنفسه أكثر من تأثير على أسعار الأسهم.\n\nمن المحتمل عند استئناف التداول نشاهد حركة غير مستقرة (تقلبات)، لكن لا توجد بيانات حتى الآن تشير إلى خسارة معتبرة في القيمة السوقية.",
+      "username": "3BDO____",
+      "timestamp": "2025-07-10T12:55:48+00:00",
+      "url": "https://www.reddit.com/r/CAIRO/comments/1lwc0ow/هو_ازاي_احتراق_اهم_مبني_للاتصالات_فى_البلد_ميأثرش/",
+      "platform": "reddit",
+      "source": "reddit:search:سهم البورصة المصرية",
+      "engagement": 11,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.05,
+        "model_used": "deduplicated"
+      },
+      "vader": {
+        "score": -0.6,
+        "label": "bearish",
+        "confidence": 1.0,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "هل حد بيكسب من البورصة المصرية\nاعتقد معظكم شاف بوستات الفيسبوك بتاعت الاجانب الباعو اسهم ب ٦٠ مليار جنيه امبارح وبنسمع طول الوقت عن حيتان بتتلاعب من البورصة المصرية\n\nدلوقتي هل الموضوع كله كده ومحدش ليكسب غير لما قيمة الجنيه تنزل، ولا فيه ناس فعلا بيجيلها عائد من استثمارتها في البورصة؟\n\nبيأل عشان بفكر اطلع نسبة من مرتبي كل شهر جزء ذهب وجزء اسهم.",
+      "username": "Threebreak28",
+      "timestamp": "2026-03-12T22:15:02+00:00",
+      "url": "https://www.reddit.com/r/PersonalFinanceEgypt/comments/1rs539b/هل_حد_بيكسب_من_البورصة_المصرية/",
+      "platform": "reddit",
+      "source": "reddit:search:سهم البورصة المصرية",
+      "engagement": 7,
+      "egx": {
+        "score": -0.9827,
+        "label": "bearish",
+        "confidence": 0.9827,
+        "model_used": "camelbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "ليه البورصة المصرية افضل من البورصة الأمريكية ؟\n**كذا**** ****حد**** ****بيتكلم**** ****علي**** ****ان**** ****بورصة**** ****امريكا**** ****احسن**** ****من**** ****البورصة**** ****المصرية**** ****من**** ****ناحيه**** ****المكسب****.** **وفي**** ****الحقيقة**** ****ده**** ****غلط**** ****والي**** ****مكنش**** ****زمان**** ****المستثمرين**** ****الأجانب**** ****بيسيب**** ****بورصة**** ****بلده**** ****ويجي**** ****يستثمر**** ****في**** ****مصر**** ****وقت**** ****الاستقرار**** ****وده**** ****أتغير**** ****بعد**** ****احداث** **2011 (****بعد**** ****الثروة****)** **وكلامي**** ****موجه**** ****لأي**** ****حد**** ****في**** ****مصر**** ****وعايش**** ****في**** ****مصر****.**\n\n**انا**** ****اشتغلت**** ****في**** ****امريكا**** ****والذهب**** ****والفوركس**** ****والكريبتو**** ****وبعد**** ****كل**** ****ده**** ****فضلت**** ****اني**** ****اشتغل**** ****في**** ****بورصة**** ****مصر،**** ****وده**** ****اكيد**** ****مش**** ****من**** ****فراغ**** ****وحاطت**** ****في**** ****الحسبان**** ****مخاطره**** ****التضخم**** ****والعملة****.** \n\n**•** **اولا****ً**** البورص****ة**** الأمريكي****ة**** سو****ق**** متقد****م**** عل****ي**** عك****س**** بورص****ة**** مص****ر**** ال****ي**** ه****ي**** سو****ق**** ناشئ****ة**** والأسوا****ق**** الناشئ****ة**** بتتمي****ز**** أنه****ا**** بيكو****ن**** فيه****ا**** فر****ص**** نم****و**** عالي****ة**** للشركات****،**** عل****ى**** عك****س**** السو****ق**** المتقد****م**** الل****ي**** مخاطر****ه**** مقبول****ة**** ونمو****ه**** مستق****ر**** عل***",
+      "username": "MCKVAY",
+      "timestamp": "2026-03-16T06:53:14+00:00",
+      "url": "https://www.reddit.com/r/PersonalFinanceEgypt/comments/1rv2blc/ليه_البورصة_المصرية_افضل_من_البورصة_الأمريكية/",
+      "platform": "reddit",
+      "source": "reddit:search:سهم البورصة المصرية",
+      "engagement": 22,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.05,
+        "model_used": "filtered:spam"
+      },
+      "vader": {
+        "score": 1.0,
+        "label": "bullish",
+        "confidence": 1.0,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "تحليل فني شامل لـ 30 سهم سعودي بارز | ديسمبر 2025 (أسهم قوية – خطر – انعكاس مح\nالسلام عليكم يا شباب السوق ⚡\n\nتحديث شامل اليوم 7 ديسمبر 2025 لأهم 30 سهم في تاسي من وجهة نظر فنية بحتة، مع تحديد واضح لـ:\n\n•  نقاط الاختراق المهمة\n\n•  الأهداف القريبة\n\n•  مستويات وقف الخسارة\n\n•  إشارات التباين في MACD وRSI\n\nقسمتهم لثلاث فئات عشان يسهل عليكم:\n\n**الأسهم القوية جدًا حاليًا (5 أسهم)**\n\n1.  الراجحي 1120 – اخترق 96.00 وخرج من القناة الهابطة → هدف أول 102 ثم 108\n\n2.  سابك 2010 – كسر المقاومة 78.50 بقوة → هدف 84–88\n\n3.  STC 7010 – فوق 44.50 = استمرار الصعود لـ 48–50\n\n4.  المواساة 4002 – قناة صاعدة ممتازة → هدف 145–150\n\n5.  الإنماء 1150 – عند أعلى مستوى تاريخي → أي تراجع لـ 48 فرصة شراء\n\n**أسهم في منطقة خطر أو توزيع (6 أسهم – أنصح بالخروج أو التقليل)**\n\n1.  اللجين 2170 – كسر الدعم 34.50 → قد يزور 28\n\n2.  الإنماء ريت 4345 – تحت كل المتوسطات → خروج فوري\n\n3.  أسمنت الرياض 3092 – توزيع واضح تحت 28\n\n4.  زجاج 2150 – كسر دعم قوي 38 → هدف 32\n\n5.  بتروكيم 2002 – تحت 30 = ضغط بيعي قوي\n\n6.  الخزف 2040 – فشل في اختراق 32 مرتين → احتمال هبوط لـ 27\n\n**أسهم في منطقة انعكاس محتمل (6 أسهم – نراقبها جيدًا الأسبوع القادم)**\n\n1.  أرامكو 2222 – تباين إيجابي واضح عند 27.20\n\n2.  سابك للمغذيات 2020 – قاع مزدوج عند 66 + تباين\n\n3.  المراعي 2280 – دعم تاريخي 52 مع حجم شراء\n\n4.  المملكة 2350 – كسر خط اتجاه هابط + إغلاق فوق 9.20\n\n5.  التعمير 4150 – قاع تاريخي 12.80 مع تباين إيجابي\n\n6.  أكوا باور 2082 – دعم 380–385 قوي جدًا\n\nكل التحليل فني 100% + إخلاء مسؤولية: القرار النهائي قرارك أنت وحدك، وهذي مجرد قراءة للشارت.\n\nالت",
+      "username": "TASIsmart",
+      "timestamp": "2025-12-06T23:21:41+00:00",
+      "url": "https://www.reddit.com/r/tadawul/comments/1pg3348/تحليل_فني_شامل_لـ_30_سهم_سعودي_بارز_ديسمبر_2025/",
+      "platform": "reddit",
+      "source": "reddit:search:تحليل سهم اوراسكوم",
+      "engagement": 1,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.8796,
+        "model_used": "camelbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "سهم طلعت مصطفي ولا اوراسكوم كونستراكشن\nمحتاج اجابه حد عنده خبره انا معايا ١٥٠ الف",
+      "username": "Realmadrid74_",
+      "timestamp": "2025-10-16T16:08:05+00:00",
+      "url": "https://www.reddit.com/r/PersonalFinanceEgypt/comments/1o8aagw/سهم_طلعت_مصطفي_ولا_اوراسكوم_كونستراكشن/",
+      "platform": "reddit",
+      "source": "reddit:search:تحليل سهم اوراسكوم",
+      "engagement": 0,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9493,
+        "model_used": "camelbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "تحليل سهم البنك التجاري الدولي",
+      "username": "Necessary-Pea9214",
+      "timestamp": "2025-11-05T23:19:30+00:00",
+      "url": "https://www.reddit.com/r/PersonalFinanceEgypt/comments/1opip8n/تحليل_سهم_البنك_التجاري_الدولي/",
+      "platform": "reddit",
+      "source": "reddit:search:تحليل سهم اوراسكوم",
+      "engagement": 3,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9809,
+        "model_used": "camelbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "سهم طلعت مصطفي\nهل ده وقت مناسب للدخول في طلعت مصطفي؟ ولا اشتري في اوراسكوم؟",
+      "username": "Alarming-Mountain-19",
+      "timestamp": "2026-03-03T23:04:46+00:00",
+      "url": "https://www.reddit.com/r/PersonalFinanceEgypt/comments/1rk4m9y/سهم_طلعت_مصطفي/",
+      "platform": "reddit",
+      "source": "reddit:search:تحليل سهم اوراسكوم",
+      "engagement": 1,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.9712,
+        "model_used": "camelbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "حد فاهم إيه اللي بيحصل في الـ EGX30؟ تجميع ولا المؤسسات بتصرف علينا؟ 🤔\n# \n\n يا جماعة، الوضع حالياً محير جداً.. المؤشر الثلاثيني بقاله فترة \"زجزاج\" ومش عارف يكسر الـ 48 ألف نقطة، وفي نفس الوقت المؤسسات الأجنبية مسيطرة على البيع والمصريين (أفراد ومؤسسات) هما اللي شايلين السوق وبيحتووا الصدمات.\n\nأنا عملت تحليل مفصل للفريمات (أسبوعي، يومي، وساعة) وطلعت بشوية أرقام جوهرية لأسهم قيادية زي:\n\n* **البنك التجاري الدولي (CIB):** رقم الـ 130 جنيه محوري جداً لتأكيد الإيجابية.\n* **أبو قير وأموك:** مناطق جني أرباح واضحة جداً فنياً.\n* **إي فاينانس وبالم هيلز:** ليهم أرقام \"دعم\" لو اتكسرت الوضع هيختلف.\n\nإنتوا شايفين إيه؟ مكملين صعود للـ 50 ألف ولا هنريح شوية لـمنطقة الـ 44 ألف؟\n\n**ملحوظة:** للي حابب يشوف \"خريطة البورصة\" كاملة وتحليل الـ 15 سهم بالأرقام والرسوم البيانية، هتلاقوا تفاصيل أكتر في **اللينك اللي موجود في البروفايل  عندي هنا على ريديت.**",
+      "username": "Royal_Treat_4607",
+      "timestamp": "2026-03-28T12:30:06+00:00",
+      "url": "https://www.reddit.com/r/EgyptTechnology/comments/1s5z23i/حد_فاهم_إيه_اللي_بيحصل_في_الـ_egx30_تجميع_ولا/",
+      "platform": "reddit",
+      "source": "reddit:search:تحليل سهم اوراسكوم",
+      "engagement": 1,
+      "egx": {
+        "score": -0.9597,
+        "label": "bearish",
+        "confidence": 0.9597,
+        "model_used": "camelbert"
+      },
+      "vader": {
+        "score": 0.6,
+        "label": "bullish",
+        "confidence": 1.0,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "تاثير الحرب علي البورصة المصرية والاقتصاد المصري، وتعمل ايه في أسهمك.\n**صباح** **الخير،**\n\n**انا** **ملاحظ** **الناس** **بداءت** **تتوتر** **وتقلق** **والأغلب** **هنا** **كمان** **جداد** **ولسه** **داخلين** **البورصة** **و** **دي** **اول** **تجربه** Panic **له** **في** **السوق**.\n\n**موضوع** **الحرب** **والتوتر** **الي** **في** **المنطقة** **ده** **مش** **جديد** **من** 2024 **واحنا** **في** **نفس** **الدائره** **كل** **فتره** **يحصل** **احداث** **زي** **كده** **ورغم** **أنها** **مش** **مؤثره** **علينا** **بشكل** **مباشر** **الي** **ان** **السوق** **بيتأثر** **بشكل** **كبير**.\n\n**في** **صورتين** **فوق** **في** **البوست** **لآخر** **ضربه** **ايرانيه** **في** **شهر** 7 **واثرت** **علي** **السوق** **واغلب** **الأسهم** **نزلت** **فوق** **ال**\\-30%.\n\n**بس** **في** **نفس** **الوقت** **السوق** **تعافي** **بعدها** **في** 8 **أيام** **وأسعار** **الأسهم** **رجعت** **زي** **الأول** **وكمان** **الي** **اشتري** **خلال** **الاسبوع** **كسب** **اكتر** **من** 30% **في** 10 **أيام**. \n\n**وأسعار** **الأسهم** **من** **وقتها** **في** **صعود** **متواصل** ( **المؤشر** **كان** 27 **الف** **نقطه**)\n\n**المهم** **ليه** **أصلا** **السوق** **ينزل** **والضرب** **بعيد** **عننا** **وملوش** **علاقه؟**\n\n**في** **ناس** **بتقول** **بسبب** **خوف** **الأفراد** **وفي** **ناس** **بتقول** **المؤسسات** **لما** **بتصدق** **تشتري** **بالرخيص،** **وفي** **الحقيقه** **الاتنين** **فيهم** **جزء** **من** **الصح**.\n\n**اولا**ً** الأفرا**د** نسبته**ا** كبير**ه** ف**ي** السو**ق** المصر**ي** تتخط**ي** ا**ل70%** ل**ك** ا**ن** تتخي*",
+      "username": "MCKVAY",
+      "timestamp": "2026-02-28T12:41:35+00:00",
+      "url": "https://www.reddit.com/r/PersonalFinanceEgypt/comments/1rh1o1m/تاثير_الحرب_علي_البورصة_المصرية_والاقتصاد_المصري/",
+      "platform": "reddit",
+      "source": "reddit:search:اشتري سهم البورصة المصرية",
+      "engagement": 18,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.5113,
+        "model_used": "camelbert"
+      },
+      "vader": {
+        "score": 1.0,
+        "label": "bullish",
+        "confidence": 1.0,
+        "model_used": "vader"
+      }
+    },
+    {
+      "text": "مبتدئ ف البورصة المصرية\nي جماعه عندي كاش حوالي 300 الف عاوز احطهم ف ثاندر. تنصحوني اشتري دلوقتي ولا استنى ، واشتري اي تحديدا بحيث تكون مطابقة للشربعة؟",
+      "username": "Own_Skin1142",
+      "timestamp": "2026-03-04T15:49:21+00:00",
+      "url": "https://www.reddit.com/r/PersonalFinanceEgypt/comments/1rkoxv4/مبتدئ_ف_البورصة_المصرية/",
+      "platform": "reddit",
+      "source": "reddit:search:اشتري سهم البورصة المصرية",
+      "engagement": 1,
+      "egx": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.8991,
+        "model_used": "camelbert"
+      },
+      "vader": {
+        "score": 0.0,
+        "label": "neutral",
+        "confidence": 0.4,
+        "model_used": "vader"
+      }
+    }
+  ]
+}

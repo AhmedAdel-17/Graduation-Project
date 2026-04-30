@@ -1,0 +1,320 @@
+[
+    {
+        "url": "https://www.facebook.com/groups/618025406208276/#post-1691840382160101",
+        "text": "الخبراء بتوعنا شايفين ايه التوقعات لافضل سهم بكرا مضاربه ؟🤔\n#يمتنع_المصرفاتية😒",
+        "platform": "facebook",
+        "group": "facebook-group:جروب الخبره",
+        "mentions": [],
+        "sentiment": {
+            "score": 0.5249,
+            "label": "bullish",
+            "confidence": 0.5249,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/618025406208276/#post-1691790432165096",
+        "text": "صدقوني اختراق القلعه المره دي غير اي مره دا مخترق ترند هابط من ٢٠ سنه وطبعا شايفين الفوليومات اخر فتره ودي المحرك الرئيسي لاي سهم \nلو بتعرف تشتغل تريدات ماشي عند مقاومات ودعوم ولو مش بتعرف خليك بايت فالسهم هتاكل الشهد باذن الله",
+        "platform": "facebook",
+        "group": "facebook-group:جروب الخبره",
+        "mentions": [],
+        "sentiment": {
+            "score": -0.9643,
+            "label": "bearish",
+            "confidence": 0.9643,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/618025406208276/#post-1691778238832982",
+        "text": "وبدأ فى أشارة الأنطلاق منذ جلسة الأربعاء 22 أبريل مع تدفق سهم القلعة وطيرانه أنه يا سادة TAQA أنتظر ما لم تتوقعه القادم مذهل",
+        "platform": "facebook",
+        "group": "facebook-group:جروب الخبره",
+        "mentions": [
+            {
+                "symbol": "TAQA",
+                "confidence": 0.95,
+                "evidence": [
+                    "ticker:TAQA",
+                    "name-en:taqa"
+                ]
+            },
+            {
+                "symbol": "CCAP",
+                "confidence": 0.75,
+                "evidence": [
+                    "name-ar:القلعة"
+                ]
+            }
+        ],
+        "sentiment": {
+            "score": 0.9883,
+            "label": "bullish",
+            "confidence": 0.9883,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/618025406208276/#post-1691773695500103",
+        "text": "بداية اتمني من الله انه يكون اسبوع جديد ملئ بالخير وبالرزق للجميع أن شاء الله\n\n🚦🚦🚦قبل نشر وجهة نظري اليوم في بعض الاسهم و ترشيحها لجلسة غداً 🚦🚦🚦\n\n📢📢📢📢📢 في أسهم انا قولت عليها \n وتم ترشيحها وعرضها علي الصفحة من قبل\n       *************************\n وأنا براجع بعض الاسهم الجديدة رجعت تاني ليها للتأكيد علي اتجاهاتها علي الشارت\nوفكرتني بسهم العربية للصناعات الهندسية وسهم القاهرة للزيوت والصابون وسهم أو بي المالية القابضة لما كررت كلامي وأكدت علي صعودها والحمد لله وبفضله حصل🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀\nالنهاردة راجع تاني وبفكركم\n📢📢\n1- اكت فاينانشال ACTF\n2-يونيباك UNIP\n3- أم أم جروب MTIE\n4- كونتاكت المالية CNFN\n5-النصر للملابس كابو KABO\n6- جدوي ( بيجمع) GDWA \n7- المنصورة للدواجن MPCO\n               🏹🏹🏹🏹🏹\n📢📢📢📢أرجع لمدير حسابك واستشيره قبل اتخاذ أي قرار  🚨🚨🚨\nجميع تحليلات الاسهم موجودة علي الصفحة \n\n🛑 ليست دعوة للشراء أو البيع ولكنها وجهة نظر شخصية تحتمل الخطأ قبل الصواب 🛑",
+        "platform": "facebook",
+        "group": "facebook-group:جروب الخبره",
+        "mentions": [
+            {
+                "symbol": "MTIE",
+                "confidence": 0.95,
+                "evidence": [
+                    "ticker:MTIE",
+                    "name-ar:ام ام جروب"
+                ]
+            }
+        ],
+        "sentiment": {
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.4872,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/4021602644518797/#post-27037581305827605",
+        "text": "📍IFAP\n📍الدولية للمحاصيل\n🕰frame 1d: \n\n⭐️مقاومة 20.10 اعلاها\n\n🎯هدف اول: 22.45\n\n🎯هدف ثاني: 26.25\n\nللتوصيات اثناء الاسبوع واثناء الجلسة لينك قناة التيلجرام:\n🔗https://t.me/MWTRADEEGX",
+        "platform": "facebook",
+        "group": "facebook-group:البورصة المصرية",
+        "mentions": [
+            {
+                "symbol": "IFAP",
+                "confidence": 0.95,
+                "evidence": [
+                    "ticker:IFAP"
+                ]
+            },
+            {
+                "symbol": "EGX_BROAD",
+                "confidence": 0.7,
+                "evidence": [
+                    "index:egx"
+                ]
+            }
+        ],
+        "sentiment": {
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9943,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/4021602644518797/#post-27037569432495459",
+        "text": "📍EMFD\n📍اعمار\n🕰frame 1M: \n\n⭐️دعم 9.90/10.20\n\n🎯هدف اول: 11.50\n\n🎯هدف ثاني: 12.40\n\nللتوصيات اثناء الاسبوع واثناء الجلسة لينك قناة التيلجرام:\n🔗https://t.me/MWTRADEEGX",
+        "platform": "facebook",
+        "group": "facebook-group:البورصة المصرية",
+        "mentions": [
+            {
+                "symbol": "EMFD",
+                "confidence": 0.95,
+                "evidence": [
+                    "ticker:EMFD"
+                ]
+            },
+            {
+                "symbol": "EGX_BROAD",
+                "confidence": 0.7,
+                "evidence": [
+                    "index:egx"
+                ]
+            }
+        ],
+        "sentiment": {
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9952,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/4021602644518797/#post-27037553425830393",
+        "text": "الخبراء بتوعنا شايفين ايه التوقعات لافضل سهم بكرا مضاربه ؟🤔\n#يمتنع_المصرفاتية😒",
+        "platform": "facebook",
+        "group": "facebook-group:البورصة المصرية",
+        "mentions": [],
+        "sentiment": {
+            "score": 0.5249,
+            "label": "bullish",
+            "confidence": 0.5249,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/4021602644518797/#post-27037551689163900",
+        "text": "📍PRMH\n📍برايم القابضه \n🕰frame 1d: \n\n⭐️مقاومة 2.18\n\n🎯هدف اول: 2.34\n\n🎯هدف ثاني: 2.55\n\nللتوصيات اثناء الاسبوع واثناء الجلسة لينك قناة التيلجرام:\n🔗https://t.me/MWTRADEEGX",
+        "platform": "facebook",
+        "group": "facebook-group:البورصة المصرية",
+        "mentions": [
+            {
+                "symbol": "EGX_BROAD",
+                "confidence": 0.7,
+                "evidence": [
+                    "index:egx"
+                ]
+            }
+        ],
+        "sentiment": {
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.992,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/4021602644518797/#post-27037413435844392",
+        "text": "معايا 15000 هدخل ف سهم من جلسة الحد ل الخميس تنصحونى ب اي",
+        "platform": "facebook",
+        "group": "facebook-group:البورصة المصرية",
+        "mentions": [],
+        "sentiment": {
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8416,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/4021602644518797/#post-27037160142536388",
+        "text": "أخطر واحد في البورصة هو \nالمغفل الخبير \n\nتبيع كليتك لو مشيت وراة",
+        "platform": "facebook",
+        "group": "facebook-group:البورصة المصرية",
+        "mentions": [],
+        "sentiment": {
+            "score": -0.984,
+            "label": "bearish",
+            "confidence": 0.984,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/4021602644518797/#post-27037159172536485",
+        "text": "مساء الخير يا رجالة \nايه الاسهم اللي ممكن اشتريها بكره ان شاء الله بس تكون أسهم ربحية عاليه موافقة للشريعة الإسلامية إستثمار مش مضاربة من فضلكم",
+        "platform": "facebook",
+        "group": "facebook-group:البورصة المصرية",
+        "mentions": [],
+        "sentiment": {
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.5294,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/4021602644518797/#post-27036908799228189",
+        "text": "هو صندوق الأسهم ده حد مجربه على مدار سنة ؟ وعمل معاه النسب دى ولا لا",
+        "platform": "facebook",
+        "group": "facebook-group:البورصة المصرية",
+        "mentions": [],
+        "sentiment": {
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.6149,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/955090341273238/#post-26852372047785046",
+        "text": "جنوب الوادي للاسمنت قالو قيمتو الحقيقه ٦.٥ و نزل ل ٦ و طلع تاني و قالو هيزودو الانتاجيه و فيه استثمارات هتتضخ و هيعيدو هيكله مصنع قديم\nاية تاثيرات الاخبار دي كلها ع سهم \n\nمع العلم انو دلوقتي رجع زاد عن قيمتو الحقيقيه اللي هي المفروض ٦.٥\n\nجنوب الوادي للاسمنت قالو قيمتو الحقيقه ٦.٥ و نزل ل ٦ و طلع تاني و قالو هيزودو الانتاجيه و فيه استثمارات هتتضخ و هيعيدو هيكله مصنع قديم",
+        "platform": "facebook",
+        "group": "facebook-group:بورصة مصر _Egypt Stock Exchange",
+        "mentions": [],
+        "sentiment": {
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.5454,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/955090341273238/#post-26852348931120691",
+        "text": "- أنا مش متخصص، هل تنصحوني أشترك في ثاندر تريد ولا مش هاستفيد منه؟\n\n- هل فيه اشتراك اقدر اعرف السعر مباشر وأبيع واشتري في نفس الجلسة فقط؟ عشان ميزة ثاندر إكس محتاجة حد متخصص. \n\nشكرا لحضراتكم",
+        "platform": "facebook",
+        "group": "facebook-group:بورصة مصر _Egypt Stock Exchange",
+        "mentions": [],
+        "sentiment": {
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9776,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/955090341273238/#post-26852326181122966",
+        "text": "الخبراء بتوعنا شايفين ايه التوقعات لافضل سهم بكرا مضاربه ؟🤔\n#يمتنع_المصرفاتية😒",
+        "platform": "facebook",
+        "group": "facebook-group:بورصة مصر _Egypt Stock Exchange",
+        "mentions": [],
+        "sentiment": {
+            "score": 0.5249,
+            "label": "bullish",
+            "confidence": 0.5249,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/955090341273238/#post-26852318644457053",
+        "text": "زهراء المعادي هدف كم وهل هيبلع الكوبون ولا؟؟",
+        "platform": "facebook",
+        "group": "facebook-group:بورصة مصر _Egypt Stock Exchange",
+        "mentions": [],
+        "sentiment": {
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.6127,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/955090341273238/#post-26852179134471004",
+        "text": "ممكن تحليل سهم جنوب الوادى للاسمنت",
+        "platform": "facebook",
+        "group": "facebook-group:بورصة مصر _Egypt Stock Exchange",
+        "mentions": [],
+        "sentiment": {
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9519,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/955090341273238/#post-26852005417821709",
+        "text": "ايه افضل توقيت للشراء في الصندوق السادس بشاير - والصندوق الثالث البنك الاهلي",
+        "platform": "facebook",
+        "group": "facebook-group:بورصة مصر _Egypt Stock Exchange",
+        "mentions": [],
+        "sentiment": {
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9654,
+            "model_used": "camelbert"
+        }
+    },
+    {
+        "url": "https://www.facebook.com/groups/955090341273238/#post-26852004634488454",
+        "text": "السلام عليكم \nلو سمحت اعرف منين اسهم الشريعه \nيعني انا في ثاندر بيعمل علامه تعرف ان السهم شريعه فعل هو المصدر الي اعتمد عليه\nمثلا ابن سينا  وبالما هيلز  واعمار مش عامل عليهم شريعه مع ان ناس تانية بتقول تبع الشريعه ولسه حد كان نزل صورة عن ان رامبل حذف اسهم وزود اسهم تانية في \nالشريعه \n\nسؤال كمان توقعاتكم ل موبيكوا وبالما وايديتا",
+        "platform": "facebook",
+        "group": "facebook-group:بورصة مصر _Egypt Stock Exchange",
+        "mentions": [
+            {
+                "symbol": "ISPH",
+                "confidence": 0.75,
+                "evidence": [
+                    "name-ar:ابن سينا"
+                ]
+            }
+        ],
+        "sentiment": {
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.6735,
+            "model_used": "camelbert"
+        }
+    }
+]
