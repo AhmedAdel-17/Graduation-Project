@@ -1,7 +1,14 @@
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
+# Set Groq API key for LLM (OpenAI-compatible)
+os.environ["GROQ_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = "sk-23941db4656d4ec4938a205cd299f125"  # Groq API key
+
+# Set EODHD API key for stock data
+os.environ["EODHD_API_KEY"] = "696cff318de733.38444726"
+
+# Gemini API key (primary LLM provider)
+os.environ["GOOGLE_API_KEY"] = "AIzaSyCAQwCi8JkCAJu-NR90pwnFb_kCUAJ0E84"
 
 DEFAULT_CONFIG = {
     "project_dir": os.path.abspath(os.path.join(os.path.dirname(__file__), ".")),
@@ -44,7 +51,9 @@ DEFAULT_CONFIG = {
     # Auto-refresh automation
     "auto_refresh_fundamentals": True,    # Set False to disable EGX auto-download
     "fundamentals_max_age_days": 90,      # Trigger refresh if data is older than this
-    
+    "use_fundamental_memory": False,      # Phase 3 memory/reflection is opt-in and local
+    "egx_risk_free_rate": 0.275,          # CBE policy rate proxy (late 2024); used for earnings_yield_spread
+
     # Backtest mode flag — set True when running single-ticker backtests.
     # Relaxes single-stock concentration limits that would otherwise veto most
     # trades when the entire portfolio is allocated to one ticker.
@@ -109,19 +118,3 @@ DEFAULT_CONFIG = {
         "end": "14:30",    # Market close
     },
 }
-
-# Supported EGX tickers (Cairo Exchange, .CA suffix)
-EGX_TICKERS = [
-    # Banks
-    "COMI.CA", "ADIB.CA", "CIEB.CA", "EXPA.CA", "HDBK.CA", "QNBA.CA", "SAUD.CA",
-    # Real Estate & Construction
-    "TMGH.CA", "HELI.CA", "PHDC.CA", "OCDI.CA", "ORAS.CA", "EMFD.CA",
-    # Industry & Materials
-    "EAST.CA", "ESRS.CA", "SWDY.CA", "ABUK.CA", "MFPC.CA", "EGAL.CA", "EGCH.CA", "EFIC.CA",
-    # Telecom & Tech
-    "ETEL.CA", "FWRY.CA", "EFIH.CA", "RAYA.CA",
-    # Financial Services
-    "HRHO.CA", "BTFH.CA", "CIch.CA",
-    # Food & Beverage
-    "JUFO.CA", "EFID.CA", "DOMT.CA",
-]
