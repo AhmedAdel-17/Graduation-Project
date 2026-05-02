@@ -12,11 +12,14 @@ import os
 import sys
 import json
 import asyncio
+import logging
 import traceback
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from contextlib import asynccontextmanager
+
+logger = logging.getLogger("tradingagents.api_server")
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -243,6 +246,14 @@ class AgentUpdate(BaseModel):
     state_keys: List[str]
     data: Dict[str, Any]
     timestamp: str
+
+
+class InvestorProfileRequest(BaseModel):
+    interview_text: str = Field(
+        ...,
+        min_length=10,
+        description="Raw transcript of the investor onboarding interview",
+    )
 
 
 # =============================================================================
@@ -1242,6 +1253,40 @@ async def get_egx_tickers():
     
     return {"tickers": ticker_list}
 
+
+# =============================================================================
+# Investor Profiling Endpoint
+# =============================================================================
+
+@app.post("/api/investor-profile")
+async def classify_investor(request: InvestorProfileRequest):
+    """
+    Classify an investor based on their onboarding interview.
+
+    Accepts a free-form interview transcript and returns:
+      - investor_category  : INTRADAY | SWING | POSITION_6MO
+      - confidence_score   : 0.0 - 1.0
+      - trigger_frequency  : cron expression for data-refresh scheduling
+      - analysis_priority  : ordered list of analyst modules to prioritise
+      - reasoning          : brief LLM explanation
+
+    The trigger_frequency can be fed directly into a scheduler to drive
+    automated analysis loops appropriate for this investor's velocity.
+    """
+    try:
+        from tradingagents.agents.profiling import InvestorProfilingAgent
+    except ImportError as exc:
+        raise HTTPException(500, f"Profiling agent unavailable: {exc}")
+
+    try:
+        agent = InvestorProfilingAgent()
+        profile = agent.classify(request.interview_text)
+        return profile.model_dump()
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    except Exception as exc:
+        logger.error("investor-profile endpoint error: %s", exc, exc_info=True)
+        raise HTTPException(500, f"Classification failed: {exc}")
 
 
 if __name__ == "__main__":
