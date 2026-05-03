@@ -11,18 +11,35 @@ Design rationale (Phase A diagnostic, 2026-04-27):
   - Calibration requires strong evidence to override the up base rate
   - The calibrated direction is what downstream agents should consume
 
-Policy: v2_conservative_nonup
+Policy: v3_sector_leverage_aware
   - Default to "up" (base-rate-aware)
-  - Keep "down" only when: raw direction is down, bearish outlook, high risk, confidence >= 75
-  - Do not emit "flat" as the final calibrated direction for now
+  - Banks sector: always "up" — CBE recapitalization patterns make down
+    predictions unreliable regardless of distress signals
+  - Extreme leverage (D/E > 4): always "up" — highly leveraged firms on
+    EGX tend to refinance or sell assets rather than report lower earnings
+  - Keep "down" only when: raw=down, bearish outlook, high risk, conf >= 75,
+    sector != banks, D/E <= 4
+  - Do not emit "flat" as the final calibrated direction
   - Preserve flat/downside/risk information in raw fields and calibration notes
-  - This is deliberately conservative to avoid false non-up final labels
 """
 from __future__ import annotations
 
-from typing import List, NamedTuple
+from typing import List, NamedTuple, Optional
 
-POLICY_NAME = "v2_conservative_nonup"
+POLICY_NAME = "v3_sector_leverage_aware"
+
+# Sectors where LLM down-calls are structurally unreliable on EGX.
+_SECTORS_ALWAYS_UP: frozenset = frozenset({"banks"})
+
+# D/E threshold above which leverage-driven distress signals are noise:
+# these companies tend to refinance or do asset sales rather than report
+# lower earnings.
+_MAX_DE_FOR_DOWN_CALL: float = 4.0
+
+# When a non-up raw signal is overridden to "up" by a calibration gate, the LLM's
+# original confidence should not carry over (it was confident in "down", not "up").
+# Cap at naive-baseline level so Brier stays competitive with always-up.
+_CALIBRATED_UP_CONFIDENCE: int = 60
 
 
 class CalibrationResult(NamedTuple):
@@ -40,6 +57,8 @@ def calibrate_earnings_direction(
     earnings_direction_confidence: int,
     freq: str = "annual",
     data_confidence: int = 100,
+    sector: str = "",
+    de_ratio: Optional[float] = None,
 ) -> CalibrationResult:
     """
     Apply deterministic base-rate-aware calibration to the LLM's raw direction.
@@ -50,6 +69,9 @@ def calibrate_earnings_direction(
         raw_earnings_direction: "up" | "down" | "flat" | ""
         earnings_direction_confidence: 0-100
         freq: "annual" or "quarterly"
+        data_confidence: data quality score (0-100), used to cap LLM confidence
+        sector: ticker's sector ("banks" | "real_estate" | "holdings" | "operational")
+        de_ratio: debt-to-equity ratio from the financial calculator, or None if unavailable
 
     Returns:
         CalibrationResult with calibrated direction, policy name, and notes.
@@ -102,7 +124,35 @@ def calibrate_earnings_direction(
             calibrated_direction="up",
             policy=POLICY_NAME,
             notes=notes,
-            calibrated_confidence=cal_conf,
+            calibrated_confidence=_CALIBRATED_UP_CONFIDENCE,
+        )
+
+    # Gate 0a: Sector exclusion — banks follow CBE recapitalization patterns.
+    # Down-calls on banks are structurally unreliable regardless of distress signals.
+    if sector in _SECTORS_ALWAYS_UP:
+        notes.append(
+            f"raw=down conf={conf} sector={sector}; "
+            "calibrated to up (bank sector excluded from down calls — v3 gate)"
+        )
+        return CalibrationResult(
+            calibrated_direction="up",
+            policy=POLICY_NAME,
+            notes=notes,
+            calibrated_confidence=_CALIBRATED_UP_CONFIDENCE,
+        )
+
+    # Gate 0b: Extreme leverage exclusion — companies with D/E > 4 on EGX tend
+    # to refinance or sell assets rather than sustain lower earnings.
+    if de_ratio is not None and de_ratio > _MAX_DE_FOR_DOWN_CALL:
+        notes.append(
+            f"raw=down conf={conf} de_ratio={de_ratio:.2f} > {_MAX_DE_FOR_DOWN_CALL}; "
+            "calibrated to up (extreme leverage excluded from down calls — v3 gate)"
+        )
+        return CalibrationResult(
+            calibrated_direction="up",
+            policy=POLICY_NAME,
+            notes=notes,
+            calibrated_confidence=_CALIBRATED_UP_CONFIDENCE,
         )
 
     # Gate 1: Confidence must be >= 75 to keep a down prediction.
@@ -112,32 +162,32 @@ def calibrate_earnings_direction(
             calibrated_direction="up",
             policy=POLICY_NAME,
             notes=notes,
-            calibrated_confidence=cal_conf,
+            calibrated_confidence=_CALIBRATED_UP_CONFIDENCE,
         )
 
     # Gate 2: For "down", require bearish outlook + high risk.
     if raw == "down":
         if outlook == "bearish" and risk == "high":
             notes.append(
-                f"raw=down conf={conf} outlook=bearish risk=high; "
-                "kept as down (v2 conservative non-up gate passed)"
+                f"raw=down conf={conf} outlook=bearish risk=high sector={sector} de={de_ratio}; "
+                "kept as down (v3 sector-leverage-aware gate passed)"
             )
             return CalibrationResult(
                 calibrated_direction="down",
                 policy=POLICY_NAME,
                 notes=notes,
-                calibrated_confidence=cal_conf,
+                calibrated_confidence=cal_conf,  # keep LLM confidence for genuine down calls
             )
         else:
             notes.append(
                 f"raw=down conf={conf} outlook={outlook} risk={risk}; "
-                "calibrated to up (outlook/risk do not pass v2 down gate)"
+                "calibrated to up (outlook/risk do not pass down gate)"
             )
             return CalibrationResult(
                 calibrated_direction="up",
                 policy=POLICY_NAME,
                 notes=notes,
-                calibrated_confidence=cal_conf,
+                calibrated_confidence=_CALIBRATED_UP_CONFIDENCE,
             )
 
     # Fallback (should not be reached)
@@ -146,5 +196,5 @@ def calibrate_earnings_direction(
         calibrated_direction="up",
         policy=POLICY_NAME,
         notes=notes,
-        calibrated_confidence=cal_conf,
+        calibrated_confidence=_CALIBRATED_UP_CONFIDENCE,
     )

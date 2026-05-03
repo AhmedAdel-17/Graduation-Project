@@ -87,6 +87,7 @@ def build_evidence_pack(
         "pe_ratio_source": getattr(report, "pe_ratio_source", ""),
         "risk_free_rate_source": getattr(report, "risk_free_rate_source", ""),
         "risk_free_rate_effective_date": getattr(report, "risk_free_rate_effective_date", ""),
+        "supplemental_context": getattr(report, "supplemental_context", {}) or {},
     }
     if prior_memory_context:
         pack["prior_memory_context"] = prior_memory_context
@@ -176,6 +177,7 @@ def format_evidence_narrative(pack: Dict[str, Any]) -> str:
     piotroski = pack.get("piotroski_score")
     health_heuristic = pack.get("financial_health_heuristic", "")
     prior_memory_context = pack.get("prior_memory_context")
+    supplemental_context = pack.get("supplemental_context") or {}
 
     lines: List[str] = []
 
@@ -207,6 +209,61 @@ def format_evidence_narrative(pack: Dict[str, Any]) -> str:
     else:
         lines.append("  none")
     lines.append("")
+
+    # ── Supplemental Context ───────────────────────────────────────────────
+    if supplemental_context:
+        lines.append("SUPPLEMENTAL FORWARD-LOOKING CONTEXT")
+        missing = supplemental_context.get("missing_categories") or []
+        if missing:
+            lines.append(
+                "  Missing supplemental categories: "
+                + ", ".join(str(item) for item in missing)
+            )
+        valuation = supplemental_context.get("valuation_context") or {}
+        if valuation:
+            lines.append(
+                "  Valuation context: "
+                f"price={_fmt(valuation.get('close_price'))}, "
+                f"P/E={_fmt(valuation.get('pe_ratio'))}, "
+                f"P/B={_fmt(valuation.get('pb_ratio'))}, "
+                f"dividend_yield={_fmt(valuation.get('dividend_yield'), pct=True)}"
+            )
+        quality = supplemental_context.get("quality_of_earnings") or {}
+        if quality:
+            lines.append(
+                "  Quality of earnings: "
+                f"OCF={_fmt(quality.get('operating_cash_flow'))}, "
+                f"FCF={_fmt(quality.get('free_cash_flow'))}, "
+                f"interest_expense={_fmt(quality.get('interest_expense'))}, "
+                f"one_off_gains_losses={_fmt(quality.get('one_off_gains_losses'))}"
+            )
+            if quality.get("one_off_description"):
+                lines.append(f"  One-off description: {quality.get('one_off_description')}")
+        narrative = supplemental_context.get("narrative_events") or {}
+        if narrative:
+            if narrative.get("management_guidance"):
+                lines.append(f"  Management guidance: {narrative.get('management_guidance')}")
+            if narrative.get("event_flags"):
+                lines.append(f"  Event flags: {narrative.get('event_flags')}")
+            if narrative.get("one_off_event_notes"):
+                lines.append(f"  Event notes: {narrative.get('one_off_event_notes')}")
+        macro = supplemental_context.get("macro_sector_context") or {}
+        if macro:
+            lines.append(
+                "  Macro/sector context: "
+                f"inflation={_fmt(macro.get('inflation_yoy'), pct=True)}, "
+                f"policy_rate={_fmt(macro.get('policy_rate'), pct=True)}, "
+                f"EGP/USD change={_fmt(macro.get('egp_usd_change_yoy'), pct=True)}"
+            )
+            if macro.get("commodity_context"):
+                lines.append(f"  Commodity context: {macro.get('commodity_context')}")
+            if macro.get("sector_cycle_notes"):
+                lines.append(f"  Sector cycle notes: {macro.get('sector_cycle_notes')}")
+        lines.append(
+            "  NOTE: Supplemental context is externally supplied and must be source-audited; "
+            "it can inform interpretation but must not overwrite deterministic statement values."
+        )
+        lines.append("")
 
     # ── Sector Context ─────────────────────────────────────────────────────
     if sector_context:

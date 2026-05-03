@@ -275,6 +275,8 @@ def _build_full_report(
         earnings_direction_confidence=raw_earnings_direction_confidence,
         freq=freq,
         data_confidence=report.data_confidence,
+        sector=report.sector,
+        de_ratio=report.ratios.get("debt_to_equity") if report.ratios else None,
     )
 
     # earnings_direction = calibrated direction (backward compatible)

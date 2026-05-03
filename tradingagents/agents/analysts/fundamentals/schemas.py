@@ -192,6 +192,14 @@ class FundamentalAnalysisReport(BaseModel):
         default_factory=list,
         description="Audit trail of calibration decisions applied to this case.",
     )
+    supplemental_context: Dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Optional manually supplied context used to address standalone signal limitations. "
+            "Keys may include valuation_context, quality_of_earnings, narrative_events, "
+            "macro_sector_context, and missing_categories. Empty when no supplemental CSV data exists."
+        ),
+    )
 
     # ── Thesis and risk fields ───────────────────────────────────────────────
     thesis_text: str = Field(

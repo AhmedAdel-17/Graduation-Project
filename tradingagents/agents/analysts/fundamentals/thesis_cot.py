@@ -43,7 +43,8 @@ H&P METHOD — follow these steps IN ORDER:
 2. EVIDENCE FOR: List 2-3 specific data points from the evidence pack that support the hypothesis
 3. EVIDENCE AGAINST: List 2-3 specific data points that challenge or complicate the hypothesis
 4. SYNTHESIS: Weigh the evidence and arrive at a final investment thesis
-5. PREDICTION: Predict earnings direction (up / down / flat) with a confidence score 0-100
+5. ASSESSMENT: Assess the fundamental outlook and downside risk separately
+6. PREDICTION: Predict earnings direction (up / down / flat) with a confidence score 0-100
 
 CRITICAL RULES:
 1. Only cite numbers that appear in the provided evidence. No invented figures.
@@ -51,9 +52,47 @@ CRITICAL RULES:
 3. Evidence AGAINST must genuinely challenge the hypothesis, not strawman objections.
 4. EGX context: EGP currency exposure, ±10% daily limits, long-only, no leverage.
 5. Sector-specific norms apply (e.g., bank D/E 5-10× is normal, not distress).
-6. Output ONLY valid JSON. No prose before or after the JSON block.
-7. DIRECTIONAL PRIOR: Egypt is a high-inflation market where nominal earnings growth is common. Use the YoY net income growth rate shown in the evidence pack as the PRIMARY directional signal: if net_income_growth_yoy is clearly POSITIVE (> +5%), predict "up"; if net_income_growth_yoy is clearly NEGATIVE (< -5%), predict "down"; if within ±5% or no trend data, predict "flat". Revenue growth direction is the SECONDARY signal — if revenue is growing strongly but net income is flat/negative, flag margin compression and weight toward "down" or "flat".
-8. CONFIDENCE CALIBRATION — vary confidence with evidence strength: use 75-85 when revenue AND net income BOTH move in the same direction with > ±10% change; use 60-70 when momentum is present but signals are mixed or change is moderate (5-10%); use 45-58 when evidence is genuinely mixed, trend reversals are possible, or change is marginal. This variation is required — do not assign the same confidence to every prediction.
+6. If PRIOR FUNDAMENTAL MEMORY CONTEXT is present, use it only as prior context.
+   Do not treat memory as current-period evidence and do not let it override the evidence pack.
+7. Output ONLY valid JSON. No prose before or after the JSON block.
+8. FUNDAMENTAL OUTLOOK — Assess the company's overall fundamental trajectory:
+   - "bullish": the weight of evidence supports improving or sustained strong earnings
+   - "neutral": evidence is mixed, no clear directional signal, or data is insufficient
+   - "bearish": the weight of evidence points to deteriorating earnings or structural problems
+
+   DOWNSIDE RISK — Assess how likely earnings are to deteriorate, SEPARATELY from outlook:
+   - "low": no major risk factors, healthy balance sheet, stable or improving margins
+   - "moderate": some risk factors present (leverage, margin compression, data gaps) but not severe
+   - "high": multiple severe risk factors (negative margins, extreme leverage, clear deterioration trend)
+
+   Outlook and risk are related but NOT identical. A company can be bullish-outlook with moderate
+   risk (e.g., strong growth but rising leverage). A company can be bearish-outlook with low risk
+   (e.g., flat/declining earnings but healthy balance sheet).
+
+9. EARNINGS DIRECTION — After assessing outlook and risk, predict the most likely direction:
+   - Consider the evidence holistically. Do not mechanically extrapolate last year's growth rate.
+   - YoY growth rates in the evidence pack describe PAST performance. The prediction is about
+     the FUTURE. Past growth is informative but does not automatically continue.
+   - Risks and concerns should inform your prediction ONLY when they are severe enough and
+     specific enough to actually reverse the earnings trend. General risks (e.g., "leverage is
+     elevated") do not automatically make earnings go down.
+   - Most EGX companies show annual earnings growth in most years. Only predict "down" or "flat"
+     when the fundamental evidence strongly supports it — not merely because risks exist.
+
+   QUARTERLY MODE: Growth rates are QoQ (current quarter vs prior quarter). Apply:
+     (a) If the [NOTE] flags a near-zero crossing (QoQ magnitude > 200%), do NOT extrapolate.
+         Use multi-period trend directions and margin levels. Assign confidence <= 58.
+     (b) If Net Income QoQ > +5% AND trend is "improving" AND margins stable/improving:
+         predict "up" with confidence 65-75.
+     (c) If Net Income QoQ < -5% AND trend is "deteriorating" AND margins worsening:
+         predict "down" with confidence 65-75.
+     (d) If signals conflict or QoQ unavailable: use trend directions as primary, confidence <= 58.
+
+10. CONFIDENCE CALIBRATION — vary confidence with evidence strength:
+    - 75-85: revenue AND net income BOTH move in the same direction with > ±10% change
+    - 60-70: momentum is present but signals are mixed or change is moderate (5-10%)
+    - 45-58: evidence is genuinely mixed, trend reversals are possible, or change is marginal
+    This variation is required — do not assign the same confidence to every prediction.
 
 OUTPUT FORMAT (strict JSON):
 {
@@ -62,6 +101,8 @@ OUTPUT FORMAT (strict JSON):
   "evidence_against": ["<data point 1>", "<data point 2>"],
   "synthesis": "<2-4 sentences synthesizing the evidence into a thesis>",
   "thesis_text": "<full investment thesis, 3-6 sentences, institutional quality>",
+  "fundamental_outlook": "<bullish|neutral|bearish>",
+  "downside_risk_level": "<low|moderate|high>",
   "earnings_direction": "<up|down|flat>",
   "earnings_direction_confidence": <integer 0-100>,
   "earnings_direction_rationale": "<1-2 sentences explaining the prediction>",
@@ -77,6 +118,8 @@ OUTPUT FORMAT (strict JSON):
 _VALID_DIRECTIONS = {"up", "down", "flat"}
 _VALID_HEALTH = {"healthy", "concerning", "critical", "insufficient_data"}
 _VALID_VALUATION = {"undervalued", "fair_value", "overvalued", "insufficient_data"}
+_VALID_OUTLOOK = {"bullish", "neutral", "bearish"}
+_VALID_RISK_LEVEL = {"low", "moderate", "high"}
 
 
 def build_thesis_prompt(
@@ -222,6 +265,30 @@ def run_thesis_cot(
             f"earnings_direction='{direction}' not in {_VALID_DIRECTIONS}"
         )
         parsed["earnings_direction"] = "flat"
+
+    # Validate fundamental_outlook (new Phase B field)
+    outlook = parsed.get("fundamental_outlook", "")
+    if outlook and outlook not in _VALID_OUTLOOK:
+        errors.append(f"fundamental_outlook='{outlook}' not in {_VALID_OUTLOOK}")
+        parsed["fundamental_outlook"] = "neutral"
+    elif not outlook:
+        # Default if LLM omits it: infer from direction
+        parsed["fundamental_outlook"] = {
+            "up": "bullish", "flat": "neutral", "down": "bearish"
+        }.get(parsed["earnings_direction"], "neutral")
+
+    # Validate downside_risk_level (new Phase B field)
+    risk_level = parsed.get("downside_risk_level", "")
+    if risk_level and risk_level not in _VALID_RISK_LEVEL:
+        errors.append(f"downside_risk_level='{risk_level}' not in {_VALID_RISK_LEVEL}")
+        parsed["downside_risk_level"] = "moderate"
+    elif not risk_level:
+        # Default if LLM omits it: infer from health
+        health_val = parsed.get("financial_health", "")
+        parsed["downside_risk_level"] = {
+            "healthy": "low", "concerning": "moderate",
+            "critical": "high", "insufficient_data": "moderate",
+        }.get(health_val, "moderate")
 
     health = parsed.get("financial_health", "")
     if health not in _VALID_HEALTH:

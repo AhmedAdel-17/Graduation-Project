@@ -186,7 +186,7 @@ def load_multi_period(
     ratios_rows = _read_egx_csv_multi(
         ticker=ticker,
         statement_type="key_ratios",
-        filename_suffix="_ratios.csv",
+        filename_suffix=f"_ratios_{freq}.csv" if freq == "quarterly" else "_ratios.csv",
         required_fields=EGX_RATIOS_REQUIRED_FIELDS,
         optional_fields=EGX_RATIOS_OPTIONAL_FIELDS,
         curr_date=curr_date,

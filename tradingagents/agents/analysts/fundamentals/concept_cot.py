@@ -48,7 +48,9 @@ CRITICAL RULES:
 2. Apply sector-specific interpretation: banks have structurally high D/E; real estate PB is understated.
 3. Ignore any distress flag that is explicitly sector-inapplicable (the pack will tell you which apply).
 4. EGX-specific context: EGP currency exposure, ±10% daily price limits, no short selling.
-5. Output ONLY valid JSON — no prose before or after the JSON block.
+5. If PRIOR FUNDAMENTAL MEMORY CONTEXT is present, use it only as prior context.
+   Do not treat memory as current-period evidence and do not let it override the evidence pack.
+6. Output ONLY valid JSON — no prose before or after the JSON block.
 
 OUTPUT FORMAT (strict JSON):
 {
