@@ -117,6 +117,10 @@ class AgentState(MessagesState):
     risk_assessment: Annotated[Optional[Dict], "Risk assessment from Risk Manager"]
     risk_veto: Annotated[Optional[bool], "True if Risk Manager vetoes the trade"]
 
+    # Risk Scorer outputs (populated by Deterministic Risk Scorer node, before LLM debate)
+    risk_action: Annotated[Optional[str], "Risk action: ALLOW | WARN | THROTTLE | VETO"]
+    risk_metrics: Annotated[Optional[Dict], "Computed risk metrics: position_pct, adv_participation_pct, days_to_exit, per_trade_loss_pct, stop_distance_pct, atr_14"]
+
     # Phase 2a: Pre-fetched data (populated by DataPrefetcher before graph starts)
     # Eliminates tool-calling round-trips for News and Social analysts
     prefetched_company_news: Annotated[Optional[str], "Pre-fetched company news (bypasses News tool call)"]
