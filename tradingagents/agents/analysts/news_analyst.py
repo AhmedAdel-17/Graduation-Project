@@ -321,6 +321,51 @@ First use the tools to retrieve news, then provide your analysis with the JSON s
                     "catalysts_from_news": [],
                 }
 
+            # ── Gap 7 fix: Enforce silence / sparse-coverage penalty in code ──
+            # The LLM is prompted to self-report lower confidence when news is
+            # absent, but it doesn't do so reliably. We apply the penalty
+            # deterministically here instead of trusting the LLM to remember.
+            coverage = sentiment_analysis.get("news_coverage", {})
+            total_articles = int(coverage.get("total_articles", 0) or 0)
+            sources_count = int(coverage.get("sources_count", 0) or 0)
+            adjustments = sentiment_analysis.setdefault("confidence_adjustments", [])
+
+            if total_articles == 0:
+                # No news at all — heavy penalty
+                old_conf = sentiment_analysis.get("confidence_score", 50)
+                new_conf = max(0, old_conf - int(NO_NEWS_CONFIDENCE_PENALTY * 100))
+                sentiment_analysis["confidence_score"] = new_conf
+                adjustments.append(
+                    f"Silence penalty applied: no articles found "
+                    f"(confidence reduced from {old_conf} → {new_conf})"
+                )
+                logger.info(
+                    "Silence penalty applied for %s: confidence %d → %d",
+                    ticker, old_conf, new_conf,
+                )
+            elif total_articles < 3:
+                # Very sparse — moderate penalty
+                old_conf = sentiment_analysis.get("confidence_score", 50)
+                new_conf = max(0, old_conf - int(SPARSE_NEWS_PENALTY * 100))
+                sentiment_analysis["confidence_score"] = new_conf
+                adjustments.append(
+                    f"Sparse news penalty: only {total_articles} article(s) found "
+                    f"(confidence {old_conf} → {new_conf})"
+                )
+                logger.info(
+                    "Sparse news penalty applied for %s: confidence %d → %d",
+                    ticker, old_conf, new_conf,
+                )
+
+            if sources_count == 1 and total_articles > 0:
+                # Single source — reduce confidence further
+                old_conf = sentiment_analysis.get("confidence_score", 50)
+                new_conf = max(0, old_conf - int(SINGLE_SOURCE_PENALTY * 100))
+                sentiment_analysis["confidence_score"] = new_conf
+                adjustments.append(
+                    f"Single-source penalty: confidence {old_conf} → {new_conf}"
+                )
+
             # ── Step 2: Extract headlines and run transformer sentiment ──
             headlines = _extract_headlines_from_report(report)
             transformer_result = _run_transformer_sentiment(headlines)
