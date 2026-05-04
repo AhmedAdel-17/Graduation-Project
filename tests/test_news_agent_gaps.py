@@ -79,14 +79,19 @@ class TestGap2RSSFeeds:
     def test_non_google_feeds_present(self):
         from tradingagents.dataflows.news_providers.rss_source import RSS_FEEDS
         non_google = [k for k in RSS_FEEDS if "google" not in k]
-        assert len(non_google) >= 3, f"Expected 3+ non-Google feeds, got {non_google}"
+        assert len(non_google) >= 2, f"Expected 2+ non-Google feeds, got {non_google}"
 
-    def test_egyptian_outlets_present(self):
+    def test_english_and_arabic_feeds_present(self):
         from tradingagents.dataflows.news_providers.rss_source import RSS_FEEDS
-        feed_keys = " ".join(RSS_FEEDS.keys())
-        egyptian_markers = ["almal", "youm7", "masrawy", "mubasher", "enterprise"]
-        found = [m for m in egyptian_markers if m in feed_keys]
-        assert found, f"No Egyptian outlets found. Expected one of {egyptian_markers}"
+        langs = {info["language"] for info in RSS_FEEDS.values()}
+        assert "ar" in langs, "No Arabic RSS feeds in registry"
+        assert "en" in langs, "No English RSS feeds in registry"
+        # At least one verified-working non-Google English source
+        english_non_google = [
+            k for k, v in RSS_FEEDS.items()
+            if v["language"] == "en" and "google" not in k
+        ]
+        assert english_non_google, "No non-Google English feed found"
 
     def test_all_feeds_have_required_fields(self):
         from tradingagents.dataflows.news_providers.rss_source import RSS_FEEDS

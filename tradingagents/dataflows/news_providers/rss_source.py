@@ -34,7 +34,7 @@ except ImportError:
 # =============================================================================
 
 RSS_FEEDS = {
-    # ── Google News (broad, bilingual) ───────────────────────────────────────
+    # ── Google News — broad market (verified working, 99-100 entries) ─────────
     "google_egx_ar": {
         "url": "https://news.google.com/rss/search?q=%D8%A7%D9%84%D8%A8%D9%88%D8%B1%D8%B5%D8%A9+%D8%A7%D9%84%D9%85%D8%B5%D8%B1%D9%8A%D8%A9&hl=ar&gl=EG&ceid=EG:ar",
         "language": "ar",
@@ -53,53 +53,37 @@ RSS_FEEDS = {
         "focus": "Google News: اقتصاد مصر بورصة",
         "priority": 1,
     },
-    # ── Al Mal News — leading EGX-focused outlet ─────────────────────────────
-    "almal_news": {
-        "url": "https://almalnews.com/feed/",
+    # ── Google News — EGX30 index and FRA regulator (verified working) ────────
+    "google_egx30_ar": {
+        "url": "https://news.google.com/rss/search?q=EGX30+%D9%85%D8%A4%D8%B4%D8%B1+%D8%A8%D9%88%D8%B1%D8%B5%D8%A9&hl=ar&gl=EG&ceid=EG:ar",
         "language": "ar",
-        "focus": "Al Mal News — premier Egyptian financial newspaper",
+        "focus": "Google News: EGX30 index Arabic",
+        "priority": 1,
+    },
+    "google_fra_ar": {
+        "url": "https://news.google.com/rss/search?q=%D9%87%D9%8A%D8%A6%D8%A9+%D8%A7%D9%84%D8%B1%D9%82%D8%A7%D8%A8%D8%A9+%D8%A7%D9%84%D9%85%D8%A7%D9%84%D9%8A%D8%A9+%D8%A5%D9%81%D8%B5%D8%A7%D8%AD&hl=ar&gl=EG&ceid=EG:ar",
+        "language": "ar",
+        "focus": "Google News: FRA regulatory disclosures Arabic",
+        "priority": 1,
+    },
+    "google_cbe_ar": {
+        "url": "https://news.google.com/rss/search?q=%D8%A7%D9%84%D8%A8%D9%86%D9%83+%D8%A7%D9%84%D9%85%D8%B1%D9%83%D8%B2%D9%8A+%D9%85%D9%81%D8%A7%D8%AC%D8%A3%D8%A9+%D8%A8%D9%88%D8%B1%D8%B5%D8%A9&hl=ar&gl=EG&ceid=EG:ar",
+        "language": "ar",
+        "focus": "Google News: CBE monetary policy and market impact",
         "priority": 2,
     },
-    # ── Youm7 Economy ─────────────────────────────────────────────────────────
-    "youm7_economy": {
-        "url": "https://www.youm7.com/Section/RSS/98",
-        "language": "ar",
-        "focus": "Youm7 Economy — high-traffic Egyptian news economy section",
-        "priority": 2,
-    },
-    # ── Masrawy Economy ───────────────────────────────────────────────────────
-    "masrawy_economy": {
-        "url": "https://www.masrawy.com/news/economy/rss",
-        "language": "ar",
-        "focus": "Masrawy Economy — popular Egyptian portal economy section",
-        "priority": 2,
-    },
-    # ── Sada El Balad Economy ────────────────────────────────────────────────
-    "sada_economy": {
-        "url": "https://www.elbalad.news/rss",
-        "language": "ar",
-        "focus": "Sada El Balad — general Egyptian news with economic coverage",
-        "priority": 3,
-    },
-    # ── Mubasher (موبايل بارجر) ───────────────────────────────────────────────
-    "mubasher_news": {
-        "url": "https://www.mubasher.info/news/rss/countries/EG",
-        "language": "ar",
-        "focus": "Mubasher — real-time EGX financial news and disclosures",
-        "priority": 2,
-    },
-    # ── Enterprise English — Egypt business in English ────────────────────────
-    "enterprise_egypt": {
-        "url": "https://enterprise.press/feed/",
-        "language": "en",
-        "focus": "Enterprise — English-language Egyptian business daily",
-        "priority": 2,
-    },
-    # ── Daily News Egypt ─────────────────────────────────────────────────────
+    # ── Daily News Egypt — English, verified working (10 entries) ─────────────
     "daily_news_egypt": {
-        "url": "https://dailynewsegypt.com/category/business-economy/feed/",
+        "url": "https://www.dailynewsegypt.com/category/business/feed/",
         "language": "en",
-        "focus": "Daily News Egypt — English business & economy",
+        "focus": "Daily News Egypt — verified working English business feed",
+        "priority": 2,
+    },
+    # ── Invest Gate — English Egyptian real estate & investment ───────────────
+    "invest_gate": {
+        "url": "https://invest-gate.me/feed/",
+        "language": "en",
+        "focus": "Invest Gate — Egyptian investment and real estate news",
         "priority": 3,
     },
 }
