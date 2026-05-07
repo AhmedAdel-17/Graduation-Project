@@ -28,6 +28,7 @@ from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
 from cli.models import AnalystType
 from cli.utils import *
+from tradingagents.sentiment.surfacing import format_sentiment_for_cli
 
 console = Console()
 
@@ -708,6 +709,25 @@ def display_complete_report(final_state):
                     padding=(1, 2),
                 )
             )
+
+    # VI. Sentiment Context (Phase 3 — PR 9)
+    # Rendered for every run; gracefully skipped if sentiment data absent.
+    try:
+        sentiment_text = format_sentiment_for_cli(final_state)
+        if sentiment_text:
+            is_no_signal = "no_signal" in sentiment_text.lower() or "insufficient" in sentiment_text.lower()
+            border = "yellow" if is_no_signal else "cyan"
+            console.print(
+                Panel(
+                    Text(sentiment_text),
+                    title="VI. Sentiment Context (Phase 3)",
+                    subtitle="modifies execution only — not directional",
+                    border_style=border,
+                    padding=(1, 2),
+                )
+            )
+    except Exception:
+        pass  # never crash the CLI display on sentiment surfacing failures
 
 
 def update_research_team_status(status):

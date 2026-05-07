@@ -1169,6 +1169,24 @@ async def test_random_egx(req: TestEgxRequest = TestEgxRequest()):
                         "_logged_at": now,
                     },
                 ]
+
+                # PR 9: add SENTIMENT_CONTEXT event when final_state is available
+                try:
+                    from tradingagents.sentiment.surfacing import build_sentiment_context_event
+                    _final_state = result.get("_final_state") or {}
+                    if _final_state:
+                        entries.append(
+                            build_sentiment_context_event(
+                                session_id=session_id,
+                                ticker=ticker_clean,
+                                trade_date=datetime.now().strftime("%Y-%m-%d"),
+                                final_state=_final_state,
+                                logged_at=now,
+                            )
+                        )
+                except Exception:
+                    pass  # sentiment context is best-effort; never fail the audit write
+
                 with open(jsonl_path, "a", encoding="utf-8") as f:
                     for entry in entries:
                         f.write(json.dumps(entry, ensure_ascii=False) + "\n")

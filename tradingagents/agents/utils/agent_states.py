@@ -123,6 +123,19 @@ class AgentState(MessagesState):
     prefetched_market_news: Annotated[Optional[str], "Pre-fetched market news (bypasses News tool call)"]
     prefetched_social_sentiment: Annotated[Optional[str], "Pre-fetched social sentiment scores"]
     prefetched_social_posts: Annotated[Optional[str], "Pre-fetched social media posts"]
+    # Phase 3 (PR 5): Layer C StockSentiment pre-LLM gate data.
+    # List of dicts matching StockDataPoint fields; populated by prefetcher or
+    # external callers. When present and non-empty, social_media_analyst runs
+    # compute_stock_sentiment before invoking the LLM and short-circuits on
+    # NO_SIGNAL, returning the template "Social sentiment: insufficient data — excluded."
+    prefetched_stock_datapoints: Annotated[Optional[List[Dict]], "Pre-built Layer C StockDataPoints for the pre-LLM gate (list of dicts with StockDataPoint fields)"]
+
+    # Phase 3 (PR 7): Layer E sentiment blend result.
+    # Dict with keys: confidence_multiplier (float), position_size_multiplier (float),
+    # audit (str). Written by social_media_analyst after running blend_sentiment().
+    # Read by propagate_confidence() and calculate_unified_score() to apply
+    # sentiment-derived multipliers WITHOUT changing directional score.
+    sentiment_blend_result: Annotated[Optional[Dict], "Layer E blend output: {confidence_multiplier, position_size_multiplier, audit}"]
 
     # EGX-specific market context
     target_market: Annotated[Optional[str], "Target market identifier (e.g. 'EGX')"]

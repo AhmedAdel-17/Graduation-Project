@@ -119,6 +119,12 @@ def aggregate(posts: List[ScoredPost]) -> Dict[str, Any]:
                     "text": (post.text or "")[:200].replace("\n", " "),
                 })
 
+        # Intentional secondary contribution: every stock-specific post also
+        # feeds the market bucket at 30% weight.  Broad activity across many
+        # tickers is itself a market-mood signal.  This path is NOT triggered
+        # when the post already routed to EGX_MARKET (market-only posts stay
+        # market-only).  The market-layer hard gate (n≥50, ≥2 sources) imposed
+        # in PR 3 will determine whether this bucket ever clears NO_SIGNAL.
         if "EGX_MARKET" not in {target[0] for target in targets}:
             market_weight = base_weight * 0.3
             market_bucket["n"] += 1

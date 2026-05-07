@@ -1,8 +1,56 @@
-from langchain_core.messages import AIMessage
-import time
 import json
 import re
+from typing import Any, Dict, Optional
 from tradingagents.dataflows.config import get_config
+
+# ---------------------------------------------------------------------------
+# Phase 3 helpers
+# ---------------------------------------------------------------------------
+
+_NO_SIGNAL_PHRASES = (
+    "insufficient data — excluded",
+    "social sentiment: insufficient",
+    "layer_c_status: no_signal",
+)
+
+
+def _format_sentiment_section(
+    sentiment_report: str,
+    blend_result: Optional[Dict[str, Any]],
+) -> str:
+    """Return a researcher-safe sentiment context string.
+
+    If the social analyst excluded sentiment (NO_SIGNAL), returns an instruction
+    to the LLM to omit social sentiment from its thesis entirely.
+    Otherwise, surfaces the blend modifiers (confidence/size multipliers) so
+    the researcher can mention them in execution context — but explicitly states
+    these do NOT change the directional thesis.
+    """
+    report_lower = (sentiment_report or "").lower()
+    is_no_signal = any(phrase in report_lower for phrase in _NO_SIGNAL_PHRASES)
+
+    if is_no_signal:
+        return (
+            "EXCLUDED — insufficient social data. "
+            "Do NOT reference, speculate about, or include social sentiment in your thesis."
+        )
+
+    # Show the narrative and the blend modifiers
+    conf_mult = 1.0
+    size_mult = 1.0
+    blend_audit = "no_blend"
+    if isinstance(blend_result, dict):
+        conf_mult  = float(blend_result.get("confidence_multiplier",  1.0))
+        size_mult  = float(blend_result.get("position_size_multiplier", 1.0))
+        blend_audit = str(blend_result.get("audit", "no_blend"))
+
+    return (
+        f"{sentiment_report or 'No social sentiment data.'}\n\n"
+        f"Sentiment context modifiers (execution only — do NOT use to change thesis direction):\n"
+        f"  confidence×{conf_mult:.2f}  |  position-size×{size_mult:.2f}\n"
+        f"  [{blend_audit}]"
+    )
+
 
 # =============================================================================
 # Bull Researcher for EGX Market
@@ -56,6 +104,13 @@ def create_bull_researcher(llm, memory):
         for i, rec in enumerate(past_memories, 1):
             past_memory_str += rec["recommendation"] + "\n\n"
 
+        # ── Phase 3 (PR 8): NO_SIGNAL guard ──────────────────────────────────
+        # If social sentiment was excluded, replace the raw template with a
+        # clear instruction so the LLM does not speculate about social signals.
+        sentiment_section = _format_sentiment_section(
+            sentiment_report, state.get("sentiment_blend_result")
+        )
+
         # EGX-specific prompt
         egx_context = ""
         if is_egx:
@@ -98,6 +153,9 @@ You have access to analyst signals — use JSON when available (more token-effic
 
 ### News & Sentiment Analysis (Journalist):
 {json.dumps(sentiment_analysis, indent=2) if sentiment_analysis else news_report}
+
+### Social Sentiment (Phase 3 — context modifier, NOT directional input):
+{sentiment_section}
 
 ## Debate Context
 Conversation history: {history}

@@ -76,14 +76,14 @@ def test_scenario_outcomes():
     }
     
     for name, (state, expected) in tests.items():
-        decision, conf, reason, _ = calculate_unified_score(state)
-        
+        decision, conf, reason, _, _status = calculate_unified_score(state)
+
         match = False
         if isinstance(expected, list):
             match = decision in expected
         else:
             match = expected in decision
-            
+
         if match:
             pass_test(f"{name} -> Evaluated accurately as {decision} (Conf: {conf:.2f})")
         else:
@@ -94,11 +94,11 @@ def test_determinism():
     title("2. CONSISTENCY & DETERMINISM TESTS")
     state = get_mock_state_bullish()
     
-    first_decision, first_conf, first_reason, _ = calculate_unified_score(state)
+    first_decision, first_conf, first_reason, _, _first_status = calculate_unified_score(state)
     is_deterministic = True
-    
+
     for i in range(100):
-        d, c, r, _ = calculate_unified_score(state)
+        d, c, r, _, _s = calculate_unified_score(state)
         if d != first_decision or abs(c - first_conf) > 0.0001 or r != first_reason:
             is_deterministic = False
             break

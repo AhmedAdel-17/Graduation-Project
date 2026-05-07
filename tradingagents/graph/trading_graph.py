@@ -28,6 +28,7 @@ from tradingagents.agents.utils.agent_states import (
     InvestDebateState,
     RiskDebateState,
 )
+from tradingagents.sentiment.surfacing import extract_sentiment_audit_record
 from tradingagents.dataflows.config import set_config
 
 # Import the new abstract tool methods from agent_utils
@@ -345,7 +346,17 @@ class TradingAgentsGraph:
                 "confidence_scores": final_state.get("confidence_scores", {}),
                 "data_quality": final_state.get("data_quality", {}),
             })
-        
+
+        # Phase 3 (PR 9): always attach sentiment audit record, EGX or not.
+        # extract_sentiment_audit_record is pure — never raises.
+        try:
+            state_log["sentiment_audit"] = extract_sentiment_audit_record(final_state)
+        except Exception as _e:  # pragma: no cover
+            import logging as _logging
+            _logging.getLogger("tradingagents").warning(
+                "_log_state: failed to extract sentiment audit record: %s", _e
+            )
+
         self.log_states_dict[str(trade_date)] = state_log
 
         # Save to file

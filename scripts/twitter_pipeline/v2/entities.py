@@ -195,7 +195,8 @@ MANUAL_AR_ALIASES: Dict[str, Set[str]] = {
     "SCTS": {
         "قناة السويس لتوطين التكنولوجيا",
         "شركة قناة السويس لتوطين التكنولوجيا",
-        "توطين التكنولوجيا",
+        # "توطين التكنولوجيا" removed — too generic; matches national
+        # tech-localization policy discussions that have no relation to SCTS.
     },
     "EMFD": {"إعمار مصر", "اعمار مصر"},
     "ADIB": {"أبوظبي الإسلامي", "ابوظبي الاسلامي", "بنك أبوظبي الإسلامي", "بنك ابوظبي الاسلامي"},
@@ -328,9 +329,12 @@ SYMBOL_REGISTRY: Dict[str, Dict[str, Set[str]]] = _build_registry()
 
 
 MARKET_INDEX_TERMS = {
-    "EGX30": {"egx30", "egx 30", "ايجي اكس 30", "المؤشر الثلاثيني"},
-    "EGX70": {"egx70", "egx 70", "ايجي اكس 70"},
-    "EGX100": {"egx100", "egx 100", "ايجي اكس 100"},
+    # All keys use the "EGX_" prefix so aggregator.py's startswith("EGX_")
+    # check correctly routes every index mention to EGX_MARKET rather than
+    # treating them as per-stock tickers.
+    "EGX_30": {"egx30", "egx 30", "ايجي اكس 30", "المؤشر الثلاثيني"},
+    "EGX_70": {"egx70", "egx 70", "ايجي اكس 70"},
+    "EGX_100": {"egx100", "egx 100", "ايجي اكس 100"},
     "EGX_BROAD": {
         "egyptian stock market", "egyptian bourse", "egyptian stock exchange",
         "cairo stock exchange", "egyptian stocks", "egypt equities",
@@ -385,16 +389,23 @@ def has_market_term(text: str) -> bool:
     )
 
 
-def _alias_in_text(normalized_text: str, alias: str) -> bool:
-    if not alias:
-        return False
-    if " " in alias:
-        return alias in normalized_text
-    return bool(
-        re.search(
-            rf"(?<![0-9A-Za-z\u0600-\u06FF]){re.escape(alias)}(?![0-9A-Za-z\u0600-\u06FF])",
-            normalized_text,
-        )
+def _compile_phrase_pattern(alias: str) -> re.Pattern:
+    """Compile a phrase-boundary regex for an alias.
+
+    Both single-word and multi-word aliases use the same non-Arabic/non-Latin
+    boundary assertions so that:
+    - "\u0627\u0644\u062A\u062C\u0627\u0631\u064A \u0627\u0644\u062F\u0648\u0644\u064A\u0629" does NOT match alias "\u0627\u0644\u062A\u062C\u0627\u0631\u064A \u0627\u0644\u062F\u0648\u0644\u064A"  (Arabic suffix
+      extension: "\u064A\u0629" is a continuation of the Arabic word, so the lookahead
+      fires on the "\u064A" character).
+    - "\u0627\u0644\u0628\u0646\u0643 \u0627\u0644\u062A\u062C\u0627\u0631\u064A \u0627\u0644\u062F\u0648\u0644\u064A" DOES match alias "\u0627\u0644\u062A\u062C\u0627\u0631\u064A \u0627\u0644\u062F\u0648\u0644\u064A"  (the chars
+      surrounding the phrase are spaces / string boundary).
+
+    For multi-word aliases, internal spaces in the alias are replaced with
+    ``\\s+`` to tolerate minor whitespace variance after normalization.
+    """
+    phrase = r"\s+".join(re.escape(w) for w in alias.split())
+    return re.compile(
+        rf"(?<![0-9A-Za-z\u0600-\u06FF]){phrase}(?![0-9A-Za-z\u0600-\u06FF])"
     )
 
 
@@ -405,16 +416,26 @@ def _is_short_alias(alias: str) -> bool:
     return len(alias) <= 8
 
 
-def _iter_symbol_aliases() -> Iterable[tuple[str, str, str, float]]:
+# Each entry: (symbol, lang, alias, confidence, compiled_pattern)
+# Pre-compiling at module load avoids redundant re.compile() inside the
+# hot path of extract(), which runs for every post.
+def _iter_symbol_aliases() -> Iterable[tuple[str, str, str, float, re.Pattern]]:
     for symbol, meta in SYMBOL_REGISTRY.items():
         for alias in meta["en"]:
-            yield symbol, "en", alias, 0.75 if _is_short_alias(alias) else 0.85
+            conf = 0.75 if _is_short_alias(alias) else 0.85
+            yield symbol, "en", alias, conf, _compile_phrase_pattern(alias)
         for alias in meta["ar"]:
             normalized_alias = _normalize_entity_text(alias)
-            yield symbol, "ar", normalized_alias, 0.75 if _is_short_alias(normalized_alias) else 0.85
+            if not normalized_alias:
+                continue
+            conf = 0.75 if _is_short_alias(normalized_alias) else 0.85
+            yield (
+                symbol, "ar", normalized_alias, conf,
+                _compile_phrase_pattern(normalized_alias),
+            )
 
 
-_SYMBOL_ALIASES = sorted(
+_SYMBOL_ALIASES: list[tuple[str, str, str, float, re.Pattern]] = sorted(
     list(_iter_symbol_aliases()),
     key=lambda item: len(item[2]),
     reverse=True,
@@ -466,8 +487,8 @@ def extract(text: str) -> List[Mention]:
                 continue
             add(canonical, 0.95, f"ticker:{ticker.upper()}")
 
-    for symbol, alias_kind, alias, confidence in _SYMBOL_ALIASES:
-        if _alias_in_text(normalized, alias):
+    for symbol, alias_kind, alias, confidence, pattern in _SYMBOL_ALIASES:
+        if pattern.search(normalized):
             add(symbol, confidence, f"name-{alias_kind}:{alias}")
 
     for idx, terms in _NORMALIZED_MARKET_TERMS.items():

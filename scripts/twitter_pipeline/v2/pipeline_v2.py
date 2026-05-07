@@ -4,7 +4,7 @@ EGX Trading-Signal Sentiment Pipeline - v2 orchestrator.
 Pipeline stages:
 
   1. SCRAPE        - pluggable sources (reddit_targeted, telegram_public,
-                     mubasher_news, twitter_authed if cookies available)
+                     facebook_apify — PRIMARY)
   2. RELEVANCE     - Layer-0: strict EGX classifier, with a lighter
                      Facebook-specific EGX guard
   3. ENTITIES      - extract per-post stock symbols
@@ -68,11 +68,12 @@ from sentiment_validation import (  # noqa: E402
 
 from sources import (  # noqa: E402
     facebook_apify,
-    facebook_groups,
-    mubasher_news,
     reddit_targeted,
     telegram_public,
-    twitter_authed,
+    # Deleted in PR 10 (were always 0 posts in production):
+    #   facebook_groups.py  — Playwright + pw-cookies fallback; duplicate of Apify
+    #   twitter_authed.py   — auth cookies expired; X.com blocks anonymous scraping
+    #   mubasher_news.py    — CSS selectors broken upstream
 )
 
 # Load APIFY_API_TOKEN and friends from .env at the repo root.
@@ -129,15 +130,15 @@ def stage_scrape() -> tuple[List[Post], dict]:
     by_source: dict[str, list] = {}
     raw: List[Post] = []
 
-    # Facebook + Twitter (authed) are PRIMARY when available. Reddit /
-    # Telegram / Mubasher backfill volume.
+    # Active sources (PR 3: dead sources unwired; PR 10: zombie files deleted).
+    # Source priority: facebook_apify (PRIMARY, bypasses Layer-0 relevance) →
+    # telegram (highest SNR) → reddit (market/sector only).
+    # Deleted in PR 10: facebook_groups.py, twitter_authed.py, mubasher_news.py
+    # (all returned 0 posts in production — see MEMORY.md §Q, §R, §S).
     for name, fn in [
         ("facebook_apify", lambda: facebook_apify.scrape(results_per_group=300)),
-        ("facebook_pw", lambda: facebook_groups.scrape(max_per_group=20, max_total=200)),
-        ("twitter_authed", lambda: twitter_authed.scrape(max_per_query=15, max_total=120)),
         ("telegram", lambda: telegram_public.scrape(max_total=120)),
         ("reddit", lambda: reddit_targeted.scrape(per_query=12, max_total=160)),
-        ("mubasher", lambda: mubasher_news.scrape(max_total=60)),
     ]:
         try:
             batch = fn()

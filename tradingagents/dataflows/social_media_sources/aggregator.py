@@ -26,7 +26,10 @@ from collections import defaultdict
 logger = logging.getLogger("tradingagents.social.aggregator")
 
 from .schema import SocialPost, SocialMediaResult
-from .twitter_source import fetch_twitter_data
+# PR 10: twitter_source removed — always returned 0 results (Google News proxy
+# strategy broke in 2024 when search engines de-indexed twitter.com). The
+# twitter_source.py module has been deleted. Apify Facebook is the primary
+# social source going forward (see MEMORY.md §Q and SESSION_BOOTSTRAP §8).
 from .telegram_source import fetch_telegram_data
 from .reddit_source import fetch_reddit_data
 from .stocktwits_source import fetch_stocktwits_data
@@ -34,8 +37,8 @@ from .cached_data import MARKET_WIDE_POSTS, EGX_TICKER_ALIASES
 from .historical_source import fetch_historical_posts
 
 # Platform source mapping
+# Note: "twitter" removed in PR 10 (dead source).
 PLATFORM_SOURCES = {
-    "twitter": fetch_twitter_data,
     "telegram": fetch_telegram_data,
     "reddit": fetch_reddit_data,
     "stocktwits": fetch_stocktwits_data,

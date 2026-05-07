@@ -13,9 +13,15 @@ from tradingagents.dataflows.config import get_config, set_config
 # =============================================================================
 # Handles state initialization with EGX-specific fields:
 # - Liquidity flags
-# - Confidence tracking
+# - Confidence tracking (Phase 3: quorum-aware + sentiment-blended)
 # - Structured analysis storage
 # - Data quality indicators
+#
+# Phase 3 changes (PR 7):
+# - propagate_confidence() now enforces the quorum rule (≥2 directional analysts)
+#   and applies sentiment blend multipliers read from state["sentiment_blend_result"].
+# - Returns "overall_status": "OK" | "INSUFFICIENT_DATA" alongside "overall" confidence.
+# - Position-size multiplier is surfaced at "position_size_multiplier" in the result.
 # =============================================================================
 
 
@@ -30,19 +36,16 @@ class Propagator:
         self, company_name: str, trade_date: str
     ) -> Dict[str, Any]:
         """Create the initial state for the agent graph with EGX enhancements."""
-        
+
         # Inject trade_date into global config so tool wrappers can enforce
         # a hard ceiling on any end_date parameters the LLM supplies.
-        # This prevents the LLM from accidentally requesting future OHLCV/news data.
         set_config({"trade_date": str(trade_date)})
 
-        # Get config to determine market
         config = get_config()
         target_market = config.get("target_market", "US")
         is_egx = target_market == "EGX"
-        
-        # Base state
-        state = {
+
+        state: Dict[str, Any] = {
             "messages": [("human", company_name)],
             "company_of_interest": company_name,
             "trade_date": str(trade_date),
@@ -76,56 +79,53 @@ class Propagator:
             "sentiment_report": "",
             "news_report": "",
         }
-        
-        # EGX-specific state extensions
+
         if is_egx:
-            state.update({
-                # Market context
-                "target_market": "EGX",
-                "trading_currency": config.get("trading_currency", "EGP"),
-                
-                # Liquidity tracking
-                "low_liquidity": False,  # Set by data layer
-                "avg_daily_volume": 0,
-                "volume_missing": False,
-                
-                # Structured analyses (JSON objects)
-                "technical_analysis": {},  # From Chartist
-                "fundamental_analysis": {},  # From Accountant
-                "sentiment_analysis": {},  # From Journalist
-                
-                # Confidence tracking - weak data reduces downstream confidence
-                "confidence_scores": {
-                    "technical": None,
-                    "fundamental": None,
-                    "sentiment": None,
-                    "overall": None,
-                },
-                
-                # Data quality indicators
-                "data_quality": {
-                    "price_data_complete": True,
-                    "fundamentals_complete": True,
-                    "news_available": True,
-                    "data_completeness_score": 100,
-                },
-                
-                # Thesis summaries (from Bull/Bear researchers)
-                "bull_thesis": None,
-                "bear_thesis": None,
-                
-                # Execution plan (from Trader)
-                "execution_plan": None,
-                
-                # Risk assessment (from Risk Manager)
-                "risk_assessment": None,
-                "risk_veto": False,  # If True, stops execution
-                
-                # Portfolio context (for position sizing)
-                "portfolio_value": config.get("portfolio_value", 10000000),  # 10M EGP default
-                "current_price": 0,
-            })
-        
+            state.update(
+                {
+                    # Market context
+                    "target_market": "EGX",
+                    "trading_currency": config.get("trading_currency", "EGP"),
+                    # Liquidity tracking
+                    "low_liquidity": False,
+                    "avg_daily_volume": 0,
+                    "volume_missing": False,
+                    # Structured analyses (JSON objects)
+                    "technical_analysis": {},
+                    "fundamental_analysis": {},
+                    "sentiment_analysis": {},
+                    # Confidence tracking
+                    "confidence_scores": {
+                        "technical": None,
+                        "fundamental": None,
+                        "sentiment": None,
+                        "overall": None,
+                        "overall_status": "PENDING",
+                        "position_size_multiplier": 1.0,
+                    },
+                    # Data quality indicators
+                    "data_quality": {
+                        "price_data_complete": True,
+                        "fundamentals_complete": True,
+                        "news_available": True,
+                        "data_completeness_score": 100,
+                    },
+                    # Thesis summaries (from Bull/Bear researchers)
+                    "bull_thesis": None,
+                    "bear_thesis": None,
+                    # Execution plan (from Trader)
+                    "execution_plan": None,
+                    # Risk assessment (from Risk Manager)
+                    "risk_assessment": None,
+                    "risk_veto": False,
+                    # Portfolio context (for position sizing)
+                    "portfolio_value": config.get("portfolio_value", 10_000_000),
+                    "current_price": 0,
+                    # Phase 3 (PR 7): sentiment blend result written by social_media_analyst
+                    "sentiment_blend_result": None,
+                }
+            )
+
         return state
 
     def get_graph_args(self) -> Dict[str, Any]:
@@ -134,41 +134,52 @@ class Propagator:
             "stream_mode": "values",
             "config": {"recursion_limit": self.max_recur_limit},
         }
-    
+
     @staticmethod
     def propagate_confidence(state: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Calculate confidence scores by harvesting values from analyst output dicts.
+        """Calculate per-analyst and overall confidence scores.
 
-        Each analyst stores its confidence_score inside its structured analysis dict.
-        This function reads those values directly — no analyst needs to write to
-        state["confidence_scores"] explicitly.
+        Phase 3 behaviour (PR 7):
+        - Enforces the quorum rule: ≥2 directional analysts must have a non-None
+          confidence.  When quorum fails, ``overall_status`` is ``"INSUFFICIENT_DATA"``
+          and ``overall`` is set to 0.10 (minimum floor, not 0, so downstream code
+          that gates on ``overall > 0`` still sees a signal to abort gracefully).
+        - Reads ``state["sentiment_blend_result"]`` and applies the confidence
+          multiplier to ``overall``.  The position-size multiplier is surfaced
+          as ``position_size_multiplier`` in the returned dict.
 
-        Returns:
-            dict with keys: technical, fundamental, sentiment (each float or None),
-            and overall (float in [0.10, 1.0]).
+        Returns
+        -------
+        dict with keys: technical, fundamental, sentiment (each float or None),
+        overall (float in [0.10, 1.0]), overall_status ("OK" | "INSUFFICIENT_DATA"),
+        position_size_multiplier (float in [0.50, 1.0]).
         """
         import json as _json
+        from tradingagents.agents.utils.scoring import (
+            QUORUM_MINIMUM,
+            blend_from_dict,
+        )
 
-        # ── Market / Technical analyst ──────────────────────────────────────
-        tech_conf = None
+        # ── Market / Technical analyst ─────────────────────────────────────
+        tech_conf: float | None = None
         technical_analysis = state.get("technical_analysis") or {}
         if isinstance(technical_analysis, dict):
             raw = technical_analysis.get("confidence_score")
             if raw is not None:
                 try:
                     tech_conf = float(raw)
-                    # Normalise: analysts return 0-1; guard against 0-100 scale
                     if tech_conf > 1.0:
                         tech_conf /= 100.0
                 except (TypeError, ValueError):
                     pass
 
-        # ── Fundamentals analyst ────────────────────────────────────────────
-        fund_conf = None
+        # ── Fundamentals analyst ───────────────────────────────────────────
+        fund_conf: float | None = None
         fundamental_analysis = state.get("fundamental_analysis") or {}
         if isinstance(fundamental_analysis, dict):
-            raw = fundamental_analysis.get("confidence_score") or fundamental_analysis.get("data_completeness")
+            raw = fundamental_analysis.get("confidence_score") or fundamental_analysis.get(
+                "data_completeness"
+            )
             if raw is not None:
                 try:
                     fund_conf = float(raw)
@@ -177,12 +188,14 @@ class Propagator:
                 except (TypeError, ValueError):
                     pass
 
-        # ── News analyst ────────────────────────────────────────────────────
-        news_conf = None
+        # ── News analyst ───────────────────────────────────────────────────
+        news_conf: float | None = None
         sentiment_analysis = state.get("sentiment_analysis") or {}
         if isinstance(sentiment_analysis, dict):
             combined = sentiment_analysis.get("combined_sentiment") or {}
-            raw = combined.get("confidence") if combined else sentiment_analysis.get("confidence_score")
+            raw = combined.get("confidence") if combined else sentiment_analysis.get(
+                "confidence_score"
+            )
             if raw is not None:
                 try:
                     news_conf = float(raw)
@@ -191,8 +204,8 @@ class Propagator:
                 except (TypeError, ValueError):
                     pass
 
-        # ── Social media analyst ────────────────────────────────────────────
-        social_conf = None
+        # ── Social media analyst ───────────────────────────────────────────
+        social_conf: float | None = None
         social_raw = state.get("social_sentiment_analysis") or "{}"
         try:
             social_data = (
@@ -208,58 +221,67 @@ class Propagator:
         except (TypeError, ValueError, _json.JSONDecodeError):
             pass
 
-        # ── Blend news + social into a single sentiment confidence ──────────
+        # Blend news + social into a single sentiment confidence
         sent_vals = [v for v in [news_conf, social_conf] if v is not None]
-        sent_conf = sum(sent_vals) / len(sent_vals) if sent_vals else None
+        sent_conf: float | None = sum(sent_vals) / len(sent_vals) if sent_vals else None
 
-        # ── Aggregate across analysts (weakest-link principle) ──────────────
-        valid_scores = [s for s in [tech_conf, fund_conf, sent_conf] if s is not None]
+        # ── Quorum check ───────────────────────────────────────────────────
+        # Directional analysts: technical, fundamental, news (3 total)
+        directional_confs = [tech_conf, fund_conf, news_conf]
+        active_directional = [c for c in directional_confs if c is not None]
+        quorum_met = len(active_directional) >= QUORUM_MINIMUM
 
-        if not valid_scores:
+        if not quorum_met:
             return {
-                "technical": None,
-                "fundamental": None,
-                "sentiment": None,
-                "overall": 0.50,
+                "technical": round(tech_conf, 3) if tech_conf is not None else None,
+                "fundamental": round(fund_conf, 3) if fund_conf is not None else None,
+                "sentiment": round(sent_conf, 3) if sent_conf is not None else None,
+                "overall": 0.10,
+                "overall_status": "INSUFFICIENT_DATA",
+                "position_size_multiplier": 1.0,
             }
 
-        min_conf = min(valid_scores)
-        avg_conf = sum(valid_scores) / len(valid_scores)
-
-        # 30% weight on the weakest signal, 70% on the average.
-        # Prevents one weak analyst from crushing a strong consensus.
+        # ── Aggregate (weakest-link dampening) ────────────────────────────
+        all_valid = [s for s in [tech_conf, fund_conf, sent_conf] if s is not None]
+        min_conf = min(all_valid)
+        avg_conf = sum(all_valid) / len(all_valid)
+        # 30% weight on weakest signal, 70% on average
         overall = 0.30 * min_conf + 0.70 * avg_conf
 
-        # Data-quality penalty: multiply by CSV completeness score (0-1)
+        # Data-quality penalty
         data_quality = state.get("data_quality") or {}
         completeness = data_quality.get("data_completeness_score", 100) / 100.0
         overall *= completeness
+
+        # ── Apply sentiment blend multiplier ───────────────────────────────
+        blend_dict = state.get("sentiment_blend_result")
+        blend = blend_from_dict(blend_dict) if blend_dict else None
+
+        if blend is not None:
+            overall = overall * blend.confidence_multiplier
+            pos_size_mult = blend.position_size_multiplier
+        else:
+            pos_size_mult = 1.0
 
         return {
             "technical": round(tech_conf, 3) if tech_conf is not None else None,
             "fundamental": round(fund_conf, 3) if fund_conf is not None else None,
             "sentiment": round(sent_conf, 3) if sent_conf is not None else None,
             "overall": round(max(0.10, min(1.0, overall)), 3),
+            "overall_status": "OK",
+            "position_size_multiplier": round(max(0.0, min(1.0, pos_size_mult)), 4),
         }
-    
+
     @staticmethod
     def should_halt_on_risk_veto(state: Dict[str, Any]) -> bool:
-        """
-        Check if risk veto has been triggered and execution should stop.
-        
-        Returns:
-            bool: True if execution should be halted
-        """
+        """Check if risk veto has been triggered and execution should stop."""
         risk_assessment = state.get("risk_assessment", {})
-        
-        # Check explicit veto flag
+
         if state.get("risk_veto", False):
             return True
-        
-        # Check risk assessment approval status
+
         if isinstance(risk_assessment, dict):
             if risk_assessment.get("approved") is False:
                 return True
-        
-        return False
 
+        return False
