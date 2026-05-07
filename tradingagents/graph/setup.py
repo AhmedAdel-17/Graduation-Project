@@ -121,8 +121,14 @@ class GraphSetup:
             from tradingagents.dataflows.config import get_config as _get_cfg2
             _cfg2 = _get_cfg2()
             if _cfg2.get("target_market") == "EGX":
-                # Deterministic path: call EGX CSV data directly, no LLM needed
-                analyst_nodes["fundamentals"] = create_deterministic_fundamentals_analyst()
+                if _cfg2.get("use_hybrid_fundamental_analyst", False):
+                    # Phase 2A: deterministic foundation + three-stage CoT pipeline
+                    analyst_nodes["fundamentals"] = create_hybrid_fundamentals_analyst(
+                        self.quick_thinking_llm, self.deep_thinking_llm
+                    )
+                else:
+                    # Default: deterministic-only path (no LLM calls)
+                    analyst_nodes["fundamentals"] = create_deterministic_fundamentals_analyst()
                 delete_nodes["fundamentals"] = create_msg_delete(_msg_field["fundamentals"])
                 tool_nodes["fundamentals"] = lambda state: {}  # No-op, never reached
             else:
@@ -150,7 +156,12 @@ class GraphSetup:
         # All 3 perspectives are argued in one LLM call without re-passing
         # the full analyst reports (eliminates ~85-90% token redundancy).
         from tradingagents.agents.risk_mgmt.merged_debator import create_merged_risk_debator
+        from tradingagents.agents.risk_mgmt.risk_scorer import (
+            create_risk_scorer_node,
+            risk_veto_node,
+        )
         merged_risk_node = create_merged_risk_debator(self.quick_thinking_llm)
+        risk_scorer_node = create_risk_scorer_node()
         risk_manager_node = create_risk_manager(
             self.deep_thinking_llm, self.risk_manager_memory
         )
@@ -171,7 +182,12 @@ class GraphSetup:
         workflow.add_node("Bear Researcher", bear_researcher_node)
         workflow.add_node("Research Manager", research_manager_node)
         workflow.add_node("Trader", trader_node)
-        # Phase 3a: Single merged risk debate node (replaces Risky/Safe/Neutral + loop)
+        # Phase 3: Three-layer risk pipeline
+        #   Risk Scorer (deterministic, pre-LLM)
+        #   -> Risk Veto (hard reject, no LLM) | Merged Risk Debate (LLM debate)
+        #   -> Risk Judge (Constitutional LLM manager + final gate)
+        workflow.add_node("Risk Scorer", risk_scorer_node)
+        workflow.add_node("Risk Veto", risk_veto_node)
         workflow.add_node("Merged Risk Debate", merged_risk_node)
         workflow.add_node("Risk Judge", risk_manager_node)
 
@@ -222,10 +238,24 @@ class GraphSetup:
             },
         )
         workflow.add_edge("Research Manager", "Trader")
-        # Phase 3a: Linear risk path — no loop, no should_continue_risk_analysis
-        workflow.add_edge("Trader", "Merged Risk Debate")
-        workflow.add_edge("Merged Risk Debate", "Risk Judge")
 
+        # Phase 3: Risk pipeline routing
+        # Step 1: Trader -> Risk Scorer (always)
+        workflow.add_edge("Trader", "Risk Scorer")
+
+        # Step 2: Risk Scorer -> conditional routing
+        #   VETO  -> Risk Veto -> END  (LLM debate skipped entirely)
+        #   other -> Merged Risk Debate -> Risk Judge -> END
+        workflow.add_conditional_edges(
+            "Risk Scorer",
+            lambda state: "VETO" if state.get("risk_action") == "VETO" else "CONTINUE",
+            {
+                "VETO": "Risk Veto",
+                "CONTINUE": "Merged Risk Debate",
+            },
+        )
+        workflow.add_edge("Risk Veto", END)
+        workflow.add_edge("Merged Risk Debate", "Risk Judge")
         workflow.add_edge("Risk Judge", END)
 
         # Compile and return

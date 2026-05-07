@@ -153,13 +153,17 @@ def fetch_quarterly_yfinance(ticker: str) -> dict:
                 tl = _safe(row.get("Total Liabilities Net Minority Interest")) or _safe(row.get("Total Debt"))
                 te = _safe(row.get("Total Equity Gross Minority Interest")) or _safe(row.get("Stockholders Equity")) or _safe(row.get("Common Stock Equity"))
                 rec = {
-                    "period_end_date":     date_str,
-                    "total_assets":        _safe(row.get("Total Assets")),
-                    "total_liabilities":   tl,
-                    "total_equity":        te,
+                    "period_end_date":      date_str,
+                    "total_assets":         _safe(row.get("Total Assets")),
+                    "total_liabilities":    tl,
+                    "total_equity":         te,
                     "cash_and_equivalents": _safe(row.get("Cash And Cash Equivalents") or row.get("Cash Cash Equivalents And Federal Funds Sold")),
-                    "customer_deposits":   None,
-                    "data_source":         "yfinance",
+                    "current_assets":       _safe(row.get("Current Assets")),
+                    "current_liabilities":  _safe(row.get("Current Liabilities")),
+                    # customer_deposits: not in yfinance — fill manually from
+                    # Mubasher for bank-sector tickers.
+                    "customer_deposits":    None,
+                    "data_source":          "yfinance",
                 }
                 bal_records.append(rec)
     except Exception as e:
@@ -187,7 +191,9 @@ INCOME_COLS = [
 
 BALANCE_COLS = [
     "period_end_date", "total_assets", "total_liabilities",
-    "total_equity", "cash_and_equivalents", "customer_deposits", "data_source",
+    "total_equity", "cash_and_equivalents",
+    "current_assets", "current_liabilities",
+    "customer_deposits", "data_source",
 ]
 
 RATIOS_COLS = [
@@ -227,10 +233,14 @@ def _derive_ratios(income_row: dict, balance_row: dict, info: dict, is_first: bo
     total_equity = fv(balance_row, "total_equity")
     total_assets = fv(balance_row, "total_assets")
 
-    net_margin     = round(net_income / revenue, 4)       if net_income and revenue and revenue != 0   else None
-    roe            = round(net_income / total_equity, 4)  if net_income and total_equity and total_equity != 0 else None
-    roa            = round(net_income / total_assets, 4)  if net_income and total_assets and total_assets != 0 else None
-    debt_to_equity = round(total_liab / total_equity, 2)  if total_liab and total_equity and total_equity != 0 else None
+    current_assets = fv(balance_row, "current_assets")
+    current_liab   = fv(balance_row, "current_liabilities")
+
+    net_margin     = round(net_income / revenue, 4)            if net_income and revenue and revenue != 0          else None
+    roe            = round(net_income / total_equity, 4)       if net_income and total_equity and total_equity != 0 else None
+    roa            = round(net_income / total_assets, 4)       if net_income and total_assets and total_assets != 0 else None
+    debt_to_equity = round(total_liab / total_equity, 2)       if total_liab and total_equity and total_equity != 0 else None
+    current_ratio  = round(current_assets / current_liab, 4)  if current_assets and current_liab and current_liab != 0 else None
 
     rec = {
         "period_end_date": income_row["period_end_date"],
@@ -240,7 +250,7 @@ def _derive_ratios(income_row: dict, balance_row: dict, info: dict, is_first: bo
         "roe":             roe,
         "roa":             roa,
         "debt_to_equity":  debt_to_equity,
-        "current_ratio":   None,
+        "current_ratio":   current_ratio,
         "gross_margin":    None,
         "operating_margin": None,
         "dividend_yield":  info.get("dividendYield") if is_first else None,
@@ -347,11 +357,13 @@ def print_manual_entry_guide(ticker: str, missing_quarters: list[str]):
     interest_expense   → "Interest Expense"
 
   BALANCE CSV columns to fill:
-    total_assets       → "Total Assets"
-    total_liabilities  → "Total Liabilities"
-    total_equity       → "Total Equity" / "Shareholders Equity"
-    cash_and_equivalents → "Cash & Cash Equivalents"
-    customer_deposits  → "Customer Deposits" (banks only)
+    total_assets          → "Total Assets"
+    total_liabilities     → "Total Liabilities"
+    total_equity          → "Total Equity" / "Shareholders Equity"
+    cash_and_equivalents  → "Cash & Cash Equivalents"
+    current_assets        → "Current Assets" / "Total Current Assets"
+    current_liabilities   → "Current Liabilities" / "Total Current Liabilities"
+    customer_deposits     → "Customer Deposits" (banks only)
 
   After filling, change data_source from MANUAL_ENTRY_REQUIRED → mubasher
   All values should be in EGP (Egyptian Pounds), raw numbers (no commas).

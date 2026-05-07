@@ -398,6 +398,12 @@ class FinancialCalculator:
 
         pe_computed = cls.pe_ratio(current_price, eps_val) if current_price else None
         result["pe_ratio"] = pe_computed if pe_computed is not None else pe_ratio_csv
+        if pe_computed is not None:
+            result["_pe_ratio_source"] = "trade_date_price"
+        elif pe_ratio_csv is not None:
+            result["_pe_ratio_source"] = "csv_fallback"
+        else:
+            result["_pe_ratio_source"] = "unavailable"
 
         pb_computed = cls.pb_ratio(current_price, book_value_per_share) if current_price else None
         result["pb_ratio"] = pb_computed if pb_computed is not None else pb_ratio_csv

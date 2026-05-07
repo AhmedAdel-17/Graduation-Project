@@ -1,0 +1,17 @@
+period_end_date,pe_ratio,pb_ratio,eps,net_margin,roe,roa,debt_to_equity,current_ratio,gross_margin,operating_margin,dividend_yield,market_cap,car_ratio,data_source
+2022-03-31,,,,,,,,,,,,,,MANUAL_ENTRY_REQUIRED
+2022-06-30,,,,,,,,,,,,,,MANUAL_ENTRY_REQUIRED
+2022-09-30,,,,,,,,,,,,,,MANUAL_ENTRY_REQUIRED
+2022-12-31,,,,,,,,,,,,,,MANUAL_ENTRY_REQUIRED
+2023-03-31,,,,,,,,,,,,,,MANUAL_ENTRY_REQUIRED
+2023-06-30,,,,,,,,,,,,,,MANUAL_ENTRY_REQUIRED
+2023-09-30,,,,,,,,,,,,,,MANUAL_ENTRY_REQUIRED
+2023-12-31,,,,,,,,,,,,,,MANUAL_ENTRY_REQUIRED
+2024-03-31,,,,,,,,,,,,,,MANUAL_ENTRY_REQUIRED
+2024-06-30,,,,,,,,,,,,,,MANUAL_ENTRY_REQUIRED
+2024-09-30,3.5636,3.9429,0.119962,0.1927,0.2766,0.0667,3.15,1.1701,,,,,,yfinance
+2024-12-31,,4.835,,0.5755,-0.2835,-0.0687,3.13,1.1585,,,,,,yfinance
+2025-03-31,18.9752,5.027,0.033333,0.0634,0.0671,0.0158,3.24,1.1476,,,,,,yfinance
+2025-06-30,18.0,5.3193,0.04,0.0579,0.07,0.0158,3.42,1.1503,,,,,,yfinance
+2025-09-30,15.6514,4.4645,0.040891,0.0562,0.0713,0.0163,3.36,1.1868,,,,,,yfinance
+2025-12-31,,,,,,,,,,,,,,MANUAL_ENTRY_REQUIRED

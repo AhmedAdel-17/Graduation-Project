@@ -24,11 +24,15 @@ from __future__ import annotations
 import logging
 from typing import Any, List, Optional
 
+from tradingagents.dataflows.config import get_config
+
 from .schemas import FundamentalAnalysisReport
 from .sector_config import SectorConfig
 from .data_cot import build_evidence_pack, validate_evidence_pack
 from .concept_cot import run_concept_cot
 from .thesis_cot import run_thesis_cot
+from .calibration import calibrate_earnings_direction
+from .memory_manager import FundamentalMemoryManager
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +42,10 @@ def run_cot_pipeline(
     deep_llm: Any,
     report: FundamentalAnalysisReport,
     sector_cfg: SectorConfig,
+    freq: str = "annual",
+    use_memory: Optional[bool] = None,
+    memory_manager: Optional[FundamentalMemoryManager] = None,
+    source_run_id: Optional[str] = None,
 ) -> FundamentalAnalysisReport:
     """
     Run the three-stage CoT pipeline and return an enriched FundamentalAnalysisReport.
@@ -47,6 +55,10 @@ def run_cot_pipeline(
       deep_llm:  LangChain LLM for Stage 3 (deep_thinking_llm)
       report:    Deterministic FundamentalAnalysisReport from Phase 1A pipeline
       sector_cfg: SectorConfig for the ticker
+      freq: "annual" or "quarterly" analysis mode
+      use_memory: Optional Phase 3 memory flag. Defaults to config value.
+      memory_manager: Optional injected manager for tests or custom storage.
+      source_run_id: Optional audit trace id for memory writes.
 
     Returns:
       FundamentalAnalysisReport with CoT-enriched fields where available,
@@ -54,16 +66,40 @@ def run_cot_pipeline(
     """
     ticker = report.ticker
     stages_completed: List[str] = []
+    cfg = get_config()
+    memory_enabled = cfg.get("use_fundamental_memory", False) if use_memory is None else bool(use_memory)
+    manager = memory_manager
+    prior_memory_context: Optional[str] = None
+
+    if memory_enabled:
+        try:
+            manager = manager or FundamentalMemoryManager()
+            prior_memory_context = manager.build_prior_context(
+                ticker=ticker,
+                frequency=freq,
+                query=f"{ticker} {report.fiscal_period} {report.sector}",
+                as_of_date=report.analysis_date,
+            )
+        except Exception as e:
+            logger.warning("pipeline[%s]: Phase 3 memory retrieval failed: %s", ticker, e)
+            prior_memory_context = "PRIOR FUNDAMENTAL MEMORY CONTEXT\nNo prior memory available for this ticker/frequency."
 
     # ── Stage 1: Evidence Pack Assembly ───────────────────────────────────────
     try:
-        evidence_pack = build_evidence_pack(report, sector_cfg)
+        evidence_pack = build_evidence_pack(
+            report,
+            sector_cfg,
+            freq=freq,
+            prior_memory_context=prior_memory_context if memory_enabled else None,
+        )
     except Exception as e:
         logger.error("pipeline[%s]: Stage 1 (data_cot) crashed: %s", ticker, e)
-        return report.model_copy(update={
+        deterministic = report.model_copy(update={
             "pipeline_mode": "deterministic",
             "stages_completed": [],
         })
+        _record_memory_safely(manager, memory_enabled, deterministic, freq, source_run_id)
+        return deterministic
 
     if not evidence_pack.get("_valid"):
         errors = evidence_pack.get("_validation_errors", [])
@@ -71,10 +107,12 @@ def run_cot_pipeline(
             "pipeline[%s]: Stage 1 validation failed (data insufficient): %s",
             ticker, errors,
         )
-        return report.model_copy(update={
+        deterministic = report.model_copy(update={
             "pipeline_mode": "deterministic",
             "stages_completed": [],
         })
+        _record_memory_safely(manager, memory_enabled, deterministic, freq, source_run_id)
+        return deterministic
 
     stages_completed.append("data_cot")
     logger.debug("pipeline[%s]: Stage 1 complete", ticker)
@@ -85,24 +123,28 @@ def run_cot_pipeline(
         concept_output = run_concept_cot(quick_llm, evidence_pack)
     except Exception as e:
         logger.error("pipeline[%s]: Stage 2 (concept_cot) crashed: %s", ticker, e)
-        return _build_partial_report(
+        partial = _build_partial_report(
             report=report,
             evidence_pack=evidence_pack,
             concept_output={},
             stages_completed=stages_completed,
         )
+        _record_memory_safely(manager, memory_enabled, partial, freq, source_run_id)
+        return partial
 
     if not concept_output.get("_valid"):
         errors = concept_output.get("_validation_errors", [])
         logger.warning(
             "pipeline[%s]: Stage 2 validation failed: %s", ticker, errors
         )
-        return _build_partial_report(
+        partial = _build_partial_report(
             report=report,
             evidence_pack=evidence_pack,
             concept_output={},
             stages_completed=stages_completed,
         )
+        _record_memory_safely(manager, memory_enabled, partial, freq, source_run_id)
+        return partial
 
     stages_completed.append("concept_cot")
     logger.debug("pipeline[%s]: Stage 2 complete", ticker)
@@ -113,12 +155,14 @@ def run_cot_pipeline(
         thesis_output = run_thesis_cot(deep_llm, evidence_pack, concept_output)
     except Exception as e:
         logger.error("pipeline[%s]: Stage 3 (thesis_cot) crashed: %s", ticker, e)
-        return _build_partial_report(
+        partial = _build_partial_report(
             report=report,
             evidence_pack=evidence_pack,
             concept_output=concept_output,
             stages_completed=stages_completed,
         )
+        _record_memory_safely(manager, memory_enabled, partial, freq, source_run_id)
+        return partial
 
     # Stage 3 failures are non-blocking (thesis is enrichment, not gating)
     # We log the issues but still include whatever was parsed.
@@ -133,13 +177,16 @@ def run_cot_pipeline(
     logger.debug("pipeline[%s]: Stage 3 complete", ticker)
 
     # ── Assemble Final Report ─────────────────────────────────────────────────
-    return _build_full_report(
+    final_report = _build_full_report(
         report=report,
         evidence_pack=evidence_pack,
         concept_output=concept_output,
         thesis_output=thesis_output,
         stages_completed=stages_completed,
+        freq=freq,
     )
+    _record_memory_safely(manager, memory_enabled, final_report, freq, source_run_id)
+    return final_report
 
 
 # =============================================================================
@@ -182,6 +229,7 @@ def _build_full_report(
     concept_output: dict,
     thesis_output: dict,
     stages_completed: List[str],
+    freq: str = "annual",
 ) -> FundamentalAnalysisReport:
     """
     Build the fully-enriched CoT report from all three stages.
@@ -192,6 +240,10 @@ def _build_full_report(
     Deterministic values (ratios, preprocessing, distress_flags,
     data_confidence, signal_coherence) are NEVER overwritten — they
     come from verified computation, not LLM output.
+
+    Signal calibration (Phase B):
+      After extracting the LLM's raw direction, apply deterministic
+      calibration to produce the final earnings_direction.
     """
     pipeline_mode = (
         "cot_full" if "thesis_cot" in stages_completed else "cot_partial"
@@ -207,9 +259,30 @@ def _build_full_report(
     if financial_health not in {"healthy", "concerning", "critical", "insufficient_data"}:
         financial_health = report.financial_health
 
-    # earnings_direction: thesis only (concept doesn't predict this)
-    earnings_direction = thesis_output.get("earnings_direction", "")
-    earnings_direction_confidence = thesis_output.get("earnings_direction_confidence", 0)
+    # Raw earnings_direction from LLM (before calibration)
+    raw_direction = thesis_output.get("earnings_direction", "")
+    raw_earnings_direction_confidence = thesis_output.get("earnings_direction_confidence", 0)
+
+    # New Phase B fields from LLM
+    fundamental_outlook = thesis_output.get("fundamental_outlook", "")
+    downside_risk_level = thesis_output.get("downside_risk_level", "")
+
+    # Apply deterministic calibration (Phase 3: cap confidence by data quality)
+    cal = calibrate_earnings_direction(
+        fundamental_outlook=fundamental_outlook,
+        downside_risk_level=downside_risk_level,
+        raw_earnings_direction=raw_direction,
+        earnings_direction_confidence=raw_earnings_direction_confidence,
+        freq=freq,
+        data_confidence=report.data_confidence,
+        sector=report.sector,
+        de_ratio=report.ratios.get("debt_to_equity") if report.ratios else None,
+    )
+
+    # earnings_direction = calibrated direction (backward compatible)
+    earnings_direction = cal.calibrated_direction
+    # Public confidence = calibrated (capped) value; raw preserved separately
+    earnings_direction_confidence = cal.calibrated_confidence
 
     # valuation_assessment: thesis > concept
     valuation_assessment = (
@@ -233,8 +306,19 @@ def _build_full_report(
         "pipeline_mode": pipeline_mode,
         "stages_completed": stages_completed,
         "financial_health": financial_health,
+        # Calibrated direction is the public earnings_direction
         "earnings_direction": earnings_direction,
         "earnings_direction_confidence": earnings_direction_confidence,
+        # Raw LLM confidence before data_confidence calibration
+        "raw_earnings_direction_confidence": raw_earnings_direction_confidence,
+        # Phase B signal fields
+        "fundamental_outlook": fundamental_outlook,
+        "downside_risk_level": downside_risk_level,
+        "raw_earnings_direction": raw_direction,
+        "calibrated_earnings_direction": cal.calibrated_direction,
+        "calibration_policy": cal.policy,
+        "signal_calibration_notes": cal.notes,
+        # Other enrichment fields
         "valuation_assessment": valuation_assessment,
         "thesis_text": thesis_text,
         "key_risks": key_risks,
@@ -261,3 +345,23 @@ def _merge_risks(structural_risks: List[str], llm_risks: List[str]) -> List[str]
             result.append(structural_risk)
 
     return result
+
+
+def _record_memory_safely(
+    memory_manager: Optional[FundamentalMemoryManager],
+    memory_enabled: bool,
+    report: FundamentalAnalysisReport,
+    freq: str,
+    source_run_id: Optional[str],
+) -> None:
+    """Write Phase 3 reflection without allowing memory failures to affect output."""
+    if not memory_enabled or memory_manager is None:
+        return
+    try:
+        memory_manager.record_reflection(
+            report=report,
+            frequency=freq,
+            source_run_id=source_run_id,
+        )
+    except Exception as e:
+        logger.warning("pipeline[%s]: Phase 3 memory write failed: %s", report.ticker, e)

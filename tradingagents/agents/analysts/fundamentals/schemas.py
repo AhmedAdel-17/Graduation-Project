@@ -104,14 +104,104 @@ class FundamentalAnalysisReport(BaseModel):
     )
     earnings_direction: str = Field(
         default="",
-        description="'up' | 'down' | 'flat' | '' (empty = not predicted). Predicted by Thesis-CoT.",
+        description=(
+            "'up' | 'down' | 'flat' | '' (empty = not predicted). "
+            "When calibration is active, this equals the calibrated direction. "
+            "The raw LLM direction is stored in raw_earnings_direction."
+        ),
     )
     earnings_direction_confidence: int = Field(
         default=0,
         ge=0,
         le=100,
-        description="Confidence in earnings_direction prediction (0 = no prediction made).",
+        description=(
+            "Confidence in earnings_direction prediction (0 = no prediction made). "
+            "When confidence calibration is active, this is the calibrated value. "
+            "The raw LLM confidence is stored in raw_earnings_direction_confidence."
+        ),
     )
+    raw_earnings_direction_confidence: int = Field(
+        default=0,
+        ge=0,
+        le=100,
+        description="Original LLM confidence before data_confidence calibration.",
+    )
+    pe_ratio_source: str = Field(
+        default="",
+        description=(
+            "'trade_date_price' | 'csv_fallback' | 'unavailable'. "
+            "Indicates whether P/E was computed from live trade-date price or stale CSV."
+        ),
+    )
+
+    # ── Risk-free rate metadata ───────────────────────────────────────────────
+    risk_free_rate_value: Optional[float] = Field(
+        default=None,
+        description="The risk-free rate used for earnings_yield_spread computation. None if not configured.",
+    )
+    risk_free_rate_source: str = Field(
+        default="",
+        description=(
+            "'date_aware_cbe_policy_rate' — from local CSV, bounded by trade_date. "
+            "'static_config_fallback' — from config['egx_risk_free_rate']; anachronistic for old backtests. "
+            "'not_configured' — rate absent; earnings_yield_spread is None."
+        ),
+    )
+    risk_free_rate_effective_date: str = Field(
+        default="",
+        description=(
+            "ISO date when the looked-up CBE rate took effect. "
+            "Empty when source is 'static_config_fallback' or 'not_configured'."
+        ),
+    )
+
+    # ── Signal calibration fields (Phase B) ──────────────────────────────────
+    fundamental_outlook: str = Field(
+        default="",
+        description=(
+            "'bullish' | 'neutral' | 'bearish' | '' (empty = not assessed). "
+            "LLM assessment of fundamental quality and trajectory."
+        ),
+    )
+    downside_risk_level: str = Field(
+        default="",
+        description=(
+            "'low' | 'moderate' | 'high' | '' (empty = not assessed). "
+            "LLM assessment of how likely earnings will deteriorate."
+        ),
+    )
+    raw_earnings_direction: str = Field(
+        default="",
+        description=(
+            "'up' | 'down' | 'flat' | '' (empty = not predicted). "
+            "Original LLM direction before calibration."
+        ),
+    )
+    calibrated_earnings_direction: str = Field(
+        default="",
+        description=(
+            "'up' | 'down' | 'flat' | '' (empty = not calibrated). "
+            "Deterministic base-rate-aware direction derived from outlook + risk + confidence."
+        ),
+    )
+    calibration_policy: str = Field(
+        default="",
+        description="Name/version of the calibration policy applied (e.g. 'v1_outlook_risk').",
+    )
+    signal_calibration_notes: List[str] = Field(
+        default_factory=list,
+        description="Audit trail of calibration decisions applied to this case.",
+    )
+    supplemental_context: Dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Optional manually supplied context used to address standalone signal limitations. "
+            "Keys may include valuation_context, quality_of_earnings, narrative_events, "
+            "macro_sector_context, and missing_categories. Empty when no supplemental CSV data exists."
+        ),
+    )
+
+    # ── Thesis and risk fields ───────────────────────────────────────────────
     thesis_text: str = Field(
         default="",
         description="Full investment thesis from Thesis-CoT. Empty in deterministic mode.",

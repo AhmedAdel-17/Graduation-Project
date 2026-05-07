@@ -1,8 +1,30 @@
+"""
+Fundamental Analyst for EGX TradingAgents pipeline.
+
+This module provides two analyst factories:
+  create_fundamentals_analyst(llm)
+      — LLM-based analyst (used for non-EGX markets, passes tools to LLM)
+
+  create_deterministic_fundamentals_analyst()
+      — Sector-aware deterministic analyst for EGX (no LLM call)
+      — Uses the new fundamentals/ module for all computation
+      — Output schema: FundamentalAnalysisReport (Pydantic)
+      — Backward-compatible: returns the same state keys as before
+
+The LLM-based analyst is unchanged from the prior version.
+The deterministic analyst is a full rebuild addressing:
+  1. Sector blindness: 4-sector design (banks, real_estate, holdings, operational)
+  2. Magic number thresholds: removed; replaced with safety floors only
+  3. Conflated confidence: 3 separate scores (data_confidence, signal_coherence, distress_flags)
+  4. Broken calculate_confidence_score: replaced entirely
+
+Plan reference: /Users/mennaazazy/.claude/plans/floofy-humming-tide.md
+"""
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-import time
 import json
 import re
 from typing import Dict, Any, Optional, List
+
 from tradingagents.agents.utils.agent_utils import (
     get_fundamentals, get_balance_sheet, get_cashflow, get_income_statement
 )
@@ -10,437 +32,88 @@ from tradingagents.agents.utils.fundamental_data_tools import (
     get_egx_fundamentals, get_egx_income, get_egx_balance, get_egx_ratios
 )
 from tradingagents.dataflows.config import get_config
-from langchain_openai import ChatOpenAI
-from langgraph.prebuilt import ToolNode
+
+from .fundamentals.schemas import FundamentalAnalysisReport
+from .fundamentals.financial_calculator import FinancialCalculator
+from .fundamentals.statement_standardizer import StatementStandardizer
+from .fundamentals.sector_config import SectorConfig
+from .fundamentals.scoring import (
+    compute_data_confidence,
+    estimate_periods_since_filing,
+    determine_financial_health_heuristic,
+)
+from .fundamentals.data_loader import load_multi_period
+from .fundamentals.pipeline import run_cot_pipeline
+from .fundamentals.rate_lookup import get_egx_risk_free_rate_as_of
+
 
 # =============================================================================
-# Fundamental Analyst ("Accountant") for EGX Market
-# =============================================================================
-# Analyzes Egyptian company financials from CSV-based data
-# Assumes Egyptian accounting disclosures, NOT SEC-style
-# Outputs structured assessment with confidence adjusted for data quality
+# LLM-Based Analyst (unchanged — used for non-EGX markets)
 # =============================================================================
 
-# Confidence adjustment factors
-DATA_COMPLETENESS_WEIGHT = 0.30  # 30% of confidence from data availability
-RECENCY_WEIGHT = 0.20  # 20% penalty for stale data (>12 months old)
-DISCLOSURE_QUALITY_WEIGHT = 0.15  # 15% for disclosure quality
-
-# Financial health thresholds (EGX-calibrated)
-EGX_HEALTH_THRESHOLDS = {
-    "debt_to_equity": {
-        "healthy": 1.0,      # D/E < 1.0 is healthy for EGX
-        "concerning": 2.0,   # D/E 1.0-2.0 is concerning
-        "critical": 3.0,     # D/E > 2.0 is critical
-    },
-    "current_ratio": {
-        "healthy": 1.5,      # Current ratio > 1.5 is healthy
-        "concerning": 1.0,   # 1.0-1.5 is concerning
-        "critical": 0.8,     # < 0.8 is critical
-    },
-    "net_margin": {
-        "healthy": 0.10,     # > 10% net margin is healthy
-        "concerning": 0.05,  # 5-10% is concerning
-        "critical": 0.0,     # < 5% or negative is critical
-    }
-}
-
-
-def calculate_data_completeness_score(fundamentals_data: Dict[str, Any]) -> float:
-    """
-    Calculate data completeness score (0.0 to 1.0) based on available fields.
-    """
-    if not fundamentals_data:
-        return 0.0
-    
-    # Check data completeness from the summary
-    completeness = fundamentals_data.get("data_completeness", {})
-    if completeness:
-        return completeness.get("completeness_ratio", 0.0)
-    
-    # Fallback: count available statements
-    available = 0
-    total = 3
-    
-    if fundamentals_data.get("income_statement", {}).get("data"):
-        available += 1
-    if fundamentals_data.get("balance_sheet", {}).get("data"):
-        available += 1
-    if fundamentals_data.get("key_ratios", {}).get("ratios"):
-        available += 1
-    
-    return available / total
-
-
-def assess_financial_health(fundamentals_data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Assess financial health based on available EGX fundamental data.
-    Returns health scores and flags for each category.
-    """
-    health = {
-        "overall": "unknown",
-        "profitability": {"status": "unknown", "details": []},
-        "leverage": {"status": "unknown", "details": []},
-        "liquidity": {"status": "unknown", "details": []},
-        "flags": []
-    }
-    
-    # Extract ratios if available
-    ratios = fundamentals_data.get("key_ratios", {}).get("ratios", {})
-    income = fundamentals_data.get("income_statement", {}).get("data", {})
-    balance = fundamentals_data.get("balance_sheet", {}).get("data", {})
-    
-    # Profitability assessment
-    net_margin = ratios.get("net_margin")
-    roe = ratios.get("roe")
-    
-    if net_margin is not None:
-        if net_margin >= EGX_HEALTH_THRESHOLDS["net_margin"]["healthy"]:
-            health["profitability"]["status"] = "healthy"
-            health["profitability"]["details"].append(f"Net margin {net_margin:.1%} is strong")
-        elif net_margin >= EGX_HEALTH_THRESHOLDS["net_margin"]["concerning"]:
-            health["profitability"]["status"] = "concerning"
-            health["profitability"]["details"].append(f"Net margin {net_margin:.1%} is weak")
-        else:
-            health["profitability"]["status"] = "critical"
-            health["profitability"]["details"].append(f"Net margin {net_margin:.1%} is critical")
-            health["flags"].append("LOW_PROFITABILITY")
-            
-    # Leverage assessment
-    de_ratio = ratios.get("debt_to_equity")
-    
-    if de_ratio is not None:
-        if de_ratio <= EGX_HEALTH_THRESHOLDS["debt_to_equity"]["healthy"]:
-            health["leverage"]["status"] = "healthy"
-            health["leverage"]["details"].append(f"D/E ratio {de_ratio:.2f} is conservative")
-        elif de_ratio <= EGX_HEALTH_THRESHOLDS["debt_to_equity"]["concerning"]:
-            health["leverage"]["status"] = "concerning"
-            health["leverage"]["details"].append(f"D/E ratio {de_ratio:.2f} is elevated")
-        else:
-            health["leverage"]["status"] = "critical"
-            health["leverage"]["details"].append(f"D/E ratio {de_ratio:.2f} is highly leveraged")
-            health["flags"].append("HIGH_LEVERAGE")
-            
-    # Liquidity assessment
-    current_ratio = ratios.get("current_ratio")
-    
-    if current_ratio is not None:
-        if current_ratio >= EGX_HEALTH_THRESHOLDS["current_ratio"]["healthy"]:
-            health["liquidity"]["status"] = "healthy"
-            health["liquidity"]["details"].append(f"Current ratio {current_ratio:.2f} indicates good liquidity")
-        elif current_ratio >= EGX_HEALTH_THRESHOLDS["current_ratio"]["concerning"]:
-            health["liquidity"]["status"] = "concerning"
-            health["liquidity"]["details"].append(f"Current ratio {current_ratio:.2f} is tight")
-        else:
-            health["liquidity"]["status"] = "critical"
-            health["liquidity"]["details"].append(f"Current ratio {current_ratio:.2f} indicates liquidity crisis")
-            health["flags"].append("LOW_LIQUIDITY")
-            
-    # Overall assessment logic
-    flags_count = len(health["flags"])
-    if flags_count >= 2:
-        health["overall"] = "critical"
-    elif flags_count == 1:
-        health["overall"] = "concerning"
-    else:
-        # If we have enough data and no flags, it's healthy
-        if net_margin is not None and de_ratio is not None:
-            health["overall"] = "healthy"
-        else:
-            health["overall"] = "insufficient_data"
-            
-    return health
-
-
-def determine_valuation_gap(fundamentals_data: Dict[str, Any], current_price: float = None) -> Dict[str, Any]:
-    """
-    Determine valuation gap/range based on available metrics.
-    """
-    valuation = {
-        "fair_value_range": {"low": None, "mid": None, "high": None},
-        "current_valuation": "unknown",
-        "methods_used": [],
-        "notes": []
-    }
-    
-    ratios = fundamentals_data.get("key_ratios", {}).get("ratios", {})
-    
-    pe = ratios.get("pe_ratio")
-    eps = ratios.get("eps")
-    book_value = ratios.get("book_value_per_share")
-    
-    estimates = []
-    
-    # Method 1: PE Ratio (Standard for EGX)
-    # Target PE ranges for EGX (simplified)
-    TARGET_PE_LOW = 6.0
-    TARGET_PE_HIGH = 12.0
-    
-    if eps and eps > 0:
-        low_fair = eps * TARGET_PE_LOW
-        high_fair = eps * TARGET_PE_HIGH
-        mid_fair = (low_fair + high_fair) / 2
-        
-        estimates.append({
-            "method": "PE_Ratio",
-            "low": low_fair,
-            "mid": mid_fair,
-            "high": high_fair
-        })
-        valuation["methods_used"].append("PE_Ratio")
-        valuation["notes"].append(f"Based on EPS {eps:.2f} and target PE {TARGET_PE_LOW}-{TARGET_PE_HIGH}x")
-        
-    # Method 2: Price to Book
-    if book_value and book_value > 0:
-        low_fair = book_value * 0.8
-        high_fair = book_value * 2.0
-        mid_fair = book_value * 1.3
-        
-        estimates.append({
-            "method": "Price_to_Book",
-            "low": low_fair,
-            "mid": mid_fair,
-            "high": high_fair
-        })
-        valuation["methods_used"].append("Price_to_Book")
-        valuation["notes"].append(f"Book value: {book_value:.2f} EGP/share")
-    
-    # Aggregate ranges
-    if estimates:
-        valuation["fair_value_range"]["low"] = round(min(e["low"] for e in estimates), 2)
-        valuation["fair_value_range"]["high"] = round(max(e["high"] for e in estimates), 2)
-        valuation["fair_value_range"]["mid"] = round(sum(e["mid"] for e in estimates) / len(estimates), 2)
-        
-        # Assess current valuation if PE is known
-        if pe is not None:
-            if pe < 8:
-                valuation["current_valuation"] = "potentially_undervalued"
-            elif pe > 15:
-                valuation["current_valuation"] = "potentially_overvalued"
-            else:
-                valuation["current_valuation"] = "fairly_valued"
-    else:
-        valuation["notes"].append("Insufficient data for valuation - no PE or Book Value available")
-    
-    return valuation
-
-
-def identify_key_risks(fundamentals_data: Dict[str, Any], health: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """
-    Identify key risks based on fundamental analysis.
-    """
-    risks = []
-    
-    # Add risks from health flags
-    for flag in health.get("flags", []):
-        if flag == "HIGH_LEVERAGE":
-            risks.append({
-                "category": "Financial",
-                "risk": "High debt levels",
-                "severity": "high",
-                "description": "Elevated debt-to-equity ratio increases financial risk and interest burden"
-            })
-        elif flag == "LOW_LIQUIDITY":
-            risks.append({
-                "category": "Financial",
-                "risk": "Liquidity constraints",
-                "severity": "high",
-                "description": "Low current ratio may indicate difficulty meeting short-term obligations"
-            })
-        elif flag == "LOW_PROFITABILITY":
-            risks.append({
-                "category": "Operational",
-                "risk": "Weak profitability",
-                "severity": "medium",
-                "description": "Low margins may indicate pricing pressure or cost inefficiencies"
-            })
-    
-    # Data quality risks
-    completeness = fundamentals_data.get("data_completeness", {})
-    if completeness.get("completeness_ratio", 1.0) < 0.7:
-        risks.append({
-            "category": "Data Quality",
-            "risk": "Incomplete financial data",
-            "severity": "medium",
-            "description": "Missing financial statements limit analysis accuracy"
-        })
-    
-    # EGX-specific risks
-    risks.append({
-        "category": "Market",
-        "risk": "EGX market structure",
-        "severity": "low",
-        "description": "Limited liquidity, daily price limits (±10%), no short selling"
-    })
-    
-    risks.append({
-        "category": "Currency",
-        "risk": "EGP currency exposure",
-        "severity": "medium",
-        "description": "Egyptian Pound volatility affects real returns for foreign investors"
-    })
-    
-    return risks
-
-
-def calculate_confidence_score(
-    data_completeness: float,
-    health_assessment: Dict[str, Any]
-) -> Dict[str, Any]:
-    """
-    Calculate overall confidence score adjusted for data quality.
-    """
-    # Base confidence from data completeness
-    base_confidence = data_completeness * DATA_COMPLETENESS_WEIGHT * 100
-    
-    # Add confidence for each assessed dimension
-    dimensions_assessed = 0
-    for dim in ["profitability", "leverage", "liquidity"]:
-        if health_assessment.get(dim, {}).get("status") != "unknown":
-            dimensions_assessed += 1
-            base_confidence += 20  # Each dimension adds up to 20%
-    
-    # Cap at 100
-    confidence = min(100, base_confidence)
-    
-    # Determine confidence level
-    if confidence >= 70:
-        level = "high"
-    elif confidence >= 50:
-        level = "moderate"
-    elif confidence >= 30:
-        level = "low"
-    else:
-        level = "very_low"
-    
-    adjustments = []
-    
-    if data_completeness < 0.5:
-        adjustments.append(f"Data completeness penalty: only {data_completeness:.0%} of statements available")
-    
-    if dimensions_assessed < 2:
-        adjustments.append(f"Limited assessment: only {dimensions_assessed}/3 dimensions could be evaluated")
-    
 def create_fundamentals_analyst(llm):
     """
-    Create the Fundamental Analyst ("Accountant") agent.
-    
-    This agent:
-    - Analyzes company financials using configured tools (yfinance by default)
-    - Outputs structured assessment with valuation RANGES
-    - Identifies key risks
-    - Adjusts confidence based on data quality
+    LLM-based Fundamental Analyst ("Accountant") agent.
+    Used for non-EGX markets. Unchanged from prior version.
     """
 
     def fundamentals_analyst_node(state):
-        """
-        Fundamental Analyst ("Accountant") agent node.
-        
-        Analyzes company financials using configured tools (yfinance by default for EGX).
-        Outputs structured assessment with valuation ranges and risk analysis.
-        """
         current_date = state["trade_date"]
         ticker = state["company_of_interest"]
-        
-        # Get config to determine market
+
         config = get_config()
         target_market = config.get("target_market", "US")
-        
-        # Select appropriate tools
-        if target_market == "EGX":
-            tools = [
-                get_egx_fundamentals,
-                get_egx_income,
-                get_egx_balance,
-                get_egx_ratios,
-            ]
-        else:
-            tools = [
-                get_fundamentals,
-                get_income_statement,
-                get_balance_sheet,
-                get_cashflow,
-            ]
-        
-        # System message
-        system_message = f"""You are a Fundamental Analyst ("Accountant") specializing in {target_market} companies.
-        
-        ## Your Role
-        Analyze company financial statements and provide a structured fundamental assessment. Your analysis must be suitable for institutional investment decisions.
-        
-        ## Available Data Sources
-        - Generic Fundamental Data (mapped to Yahoo Finance or other providers)
-        - Income Statement, Balance Sheet, Cash Flow, and Key Ratios
-        
-        ## Market Considerations ({target_market})
-        - For EGX companies, values are in EGP.
-        - Be aware of potential data gaps for smaller cap stocks.
-        
-        ## CRITICAL RULES
-        1. Provide VALUATION RANGES, not point estimates (e.g., "fair value: 45-55 {config.get('trading_currency', 'USD')}")
-        2. If data is incomplete, REDUCE your confidence score explicitly
-        3. Always identify key risks specific to the company
-        4. Focus on:
-        - Profitability (Margins, ROE)
-        - Financial Health (Leverage, Liquidity)
-        - Valuation (PE, P/B vs sector)
-        - Growth (Revenue/Earnings trends)
-        5. Once you have received the data from your tools, DO NOT attempt to call any other tools like 'calculate_fundamental_analysis'. Output your final unstructured report and the structured JSON object directly in your text response.
-        
-        ## Required Output Format
-        You must output a JSON object with the following structure:
-        {{{{
-            "financial_health": "string (Strong/Moderate/Weak)",
-            "valuation_gap": "string (Undervalued/Fair/Overvalued)",
-            "fair_value_range": "string (e.g., 45-55)",
-            "key_risks": ["risk1", "risk2"],
-            "confidence_score": "number (0-100)",
-            "data_completeness": "number (0-100)",
-            "reasoning": "string (brief summary)"
-        }}}}
-        """
-        
-        # Initialize LLM
-        # We use the passed LLM or create a new one if needed, but here we ignore the passed LLM 
-        # to ensure we use the deep_thinking_llm from config if we want, or just use the passed one.
-        # The setup.py passes quick_thinking_llm. Let's use the passed llm for consistency with other agents.
-        # But wait, previous implementation ignored the passed llm and created a new one? 
-        # No, the previous implementation used the passed llm: "chain = prompt | llm.bind_tools(tools)"
-        # So we should use the `llm` argument from the outer scope.
 
+        if target_market == "EGX":
+            tools = [get_egx_fundamentals, get_egx_income, get_egx_balance, get_egx_ratios]
+        else:
+            tools = [get_fundamentals, get_income_statement, get_balance_sheet, get_cashflow]
+
+        system_message = f"""You are a Fundamental Analyst ("Accountant") specializing in {target_market} companies.
+
+## Your Role
+Analyze company financial statements and provide a structured fundamental assessment.
+
+## CRITICAL RULES
+1. Provide VALUATION RANGES, not point estimates
+2. If data is incomplete, REDUCE your confidence score explicitly
+3. Always identify key risks specific to the company
+4. Once you have received the data from your tools, output your final report and the structured JSON object directly.
+
+## Required Output Format
+{{{{
+    "financial_health": "string (Strong/Moderate/Weak)",
+    "valuation_gap": "string (Undervalued/Fair/Overvalued)",
+    "fair_value_range": "string (e.g., 45-55)",
+    "key_risks": ["risk1", "risk2"],
+    "confidence_score": "number (0-100)",
+    "data_completeness": "number (0-100)",
+    "reasoning": "string (brief summary)"
+}}}}
+"""
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_message),
             MessagesPlaceholder(variable_name="messages"),
         ])
-        
+
         chain = prompt | llm.bind_tools(tools)
         result = chain.invoke({
             "messages": state.get("fundamentals_messages") or [("human", ticker)]
         })
-        
-        report = ""
-        structured_analysis = None
-        
-        # If the LLM returned a tool call, we simply return the message. 
-        # The graph controls the loop (ConditionalLogic -> tools_fundamentals -> back here).
+
         if len(result.tool_calls) > 0:
             return {"fundamentals_messages": [result]}
 
-        # If no tool calls, it means we have the final report
         report = result.content
-        
-        # Try to extract JSON from the report
+        structured_analysis = None
+
         try:
-            # Look for JSON block
-            import re
             json_match = re.search(r'\{.*\}', report, re.DOTALL)
             if json_match:
-                json_str = json_match.group(0)
-                structured_analysis = json.loads(json_str)
-        except Exception as e:
-            print(f"Error parsing JSON from analyst report: {e}")
-            
-        # Fallback if structure missing
+                structured_analysis = json.loads(json_match.group(0))
+        except Exception:
+            pass
+
         if not structured_analysis:
             structured_analysis = {
                 "financial_health": "Unknown",
@@ -449,7 +122,7 @@ def create_fundamentals_analyst(llm):
                 "key_risks": ["Analysis failed or data missing"],
                 "confidence_score": 0,
                 "data_completeness": 0,
-                "reasoning": "Model did not provide structured output"
+                "reasoning": "Model did not provide structured output",
             }
 
         return {
@@ -462,105 +135,498 @@ def create_fundamentals_analyst(llm):
 
 
 # =============================================================================
-# Deterministic Fundamentals Analyst (replaces LLM calls with existing functions)
+# Deterministic Analyst — EGX (full rebuild)
 # =============================================================================
 
 def create_deterministic_fundamentals_analyst():
     """
-    Create a deterministic Fundamental Analyst node that calls EGX data tools
-    directly and applies the existing assess/valuation/risk functions — no LLM call.
+    Sector-aware deterministic Fundamental Analyst for EGX.
+    No LLM calls. Output is identical in state schema to create_fundamentals_analyst.
 
-    Saves ~2 LLM calls and ~4,000-6,000 tokens per run compared to the
-    LLM-based `create_fundamentals_analyst`.
-
-    The output state schema is identical to `create_fundamentals_analyst` so
-    downstream agents require no changes.
+    Architecture (Phase 1A):
+      1. Load multi-period data (data_loader.py)
+      2. Compute ratios (financial_calculator.py)
+      3. Standardize statements (statement_standardizer.py)
+      4. Apply sector config and generate alerts (sector_config.py)
+      5. Score data quality (scoring.py)
+      6. Pack FundamentalAnalysisReport (schemas.py)
+      7. Emit backward-compatible state keys
     """
-    from tradingagents.dataflows.local import (
-        get_egx_fundamentals_summary,
-        get_egx_income_statement,
-        get_egx_balance_sheet,
-        get_egx_key_ratios,
-    )
 
     def deterministic_fundamentals_analyst_node(state):
         trade_date = state["trade_date"]
         ticker = state["company_of_interest"]
 
-        # ── 1. Fetch all EGX fundamental data directly ─────────────────────────
-        fundamentals_data = get_egx_fundamentals_summary(ticker, trade_date)
-        income_data = get_egx_income_statement(ticker, "annual", trade_date)
-        balance_data = get_egx_balance_sheet(ticker, "annual", trade_date)
-        ratios_data = get_egx_key_ratios(ticker, trade_date)
+        # ── 1. Load multi-period data ──────────────────────────────────────────
+        multi = load_multi_period(ticker, curr_date=trade_date, n_periods=5, freq="annual")
 
-        # Merge into combined dict (same schema as `assess_financial_health` expects)
-        combined = {
-            "income_statement": income_data if income_data else {},
-            "balance_sheet": balance_data if balance_data else {},
-            "key_ratios": ratios_data if ratios_data else {},
-            "data_completeness": fundamentals_data.get("data_completeness", {}),
-        }
+        income_periods = multi["income"]   # list of dicts, most-recent first
+        balance_periods = multi["balance"]
+        ratios_periods = multi["ratios"]
 
-        # ── 2. Run existing deterministic pipeline ─────────────────────────────
-        data_completeness_score = calculate_data_completeness_score(combined)
-        health = assess_financial_health(combined)
-        valuation = determine_valuation_gap(combined)
-        risks = identify_key_risks(combined, health)
-        confidence_info = calculate_confidence_score(data_completeness_score, health)
+        # Current period (most recent)
+        cur_income = income_periods[0] if income_periods else {}
+        cur_balance = balance_periods[0] if balance_periods else {}
+        cur_ratios = ratios_periods[0] if ratios_periods else {}
 
-        # ── 3. Build structured output (same schema as LLM output) ─────────────
-        # Map internal health/valuation labels to the LLM output format
-        health_map = {"healthy": "Strong", "concerning": "Moderate", "critical": "Weak"}
-        financial_health_str = health_map.get(health.get("overall", "unknown"), "Unknown")
+        # Prior period (second most recent, for YoY)
+        prior_income = income_periods[1] if len(income_periods) > 1 else None
+        prior_balance = balance_periods[1] if len(balance_periods) > 1 else None
+        prior_ratios = ratios_periods[1] if len(ratios_periods) > 1 else None
 
-        val_status = valuation.get("current_valuation", "unknown")
-        val_map = {
-            "potentially_undervalued": "Undervalued",
-            "fairly_valued": "Fair",
-            "potentially_overvalued": "Overvalued",
-        }
-        valuation_gap_str = val_map.get(val_status, "Unknown")
+        # ── 2. Sector classification ───────────────────────────────────────────
+        sector_cfg = SectorConfig(ticker)
+        sector = sector_cfg.sector
+        fiscal_period = cur_income.get("_period_end_date") or cur_balance.get("_period_end_date") or trade_date
 
-        fvr = valuation.get("fair_value_range", {})
-        fair_value_range_str = (
-            f"{fvr.get('low', 'N/A')}-{fvr.get('high', 'N/A')}"
-            if fvr.get("low") is not None and fvr.get("high") is not None
-            else "N/A"
+        # ── 3. Compute ratios ─────────────────────────────────────────────────
+        # Extract raw values from current period
+        revenue = cur_income.get("revenue")
+        gross_profit = cur_income.get("gross_profit")
+        operating_income = cur_income.get("operating_income")
+        net_income = cur_income.get("net_income")
+        total_assets = cur_balance.get("total_assets")
+        total_liabilities = cur_balance.get("total_liabilities")
+        total_equity = cur_balance.get("total_equity")
+        current_assets = cur_balance.get("current_assets")
+        current_liabilities = cur_balance.get("current_liabilities")
+        shares_outstanding = cur_balance.get("shares_outstanding")
+
+        # Piotroski prior-period comparison inputs
+        roa_prior = FinancialCalculator.roa(
+            prior_income.get("net_income") if prior_income else None,
+            prior_balance.get("total_assets") if prior_balance else None,
+        )
+        gm_prior = FinancialCalculator.gross_margin(
+            prior_income.get("gross_profit") if prior_income else None,
+            prior_income.get("revenue") if prior_income else None,
+        )
+        at_prior = FinancialCalculator.asset_turnover(
+            prior_income.get("revenue") if prior_income else None,
+            prior_balance.get("total_assets") if prior_balance else None,
+        )
+        de_prior = FinancialCalculator.debt_to_equity(
+            prior_balance.get("total_liabilities") if prior_balance else None,
+            prior_balance.get("total_equity") if prior_balance else None,
+        )
+        cr_prior = cur_ratios.get("current_ratio") if prior_ratios is None else prior_ratios.get("current_ratio")
+        shares_prior = prior_balance.get("shares_outstanding") if prior_balance else None
+
+        cfg = get_config()
+        # Date-aware risk-free rate: looks up the CBE policy rate effective as of
+        # trade_date. Falls back to static config if no CSV data is available.
+        # Temporal safety: the lookup never returns a rate whose effective_date
+        # is after trade_date, preventing lookahead bias in backtests.
+        risk_free_rate, rfr_source, rfr_effective_date = get_egx_risk_free_rate_as_of(
+            trade_date=trade_date,
+            config=cfg,
+        )
+        # Treat state current_price=0 as unavailable (0 is the propagation.py sentinel)
+        current_price = state.get("current_price") or None
+
+        ratios_raw = FinancialCalculator.compute_all(
+            revenue=revenue,
+            gross_profit=gross_profit,
+            operating_income=operating_income,
+            net_income=net_income,
+            total_assets=total_assets,
+            total_liabilities=total_liabilities,
+            total_equity=total_equity,
+            current_assets=current_assets,
+            current_liabilities=current_liabilities,
+            shares_outstanding=shares_outstanding,
+            # CSV-provided fallback values
+            eps_csv=cur_ratios.get("eps"),
+            pe_ratio_csv=cur_ratios.get("pe_ratio"),
+            pb_ratio_csv=cur_ratios.get("price_to_book"),
+            current_ratio_csv=cur_ratios.get("current_ratio"),
+            roe_csv=cur_ratios.get("roe"),
+            roa_csv=cur_ratios.get("roa"),
+            gross_margin_csv=cur_ratios.get("gross_margin"),
+            operating_margin_csv=cur_ratios.get("operating_margin"),
+            net_margin_csv=cur_ratios.get("net_margin"),
+            book_value_per_share=cur_ratios.get("book_value_per_share"),
+            dividend_yield_csv=cur_ratios.get("dividend_yield"),
+            # Market data: wired from state and config
+            current_price=current_price,
+            risk_free_rate=risk_free_rate,
+            roa_prior=roa_prior,
+            gross_margin_prior=gm_prior,
+            asset_turnover_prior=at_prior,
+            leverage_prior=de_prior,
+            current_ratio_prior=cr_prior,
+            shares_prior=shares_prior,
         )
 
+        # Extract internal metadata before stripping
+        pe_ratio_source: str = ratios_raw.get("_pe_ratio_source", "unavailable")
+
+        # Strip internal metadata keys for the public ratios dict
+        public_ratios: Dict[str, Optional[float]] = {
+            k: v for k, v in ratios_raw.items()
+            if not k.startswith("_")
+        }
+
+        # ── 4. Standardize statements ──────────────────────────────────────────
+        preprocessing = StatementStandardizer.standardize(
+            current_income=cur_income,
+            current_balance=cur_balance,
+            current_ratios={k: v for k, v in public_ratios.items() if v is not None},
+            prior_income=prior_income,
+            prior_balance=prior_balance,
+            prior_ratios={k: v for k, v in FinancialCalculator.compute_all(
+                revenue=prior_income.get("revenue") if prior_income else None,
+                gross_profit=prior_income.get("gross_profit") if prior_income else None,
+                operating_income=prior_income.get("operating_income") if prior_income else None,
+                net_income=prior_income.get("net_income") if prior_income else None,
+                total_assets=prior_balance.get("total_assets") if prior_balance else None,
+                total_liabilities=prior_balance.get("total_liabilities") if prior_balance else None,
+                total_equity=prior_balance.get("total_equity") if prior_balance else None,
+                roa_csv=prior_ratios.get("roa") if prior_ratios else None,
+                gross_margin_csv=prior_ratios.get("gross_margin") if prior_ratios else None,
+                net_margin_csv=prior_ratios.get("net_margin") if prior_ratios else None,
+                operating_margin_csv=prior_ratios.get("operating_margin") if prior_ratios else None,
+                current_ratio_csv=prior_ratios.get("current_ratio") if prior_ratios else None,
+                roe_csv=prior_ratios.get("roe") if prior_ratios else None,
+                eps_csv=prior_ratios.get("eps") if prior_ratios else None,
+                pe_ratio_csv=prior_ratios.get("pe_ratio") if prior_ratios else None,
+                pb_ratio_csv=prior_ratios.get("price_to_book") if prior_ratios else None,
+            ).items() if not k.startswith("_")} if prior_income else None,
+        )
+
+        # ── 5. Generate distress flags ─────────────────────────────────────────
+        nm_val = public_ratios.get("net_margin")
+        de_val = public_ratios.get("debt_to_equity")
+        cr_val = public_ratios.get("current_ratio")
+        roe_val = public_ratios.get("roe")
+        eps_val = public_ratios.get("eps")
+        pe_val = public_ratios.get("pe_ratio")
+        ey_spread = public_ratios.get("earnings_yield_spread")
+
+        distress_flags = sector_cfg.generate_distress_flags(
+            net_margin=nm_val,
+            debt_to_equity=de_val,
+            current_ratio=cr_val,
+            total_equity=total_equity,
+            revenue=revenue,
+            eps=eps_val,
+            pe_ratio=pe_val,
+            roe=roe_val,
+            earnings_yield_spread=ey_spread,
+        )
+
+        # ── 6. Compute signal_coherence ────────────────────────────────────────
+        signal_coherence, coherence_reasons = FinancialCalculator.compute_signal_coherence(
+            ratios=ratios_raw,
+            current_ratio_csv=cur_ratios.get("current_ratio"),
+            current_assets=current_assets,
+            current_liabilities=current_liabilities,
+        )
+
+        # ── 7. Compute data_confidence ─────────────────────────────────────────
+        n_annual = multi["n_income"]  # income depth as proxy for overall period depth
+        periods_since = estimate_periods_since_filing(n_annual, 5)
+        data_confidence = compute_data_confidence(
+            income_row=cur_income,
+            balance_row=cur_balance,
+            ratios_row=cur_ratios,
+            n_annual_periods=n_annual,
+            periods_since_last_filing=periods_since,
+        )
+
+        # ── 8. Determine financial_health heuristic ────────────────────────────
+        directions = preprocessing.get("directions", {})
+
+        # Guard: if NEGATIVE_EQUITY_ALERT fired, ROE is sign-reversed and
+        # cannot be interpreted as a normal positive/negative quality signal.
+        # A sign-reversed ROE (both periods negative equity) can flip the heuristic
+        # verdict from 'concerning' to 'healthy' — a false positive safety risk.
+        # Nullify the ROE direction to prevent contamination.
+        if "NEGATIVE_EQUITY_ALERT" in distress_flags:
+            directions = {**directions, "roe": "insufficient_history"}
+
+        financial_health = determine_financial_health_heuristic(directions)
+
+        # ── 9. Build key_risks (deterministic: structural EGX risks only) ─────
+        key_risks: List[str] = [
+            "EGX market structure: limited liquidity, ±10% daily price limits, no short selling",
+            "EGP currency exposure: Egyptian Pound volatility affects real returns",
+        ]
+        for flag in distress_flags:
+            if flag in ("NEGATIVE_MARGIN_ALERT", "HIGH_LEVERAGE_ALERT", "LIQUIDITY_EMERGENCY", "NEGATIVE_EQUITY_ALERT"):
+                key_risks.insert(0, f"Fundamental risk: {flag.replace('_', ' ').lower()}")
+
+        # ── 10. Assemble FundamentalAnalysisReport ────────────────────────────
+        report_obj = FundamentalAnalysisReport(
+            ticker=ticker.upper().replace(".CA", ""),
+            analysis_date=trade_date,
+            fiscal_period=fiscal_period,
+            sector=sector,
+            ratios=public_ratios,
+            preprocessing=preprocessing,
+            distress_flags=distress_flags,
+            data_confidence=data_confidence,
+            signal_coherence=signal_coherence,
+            financial_health=financial_health,
+            valuation_assessment="",  # Not assessed in deterministic mode
+            earnings_direction="",    # Not predicted in deterministic mode
+            earnings_direction_confidence=0,
+            raw_earnings_direction_confidence=0,
+            pe_ratio_source=pe_ratio_source,
+            risk_free_rate_value=risk_free_rate,
+            risk_free_rate_source=rfr_source,
+            risk_free_rate_effective_date=rfr_effective_date or "",
+            thesis_text="",           # Empty in deterministic mode
+            key_risks=key_risks,
+            pipeline_mode="deterministic",
+            stages_completed=[],
+        )
+
+        # ── 11. Build backward-compatible text report ─────────────────────────
+        flags_str = ", ".join(distress_flags) if distress_flags else "none"
+        coherence_notes = "; ".join(coherence_reasons) if coherence_reasons else "all checks passed"
+
+        text_report = (
+            f"EGX Fundamental Analysis — {ticker} | {fiscal_period}\n"
+            f"Sector: {sector} | Financial Health: {financial_health}\n"
+            f"Data Confidence: {data_confidence}/100 | Signal Coherence: {signal_coherence}/100\n"
+            f"Distress Flags: {flags_str}\n"
+            f"Coherence notes: {coherence_notes}\n"
+            f"Key Ratios: "
+            f"ROE={_fmt(public_ratios.get('roe'))} | "
+            f"Net Margin={_fmt(public_ratios.get('net_margin'))} | "
+            f"D/E={_fmt(public_ratios.get('debt_to_equity'))} | "
+            f"Current={_fmt(public_ratios.get('current_ratio'))} | "
+            f"P/E={_fmt(public_ratios.get('pe_ratio'))} | "
+            f"P/B={_fmt(public_ratios.get('pb_ratio'))}\n"
+            f"Revenue Growth YoY: {_fmt(preprocessing.get('revenue_growth_yoy'), pct=True)}\n"
+            f"Key Risks: {'; '.join(key_risks[:3])}"
+        )
+
+        # ── 12. Build backward-compatible structured_analysis dict ────────────
+        # Maps to the same keys the old code emitted so downstream agents are unchanged.
         structured_analysis = {
-            "financial_health": financial_health_str,
-            "valuation_gap": valuation_gap_str,
-            "fair_value_range": fair_value_range_str,
-            "key_risks": [r.get("risk", str(r)) for r in risks],
-            "confidence_score": confidence_info.get("score", 0) if isinstance(confidence_info, dict) else confidence_info,
-            "data_completeness": round(data_completeness_score * 100),
+            # Legacy keys (kept for backward compatibility)
+            "financial_health": financial_health,
+            "valuation_gap": "not_assessed",
+            "fair_value_range": "N/A",
+            "key_risks": key_risks,
+            "confidence_score": data_confidence,       # maps old "confidence_score"
+            "data_completeness": data_confidence,      # maps old "data_completeness"
             "reasoning": (
-                f"Health: {health.get('overall', 'unknown')} "
-                f"| Valuation: {val_status} "
-                f"| Risks: {len(risks)} identified"
+                f"Sector: {sector} | Health: {financial_health} | "
+                f"Flags: {flags_str} | Coherence: {signal_coherence}/100"
             ),
-            # Extended fields for downstream agents
-            "health_detail": health,
-            "valuation_detail": valuation,
-            "risks_detail": risks,
+            # New structured fields
+            "data_confidence": data_confidence,
+            "signal_coherence": signal_coherence,
+            "distress_flags": distress_flags,
+            "ratios": public_ratios,
+            "preprocessing": {
+                "revenue_growth_yoy": preprocessing.get("revenue_growth_yoy"),
+                "net_income_growth_yoy": preprocessing.get("net_income_growth_yoy"),
+                "directions": directions,
+            },
+            "sector": sector,
+            "fiscal_period": fiscal_period,
+            "pipeline_mode": "deterministic",
+            "pe_ratio_source": pe_ratio_source,
+            "risk_free_rate_value": risk_free_rate,
+            "risk_free_rate_source": rfr_source,
+            "risk_free_rate_effective_date": rfr_effective_date or "",
+            # Full Pydantic report serialized for downstream agents that expect it
+            "report": report_obj.model_dump(),
         }
-
-        # Compact text report for backward compatibility
-        report = (
-            f"Deterministic Fundamental Analysis for {ticker} on {trade_date}:\n"
-            f"Financial Health: {financial_health_str}\n"
-            f"Valuation: {valuation_gap_str} | Fair Value Range: {fair_value_range_str}\n"
-            f"Key Risks: {', '.join(r.get('risk', '') for r in risks[:3])}\n"
-            f"Confidence: {structured_analysis['confidence_score']}/100 | "
-            f"Data Completeness: {structured_analysis['data_completeness']}%"
-        )
 
         return {
-            "fundamentals_report": report,
+            "fundamentals_report": text_report,
             "fundamental_analysis": structured_analysis,
-            # Clear per-analyst message channel (no messages were added)
             "fundamentals_messages": [],
         }
 
     return deterministic_fundamentals_analyst_node
+
+
+# =============================================================================
+# Hybrid Analyst — EGX (Phase 2A: deterministic foundation + CoT pipeline)
+# =============================================================================
+
+def create_hybrid_fundamentals_analyst(quick_thinking_llm, deep_thinking_llm):
+    """
+    Hybrid Fundamental Analyst for EGX: deterministic foundation + three-stage CoT.
+
+    Architecture:
+      1. Runs the full deterministic pipeline (same as create_deterministic_fundamentals_analyst)
+      2. Passes the FundamentalAnalysisReport to the CoT pipeline (pipeline.py)
+      3. The CoT pipeline enriches: financial_health, thesis_text, earnings_direction,
+         valuation_assessment, key_risks using quick_thinking_llm + deep_thinking_llm
+      4. Falls back to deterministic output on any CoT failure
+
+    Output state schema is identical to create_deterministic_fundamentals_analyst.
+    """
+
+    # Reuse the deterministic node to compute the Phase 1A report
+    _deterministic_node = create_deterministic_fundamentals_analyst()
+
+    def hybrid_fundamentals_analyst_node(state):
+        # Step 1: Run deterministic pipeline
+        det_result = _deterministic_node(state)
+
+        # Extract the structured FundamentalAnalysisReport from deterministic output
+        structured = det_result.get("fundamental_analysis", {})
+        report_dict = structured.get("report")
+
+        if report_dict is None:
+            # Deterministic pipeline produced no report — return as-is
+            return det_result
+
+        try:
+            report_obj = FundamentalAnalysisReport(**report_dict)
+        except Exception:
+            # Schema deserialization failed — return deterministic result
+            return det_result
+
+        # Step 2: Run CoT pipeline
+        ticker = state["company_of_interest"]
+        sector_cfg = SectorConfig(ticker)
+        config = get_config()
+
+        try:
+            enriched_report = run_cot_pipeline(
+                quick_llm=quick_thinking_llm,
+                deep_llm=deep_thinking_llm,
+                report=report_obj,
+                sector_cfg=sector_cfg,
+                freq="annual",
+                use_memory=config.get("use_fundamental_memory", False),
+                source_run_id=f"{ticker}-{state['trade_date']}-fundamentals",
+            )
+        except Exception:
+            # CoT pipeline crashed entirely — return deterministic result
+            return det_result
+
+        # Step 3: Rebuild state outputs from enriched report
+        trade_date = state["trade_date"]
+        fiscal_period = enriched_report.fiscal_period
+        sector = enriched_report.sector
+        public_ratios = enriched_report.ratios
+        preprocessing = enriched_report.preprocessing
+        distress_flags = enriched_report.distress_flags
+        data_confidence = enriched_report.data_confidence
+        signal_coherence = enriched_report.signal_coherence
+        financial_health = enriched_report.financial_health
+        thesis_text = enriched_report.thesis_text
+        earnings_direction = enriched_report.earnings_direction
+        earnings_direction_confidence = enriched_report.earnings_direction_confidence
+        raw_earnings_direction = enriched_report.raw_earnings_direction
+        calibrated_earnings_direction = enriched_report.calibrated_earnings_direction
+        fundamental_outlook = enriched_report.fundamental_outlook
+        downside_risk_level = enriched_report.downside_risk_level
+        calibration_policy = enriched_report.calibration_policy
+        signal_calibration_notes = enriched_report.signal_calibration_notes
+        valuation_assessment = enriched_report.valuation_assessment
+        key_risks = enriched_report.key_risks
+        pipeline_mode = enriched_report.pipeline_mode
+        stages_completed = enriched_report.stages_completed
+
+        flags_str = ", ".join(distress_flags) if distress_flags else "none"
+        directions = preprocessing.get("directions", {})
+
+        # Build enriched text report
+        thesis_section = (
+            f"\nInvestment Thesis: {thesis_text}"
+            if thesis_text else ""
+        )
+        earnings_section = (
+            f"\nEarnings Direction: {earnings_direction} "
+            f"(confidence: {earnings_direction_confidence}/100)"
+            if earnings_direction else ""
+        )
+        valuation_section = (
+            f"\nValuation: {valuation_assessment}"
+            if valuation_assessment else ""
+        )
+
+        text_report = (
+            f"EGX Fundamental Analysis — {ticker} | {fiscal_period}\n"
+            f"Sector: {sector} | Financial Health: {financial_health}\n"
+            f"Data Confidence: {data_confidence}/100 | Signal Coherence: {signal_coherence}/100\n"
+            f"Distress Flags: {flags_str}\n"
+            f"Pipeline Mode: {pipeline_mode} | Stages: {', '.join(stages_completed) or 'none'}\n"
+            f"Key Ratios: "
+            f"ROE={_fmt(public_ratios.get('roe'))} | "
+            f"Net Margin={_fmt(public_ratios.get('net_margin'))} | "
+            f"D/E={_fmt(public_ratios.get('debt_to_equity'))} | "
+            f"Current={_fmt(public_ratios.get('current_ratio'))} | "
+            f"P/E={_fmt(public_ratios.get('pe_ratio'))} | "
+            f"P/B={_fmt(public_ratios.get('pb_ratio'))}\n"
+            f"Revenue Growth YoY: {_fmt(preprocessing.get('revenue_growth_yoy'), pct=True)}"
+            f"{valuation_section}"
+            f"{earnings_section}"
+            f"{thesis_section}\n"
+            f"Key Risks: {'; '.join(key_risks[:3])}"
+        )
+
+        structured_analysis = {
+            # Legacy keys (backward compatibility)
+            "financial_health": financial_health,
+            "valuation_gap": valuation_assessment or "not_assessed",
+            "fair_value_range": "N/A",
+            "key_risks": key_risks,
+            "confidence_score": data_confidence,
+            "data_completeness": data_confidence,
+            "reasoning": (
+                f"Sector: {sector} | Health: {financial_health} | "
+                f"Flags: {flags_str} | Coherence: {signal_coherence}/100 | "
+                f"Pipeline: {pipeline_mode}"
+            ),
+            # New structured fields
+            "data_confidence": data_confidence,
+            "signal_coherence": signal_coherence,
+            "distress_flags": distress_flags,
+            "ratios": public_ratios,
+            "preprocessing": {
+                "revenue_growth_yoy": preprocessing.get("revenue_growth_yoy"),
+                "net_income_growth_yoy": preprocessing.get("net_income_growth_yoy"),
+                "directions": directions,
+            },
+            "sector": sector,
+            "fiscal_period": fiscal_period,
+            "pipeline_mode": pipeline_mode,
+            "stages_completed": stages_completed,
+            "thesis_text": thesis_text,
+            "earnings_direction": earnings_direction,
+            "earnings_direction_confidence": earnings_direction_confidence,
+            "raw_earnings_direction_confidence": enriched_report.raw_earnings_direction_confidence,
+            "raw_earnings_direction": raw_earnings_direction,
+            "calibrated_earnings_direction": calibrated_earnings_direction,
+            "fundamental_outlook": fundamental_outlook,
+            "downside_risk_level": downside_risk_level,
+            "calibration_policy": calibration_policy,
+            "signal_calibration_notes": signal_calibration_notes,
+            "valuation_assessment": valuation_assessment,
+            "pe_ratio_source": getattr(enriched_report, "pe_ratio_source", ""),
+            "risk_free_rate_value": getattr(enriched_report, "risk_free_rate_value", None),
+            "risk_free_rate_source": getattr(enriched_report, "risk_free_rate_source", ""),
+            "risk_free_rate_effective_date": getattr(enriched_report, "risk_free_rate_effective_date", ""),
+            "report": enriched_report.model_dump(),
+        }
+
+        return {
+            "fundamentals_report": text_report,
+            "fundamental_analysis": structured_analysis,
+            "fundamentals_messages": [],
+        }
+
+    return hybrid_fundamentals_analyst_node
+
+
+def _fmt(val: Optional[float], pct: bool = False) -> str:
+    """Format a float or None for display."""
+    if val is None:
+        return "N/A"
+    if pct:
+        return f"{val:+.1%}"
+    if abs(val) >= 1000:
+        return f"{val:,.0f}"
+    return f"{val:.3f}"

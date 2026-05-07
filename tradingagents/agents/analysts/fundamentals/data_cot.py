@@ -30,9 +30,18 @@ _MIN_CONFIDENCE_FOR_COT = 20
 def build_evidence_pack(
     report: FundamentalAnalysisReport,
     sector_cfg: SectorConfig,
+    freq: str = "annual",
+    prior_memory_context: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Assemble a structured evidence pack from a deterministic FundamentalAnalysisReport.
+
+    Args:
+      freq: "annual" or "quarterly". Controls how growth signals are labeled
+            and which comparison is treated as primary in the narrative.
+            Annual → YoY is primary. Quarterly → sequential QoQ is primary.
+      prior_memory_context: Optional Phase 3 context. Memory is prompt context
+            only and must not overwrite deterministic evidence fields.
 
     The evidence pack contains all computed data in two forms:
       - Structured dict (for downstream parsing and Stage 3 JSON building)
@@ -43,6 +52,7 @@ def build_evidence_pack(
         ticker, fiscal_period, sector, sector_context,
         ratios, directions, distress_flags,
         data_confidence, signal_coherence,
+        freq,
         revenue_growth_yoy, net_income_growth_yoy,
         common_size_income, common_size_balance,
         piotroski_score,
@@ -67,13 +77,20 @@ def build_evidence_pack(
         "distress_flags": report.distress_flags,
         "data_confidence": report.data_confidence,
         "signal_coherence": report.signal_coherence,
+        "freq": freq,
         "revenue_growth_yoy": preprocessing.get("revenue_growth_yoy"),
         "net_income_growth_yoy": preprocessing.get("net_income_growth_yoy"),
         "common_size_income": common_size_income,
         "common_size_balance": common_size_balance,
         "piotroski_score": ratios.get("piotroski_score"),
         "financial_health_heuristic": report.financial_health,
+        "pe_ratio_source": getattr(report, "pe_ratio_source", ""),
+        "risk_free_rate_source": getattr(report, "risk_free_rate_source", ""),
+        "risk_free_rate_effective_date": getattr(report, "risk_free_rate_effective_date", ""),
+        "supplemental_context": getattr(report, "supplemental_context", {}) or {},
     }
+    if prior_memory_context:
+        pack["prior_memory_context"] = prior_memory_context
 
     # Format the narrative for LLM consumption
     pack["narrative"] = format_evidence_narrative(pack)
@@ -151,12 +168,16 @@ def format_evidence_narrative(pack: Dict[str, Any]) -> str:
     directions = pack.get("directions", {})
     flags = pack.get("distress_flags", [])
     sector_context = pack.get("sector_context", {})
+    freq = pack.get("freq", "annual")
+    is_quarterly = (freq == "quarterly")
     rev_growth = pack.get("revenue_growth_yoy")
     ni_growth = pack.get("net_income_growth_yoy")
     cs_income = pack.get("common_size_income", {})
     cs_balance = pack.get("common_size_balance", {})
     piotroski = pack.get("piotroski_score")
     health_heuristic = pack.get("financial_health_heuristic", "")
+    prior_memory_context = pack.get("prior_memory_context")
+    supplemental_context = pack.get("supplemental_context") or {}
 
     lines: List[str] = []
 
@@ -165,7 +186,20 @@ def format_evidence_narrative(pack: Dict[str, Any]) -> str:
     lines.append(f"Sector: {sector.upper()} | Analysis Date: {pack.get('analysis_date', '')}")
     lines.append(f"Data Confidence: {dc}/100 | Signal Coherence: {sc}/100")
     lines.append(f"Deterministic Health Heuristic: {health_heuristic}")
+    if is_quarterly:
+        lines.append(
+            "ANALYSIS MODE: QUARTERLY — prediction horizon is next quarter vs current quarter (QoQ). "
+            "Growth signals below show sequential quarter-over-quarter changes, NOT year-over-year. "
+            "Do NOT use these as YoY signals."
+        )
+    else:
+        lines.append("ANALYSIS MODE: ANNUAL — prediction horizon is next year vs current year (YoY).")
     lines.append("")
+
+    # ── Phase 3 Memory Context ───────────────────────────────────────────────
+    if prior_memory_context:
+        lines.append(str(prior_memory_context).strip())
+        lines.append("")
 
     # ── Distress Flags ─────────────────────────────────────────────────────
     lines.append("DISTRESS FLAGS")
@@ -175,6 +209,61 @@ def format_evidence_narrative(pack: Dict[str, Any]) -> str:
     else:
         lines.append("  none")
     lines.append("")
+
+    # ── Supplemental Context ───────────────────────────────────────────────
+    if supplemental_context:
+        lines.append("SUPPLEMENTAL FORWARD-LOOKING CONTEXT")
+        missing = supplemental_context.get("missing_categories") or []
+        if missing:
+            lines.append(
+                "  Missing supplemental categories: "
+                + ", ".join(str(item) for item in missing)
+            )
+        valuation = supplemental_context.get("valuation_context") or {}
+        if valuation:
+            lines.append(
+                "  Valuation context: "
+                f"price={_fmt(valuation.get('close_price'))}, "
+                f"P/E={_fmt(valuation.get('pe_ratio'))}, "
+                f"P/B={_fmt(valuation.get('pb_ratio'))}, "
+                f"dividend_yield={_fmt(valuation.get('dividend_yield'), pct=True)}"
+            )
+        quality = supplemental_context.get("quality_of_earnings") or {}
+        if quality:
+            lines.append(
+                "  Quality of earnings: "
+                f"OCF={_fmt(quality.get('operating_cash_flow'))}, "
+                f"FCF={_fmt(quality.get('free_cash_flow'))}, "
+                f"interest_expense={_fmt(quality.get('interest_expense'))}, "
+                f"one_off_gains_losses={_fmt(quality.get('one_off_gains_losses'))}"
+            )
+            if quality.get("one_off_description"):
+                lines.append(f"  One-off description: {quality.get('one_off_description')}")
+        narrative = supplemental_context.get("narrative_events") or {}
+        if narrative:
+            if narrative.get("management_guidance"):
+                lines.append(f"  Management guidance: {narrative.get('management_guidance')}")
+            if narrative.get("event_flags"):
+                lines.append(f"  Event flags: {narrative.get('event_flags')}")
+            if narrative.get("one_off_event_notes"):
+                lines.append(f"  Event notes: {narrative.get('one_off_event_notes')}")
+        macro = supplemental_context.get("macro_sector_context") or {}
+        if macro:
+            lines.append(
+                "  Macro/sector context: "
+                f"inflation={_fmt(macro.get('inflation_yoy'), pct=True)}, "
+                f"policy_rate={_fmt(macro.get('policy_rate'), pct=True)}, "
+                f"EGP/USD change={_fmt(macro.get('egp_usd_change_yoy'), pct=True)}"
+            )
+            if macro.get("commodity_context"):
+                lines.append(f"  Commodity context: {macro.get('commodity_context')}")
+            if macro.get("sector_cycle_notes"):
+                lines.append(f"  Sector cycle notes: {macro.get('sector_cycle_notes')}")
+        lines.append(
+            "  NOTE: Supplemental context is externally supplied and must be source-audited; "
+            "it can inform interpretation but must not overwrite deterministic statement values."
+        )
+        lines.append("")
 
     # ── Sector Context ─────────────────────────────────────────────────────
     if sector_context:
@@ -219,21 +308,61 @@ def format_evidence_narrative(pack: Dict[str, Any]) -> str:
     ey = ratios.get("earnings_yield")
     ey_spread = ratios.get("earnings_yield_spread")
     div_yield = ratios.get("dividend_yield")
-    lines.append(
-        f"  P/E: {_fmt(pe)} | P/B: {_fmt(pb)} | EPS: {_fmt(eps)}"
+    pe_source = pack.get("pe_ratio_source", "")
+    # Annotate P/E with its source so analysts know if the value is stale
+    pe_annotation = (
+        "[live price]" if pe_source == "trade_date_price"
+        else "[stale CSV]" if pe_source == "csv_fallback"
+        else "[N/A]"
     )
     lines.append(
-        f"  Earnings Yield: {_fmt(ey, pct=True)} | EY Spread vs Risk-Free: {_fmt(ey_spread, pct=True)}"
+        f"  P/E: {_fmt(pe)} {pe_annotation} | P/B: {_fmt(pb)} | EPS: {_fmt(eps)}"
+    )
+    rfr_source = pack.get("risk_free_rate_source", "")
+    rfr_eff_date = pack.get("risk_free_rate_effective_date", "")
+    if ey_spread is not None:
+        if rfr_source == "date_aware_cbe_policy_rate":
+            rfr_annotation = f"[date-aware CBE: effective {rfr_eff_date}]"
+        elif rfr_source == "static_config_fallback":
+            rfr_annotation = "[static config — may be anachronistic for this backtest date]"
+        else:
+            rfr_annotation = ""
+        ey_spread_str = f"{_fmt(ey_spread, pct=True)} {rfr_annotation}".strip()
+    else:
+        ey_spread_str = "N/A (risk_free_rate not configured)"
+    lines.append(
+        f"  Earnings Yield: {_fmt(ey, pct=True)} | EY Spread vs Risk-Free: {ey_spread_str}"
     )
     lines.append(f"  Dividend Yield: {_fmt(div_yield, pct=True)}")
     lines.append("")
 
     # ── Growth ────────────────────────────────────────────────────────────
-    lines.append("GROWTH SIGNALS")
-    lines.append(
-        f"  Revenue YoY: {_fmt(rev_growth, pct=True)} {_direction_arrow(directions.get('revenue', '?'))} | "
-        f"Net Income YoY: {_fmt(ni_growth, pct=True)} {_direction_arrow(directions.get('net_income', '?'))}"
-    )
+    if is_quarterly:
+        lines.append("GROWTH SIGNALS (QUARTERLY MODE — all rates are QoQ: current quarter vs prior quarter)")
+        rev_label = "Revenue QoQ"
+        ni_label  = "Net Income QoQ"
+        lines.append(
+            f"  {rev_label}: {_fmt(rev_growth, pct=True)} {_direction_arrow(directions.get('revenue', '?'))} | "
+            f"{ni_label}: {_fmt(ni_growth, pct=True)} {_direction_arrow(directions.get('net_income', '?'))}"
+        )
+        # Add interpretation note when QoQ is extreme (sign of near-zero crossing)
+        if ni_growth is not None and abs(ni_growth) > 2.0:
+            lines.append(
+                f"  [NOTE] Net Income QoQ magnitude > 200% — likely reflects a near-zero crossing "
+                f"(e.g. trough-to-recovery or peak-to-loss). Extrapolating this rate forward is unreliable; "
+                f"use trend direction and margin signals as primary context."
+            )
+        elif ni_growth is None:
+            lines.append(
+                "  [NOTE] Net Income QoQ: unavailable — no prior quarter data in scope. "
+                "Use trend directions and margin levels as primary signals. Reduce confidence."
+            )
+    else:
+        lines.append("GROWTH SIGNALS (ANNUAL MODE — all rates are YoY: current year vs prior year)")
+        lines.append(
+            f"  Revenue YoY: {_fmt(rev_growth, pct=True)} {_direction_arrow(directions.get('revenue', '?'))} | "
+            f"Net Income YoY: {_fmt(ni_growth, pct=True)} {_direction_arrow(directions.get('net_income', '?'))}"
+        )
     lines.append(
         f"  Gross Profit trend: {_direction_arrow(directions.get('gross_profit', '?'))} | "
         f"Operating Income trend: {_direction_arrow(directions.get('operating_income', '?'))}"

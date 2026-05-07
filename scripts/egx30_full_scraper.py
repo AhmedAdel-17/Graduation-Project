@@ -140,16 +140,25 @@ def fetch_ticker_data(ticker: str) -> dict:
             if pd.isna(te):
                 te = row.get("Stockholders Equity") or row.get("Common Stock Equity")
 
+            # Current assets / liabilities — present for operational tickers,
+            # absent for banks (which don't report them in the same structure).
+            ca = row.get("Current Assets")
+            cl = row.get("Current Liabilities")
+
             rec = {
-                "period_end_date":     date,
-                "total_assets":        row.get("Total Assets"),
-                "total_liabilities":   tl,
-                "total_equity":        te,
+                "period_end_date":      date,
+                "total_assets":         row.get("Total Assets"),
+                "total_liabilities":    tl,
+                "total_equity":         te,
                 "cash_and_equivalents": (
                     row.get("Cash And Cash Equivalents")
                     or row.get("Cash Cash Equivalents And Federal Funds Sold")
                 ),
-                "customer_deposits":   None,  # Not available in standard yfinance
+                "current_assets":       ca,
+                "current_liabilities":  cl,
+                # customer_deposits: not in yfinance — fill manually from
+                # Mubasher / EGX annual reports for bank-sector tickers.
+                "customer_deposits":    None,
             }
             rec = {k: (v if pd.notna(v) else None) for k, v in rec.items()}
             bal_records.append(rec)
@@ -215,10 +224,14 @@ def save_csvs(ticker: str, data: dict) -> dict:
         total_equity = row.get("total_equity") if pd.notna(row.get("total_equity")) else None
         total_assets = row.get("total_assets") if pd.notna(row.get("total_assets")) else None
 
-        net_margin    = round(net_income / revenue, 4)       if net_income and revenue and revenue != 0    else None
-        roe           = round(net_income / total_equity, 4)  if net_income and total_equity and total_equity != 0 else None
-        roa           = round(net_income / total_assets, 4)  if net_income and total_assets and total_assets != 0 else None
-        debt_to_equity = round(total_liab / total_equity, 2) if total_liab and total_equity and total_equity != 0 else None
+        current_assets = row.get("current_assets") if pd.notna(row.get("current_assets")) else None
+        current_liab   = row.get("current_liabilities") if pd.notna(row.get("current_liabilities")) else None
+
+        net_margin     = round(net_income / revenue, 4)         if net_income and revenue and revenue != 0          else None
+        roe            = round(net_income / total_equity, 4)    if net_income and total_equity and total_equity != 0 else None
+        roa            = round(net_income / total_assets, 4)    if net_income and total_assets and total_assets != 0 else None
+        debt_to_equity = round(total_liab / total_equity, 2)    if total_liab and total_equity and total_equity != 0 else None
+        current_ratio  = round(current_assets / current_liab, 4) if current_assets and current_liab and current_liab != 0 else None
 
         ratiorec = {
             "period_end_date": date_str,
@@ -226,6 +239,7 @@ def save_csvs(ticker: str, data: dict) -> dict:
             "roe":             roe,
             "roa":             roa,
             "debt_to_equity":  debt_to_equity,
+            "current_ratio":   current_ratio,
         }
 
         # Attach snapshot metrics only to the most recent (first) row
