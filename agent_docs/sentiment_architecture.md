@@ -1,4 +1,4 @@
-# EGX Sentiment Subsystem — Deep Technical & Trading Reference
+﻿# EGX Sentiment Subsystem — Deep Technical & Trading Reference
 
 > **Audience:** Senior engineers onboarding to this codebase + junior quant traders who need
 > to understand, defend, and debug the sentiment layer.
@@ -142,7 +142,7 @@ The system must handle this post correctly:
 
 ```mermaid
 graph TD
-    subgraph INGESTION["Data Ingestion (v2 Pipeline — scripts/twitter_pipeline/v2/)"]
+    subgraph INGESTION["Data Ingestion (v2 Pipeline — scripts/social_pipeline/v2/)"]
         FB["Apify Facebook\nfacebook_apify.py\nPRIMARY source"]
         TG["Telegram Public\ntelegram_public.py\nHighest SNR"]
         RD["Reddit Targeted\nreddit_targeted.py\nEnglish subset"]
@@ -1470,7 +1470,7 @@ If `n_total_posts` fails: fewer than 50 market posts were collected. Check:
 - Reddit targeted queries returning results?
 
 If `n_distinct_sources` fails: only 1 platform is producing posts. Usually a scraper failure
-on one source. Check individual scraper logs in `scripts/twitter_pipeline/v2/logs/`.
+on one source. Check individual scraper logs in `scripts/social_pipeline/v2/logs/`.
 
 If `recent_24h_share` fails: posts are all from 2+ days ago. Check scraper timestamps —
 sometimes timestamp parsing errors cause posts to appear stale. Look at raw JSON in `results_*.json`.
@@ -2220,9 +2220,9 @@ The execution is calibrated.
 | `tradingagents/agents/researchers/bull_researcher.py` | `_format_sentiment_section()` — EXCLUDED or non-directional context |
 | `tradingagents/utils/sentiment_engine.py` | `SentimentEngine` singleton, language routing, FinBERT/CAMeLBERT-DA/XLM-R inference, VADER fallback |
 | `tradingagents/utils/text_preprocessor.py` | `normalize_arabic()`, `normalize_text()`, `detect_language()`, `is_spam()`, `EGYPTIAN_SLANG_MAP`, spam patterns |
-| `scripts/twitter_pipeline/v2/entities.py` | `SYMBOL_REGISTRY`, `EGX_COMPANIES`, `MANUAL_EN_ALIASES`, `Mention` dataclass, phrase-boundary regex matcher |
-| `scripts/twitter_pipeline/v2/aggregator.py` | Weight formula, post routing to market/sector/stock buckets, `PLATFORM_SOURCES` |
-| `scripts/twitter_pipeline/v2/pipeline_v2.py` | Full v2 pipeline orchestration: SCRAPE → RELEVANCE → ENRICH → QUALITY → SENTIMENT → AGGREGATE |
+| `scripts/social_pipeline/v2/entities.py` | `SYMBOL_REGISTRY`, `EGX_COMPANIES`, `MANUAL_EN_ALIASES`, `Mention` dataclass, phrase-boundary regex matcher |
+| `scripts/social_pipeline/v2/aggregator.py` | Weight formula, post routing to market/sector/stock buckets, `PLATFORM_SOURCES` |
+| `scripts/social_pipeline/v2/pipeline.py` | Full v2 pipeline orchestration: SCRAPE → RELEVANCE → ENRICH → QUALITY → SENTIMENT → AGGREGATE |
 | `scripts/test_sentiment_pipeline.py` | Manual test harness — 5 scenarios, stage-by-stage display, no LLM |
 | `scripts/calibrate_tier_thresholds.py` | Offline calibration: reads `results_*.json`, computes p25 per tier/gate, recommends threshold updates |
 | `tests/test_sentiment_harness.py` | 106 regression tests for the harness |

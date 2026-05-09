@@ -1,4 +1,4 @@
-# CLAUDE.md — Operational Reference
+﻿# CLAUDE.md — Operational Reference
 
 > **Read this first.** This file is the authoritative working reference for any Claude session in this repo. It supersedes README.md (which is the upstream Tauric TradingAgents readme and does NOT describe this fork's EGX state).
 >
@@ -134,8 +134,8 @@ scripts/
   benchmark_comparison.py            <- side-by-side comparator
   run_real_backtests.py              <- multi-ticker driver
   parse_egx_annex5.py                <- PDF parser for fundamentals
-  twitter_pipeline/                  <- v1: scrape-only validation
-  twitter_pipeline/v2/               <- v2: layered trading-signal engine (Apify-backed)
+  social_pipeline/                  <- v1: scrape-only validation
+  social_pipeline/v2/               <- v2: layered trading-signal engine (Apify-backed)
 
 tests/                               <- pytest suite (Fundamentals strong; rest sparse)
 agent_docs/                          <- per-component design notes (read on demand)
@@ -224,10 +224,10 @@ python scripts/bt_benchmark.py --ticker COMI.CA --start 2023-10-01 --end 2024-01
 python scripts/run_real_backtests.py
 
 # Twitter/social v2 pipeline
-PYTHONIOENCODING=utf-8 python scripts/twitter_pipeline/v2/pipeline_v2.py
+PYTHONIOENCODING=utf-8 python scripts/social_pipeline/v2/pipeline.py
 
 # Standalone Facebook scrape + sentiment test
-python scripts/twitter_pipeline/v2/test_fb_sentiment.py
+python scripts/social_pipeline/v2/test_fb_sentiment.py
 
 # Tests
 python -m pytest tests/ -v --tb=short
@@ -251,16 +251,16 @@ python -c "from tradingagents.graph.trading_graph import TradingAgentsGraph; pri
 | `server/api_server.py` | FastAPI REST + WebSocket - dashboard backend |
 | `scripts/backtester.py` | LLM multi-agent backtest engine |
 | `scripts/bt_benchmark.py` | Backtrader classical RSI/MACD/BB baseline |
-| `scripts/twitter_pipeline/v2/pipeline_v2.py` | Production-style trading-signal aggregator from social sources |
+| `scripts/social_pipeline/v2/pipeline.py` | Production-style trading-signal aggregator from social sources |
 
 ---
 
 ## 8. Twitter / Social Pipeline (v1 + v2)
 
-### v1 - `scripts/twitter_pipeline/`
+### v1 - `scripts/social_pipeline/`
 Validation-grade scraper-only flow (Reddit JSON + DDG + dead Nitter mesh). Strict two-signal relevance classifier (finance AND EGX). Writes `logs/results_*.json` + `.csv`. Twitter is anonymously unscrapable in 2026 - documented in `scraper.py`.
 
-### v2 - `scripts/twitter_pipeline/v2/`
+### v2 - `scripts/social_pipeline/v2/`
 Layered trading-signal engine. **This is the production-track pipeline.**
 
 ```
