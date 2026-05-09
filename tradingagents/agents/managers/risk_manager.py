@@ -357,3 +357,15 @@ Replace BUY with SELL or HOLD. Confidence: 0.0 (low) to 1.0 (high).
         }
 
     return risk_manager_node
+
+
+# =============================================================================
+# Backward-compatibility re-exports (functions moved to risk_scorer.py)
+# Tests and scripts that imported these from risk_manager continue to work.
+# =============================================================================
+from tradingagents.agents.risk_mgmt.risk_scorer import (  # noqa: E402, F401
+    check_short_selling_violation,
+    check_leverage_violation,
+    run_all_risk_checks,
+    EGX_RISK_LIMITS,
+)

@@ -33,9 +33,12 @@ Literature grounding:
 """
 
 import json
+import logging
 import re
 from typing import Dict, Any, List, Tuple, Optional
 from tradingagents.dataflows.config import get_config
+
+logger = logging.getLogger("tradingagents.risk_scorer")
 
 
 # =============================================================================
@@ -413,8 +416,8 @@ def check_stop_loss_atr(
     }
     execution_plan["exit_logic"] = exit_logic
 
-    print(
-        f"[RiskScorer] Auto-generated stop-loss at {stop_price:.2f} EGP ({note})"
+    logger.info(
+        "[RiskScorer] Auto-generated stop-loss at %.2f EGP (%s)", stop_price, note
     )
     return None  # No violation — stop generated
 
@@ -482,7 +485,9 @@ def check_short_selling_violation(execution_plan: dict) -> Optional[RiskViolatio
 
     plan_text = json.dumps(execution_plan).lower()
 
-    # Word-boundary patterns — only match actual short-selling language
+    # Word-boundary patterns — only match actual short-selling language.
+    # Avoids false positives on "short-term", "short_term", "short_horizon".
+    # The last pattern catches "short COMI.CA 1000" (verb + ticker or quantity).
     short_sell_patterns = [
         r"\bshort[\s_-]sell(ing)?\b",
         r"\bsell[\s_-]short\b",
@@ -490,6 +495,7 @@ def check_short_selling_violation(execution_plan: dict) -> Optional[RiskViolatio
         r"\bshort[\s_-]position\b",
         r"\bgo[\s_-]short\b",
         r"\bopen[\s_-]short\b",
+        r"\bshort\s+(?:\w+\.ca|\d+)",  # "short comi.ca 1000" (plan_text is lowercased)
     ]
 
     for pattern in short_sell_patterns:
@@ -701,10 +707,9 @@ def apply_throttle_adjustments(
         "effective_adv": effective_adv,
         "throttle_threshold_pct": EGX_RISK_LIMITS["throttle_adv_threshold"],
     }
-    print(
-        f"[RiskScorer] THROTTLE applied: max_shares_per_day "
-        f"{old_daily:,.0f} → {throttle_daily:,} (5% of {effective_adv:,.0f} ADV), "
-        f"execution_days → {new_days}"
+    logger.info(
+        "[RiskScorer] THROTTLE applied: max_shares_per_day %s → %s (5%% of %s ADV), execution_days → %s",
+        f"{old_daily:,.0f}", f"{throttle_daily:,}", f"{effective_adv:,.0f}", new_days,
     )
     return adjustment
 
@@ -1033,3 +1038,45 @@ def risk_veto_node(state: dict) -> dict:
         "final_trade_decision": "HOLD",
         "risk_veto": True,
     }
+
+
+# =============================================================================
+# Convenience runner (backward-compatibility entry point)
+# =============================================================================
+
+def run_all_risk_checks(
+    execution_plan: dict,
+    portfolio_value: float,
+    avg_daily_volume: float,
+    current_price: float,
+    low_liquidity: bool = False,
+    technical_analysis: dict | None = None,
+) -> tuple[bool, List[RiskViolation]]:
+    """Run all deterministic EGX risk checks and return (approved, violations).
+
+    ``approved`` is True when there are no critical violations.
+    This function is the programmatic entry point used by tests and scripts;
+    the graph uses ``create_risk_scorer_node()`` instead.
+    """
+    _normalize_execution_plan(execution_plan)
+    _decision = (execution_plan.get("decision") or "").strip().upper()
+
+    violations: List[RiskViolation] = []
+    for result in [
+        check_position_size_limit(execution_plan, portfolio_value),
+        check_liquidity_participation(execution_plan, avg_daily_volume, low_liquidity),
+        check_exit_horizon(execution_plan, avg_daily_volume, low_liquidity),
+        check_stop_loss_atr(
+            execution_plan, _decision, current_price, technical_analysis or {}
+        ),
+        check_max_trade_loss(execution_plan, portfolio_value, current_price),
+        check_short_selling_violation(execution_plan),
+        check_leverage_violation(execution_plan),
+        check_egx_price_band(execution_plan, current_price),
+    ]:
+        if result is not None:
+            violations.append(result)
+
+    critical = [v for v in violations if v.severity == "critical"]
+    approved = len(critical) == 0
+    return approved, violations

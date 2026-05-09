@@ -2,7 +2,11 @@ from .utils.agent_utils import create_msg_delete
 from .utils.agent_states import AgentState, InvestDebateState, RiskDebateState
 from .utils.memory import FinancialSituationMemory
 
-from .analysts.fundamentals_analyst import create_fundamentals_analyst, create_deterministic_fundamentals_analyst
+from .analysts.fundamentals_analyst import (
+    create_fundamentals_analyst,
+    create_deterministic_fundamentals_analyst,
+    create_hybrid_fundamentals_analyst,
+)
 from .analysts.market_analyst import create_market_analyst, create_deterministic_market_analyst
 from .analysts.news_analyst import create_news_analyst
 from .analysts.social_media_analyst import create_social_media_analyst
@@ -30,6 +34,7 @@ __all__ = [
     "create_market_analyst",
     "create_deterministic_market_analyst",
     "create_deterministic_fundamentals_analyst",
+    "create_hybrid_fundamentals_analyst",
     "create_merged_risk_debator",
     "create_news_analyst",
     "create_risk_manager",

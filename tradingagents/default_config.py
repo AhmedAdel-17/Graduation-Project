@@ -1,14 +1,21 @@
 import os
 
-# Set Groq API key for LLM (OpenAI-compatible)
-os.environ["GROQ_API_KEY"] = "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"
-os.environ["OPENAI_API_KEY"] = "sk-23941db4656d4ec4938a205cd299f125"  # Groq API key
-
-# Set EODHD API key for stock data
-os.environ["EODHD_API_KEY"] = "696cff318de733.38444726"
-
-# Gemini API key (primary LLM provider)
-os.environ["GOOGLE_API_KEY"] = "AIzaSyCAQwCi8JkCAJu-NR90pwnFb_kCUAJ0E84"
+# EGX ticker universe — from CLAUDE.md §10.
+# Format: uppercase with .CA suffix (Yahoo Finance / EGX convention).
+EGX_TICKERS: list[str] = [
+    # Banks
+    "COMI.CA", "ADIB.CA", "CIEB.CA", "EXPA.CA", "HDBK.CA", "QNBA.CA", "SAUD.CA",
+    # Real Estate
+    "TMGH.CA", "HELI.CA", "PHDC.CA", "OCDI.CA", "ORAS.CA", "EMFD.CA",
+    # Industry
+    "EAST.CA", "ESRS.CA", "SWDY.CA", "ABUK.CA", "MFPC.CA", "EGAL.CA", "EGCH.CA", "EFIC.CA",
+    # Telecom / Tech
+    "ETEL.CA", "FWRY.CA", "EFIH.CA", "RAYA.CA",
+    # Financial Services
+    "HRHO.CA", "BTFH.CA", "CICH.CA",
+    # Food & Beverage
+    "JUFO.CA", "EFID.CA", "DOMT.CA",
+]
 
 DEFAULT_CONFIG = {
     "project_dir": os.path.abspath(os.path.join(os.path.dirname(__file__), ".")),

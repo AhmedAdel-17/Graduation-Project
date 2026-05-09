@@ -24,11 +24,12 @@ What is not yet defensible:
 
 Each issue is tagged: **CRIT** (blocks ship), **HIGH** (must fix in 4 weeks), **MED** (should fix), **LOW** (cleanup).
 
-### A. Hardcoded EODHD API key in source — **CRIT** (security + cost exposure)
-- **Where:** `tradingagents/dataflows/eodhd.py:17`, `tradingagents/dataflows/gateway.py:17` — literal `EODHD_API_KEY = "696cff318de733.38444726"`.
-- **Risk:** Live key, committed to git history, drains paid quota, leakage on public push.
-- **Fix:** Rotate the key with EODHD. Remove the literal. Load from `.env` only. Scrub git history with `git filter-repo --replace-text`. Add `gitleaks` or `detect-secrets` to a pre-commit hook.
-- **Owner / status:** open.
+### A. Hardcoded API keys — **CRIT** (security + cost exposure) — PARTIALLY RESOLVED
+- **Original:** `tradingagents/dataflows/eodhd.py:17` hardcoded EODHD key as `os.getenv()` fallback.
+- **Escalated (2026-05-09):** `tradingagents/default_config.py:4-11` was additionally setting **four** live keys via module-level `os.environ[…]` calls (GROQ, OPENAI, EODHD, Google), overwriting any `.env`-loaded values on every import.
+- **Resolved (2026-05-09):** Removed all 4 `os.environ[…]` assignments from `default_config.py`. Replaced EODHD hardcoded fallback in `eodhd.py:17` with empty string. Fixed `main.py`, `run_egx_prediction.py`, `api_server.py` import order so `load_dotenv()` runs before any tradingagents import. Added `EGX_TICKERS` module-level list to `default_config.py` (was missing, imported by `taxonomy.py`).
+- **Remaining:** Keys are still in git history — rotate all 4 keys and scrub history with `git filter-repo --replace-text`. Add `gitleaks` pre-commit hook.
+- **Owner / status:** open (history scrub + key rotation pending).
 
 ### B. LLM non-determinism — **CRIT** (audit, reproducibility, backtest validity)
 - **Where:** `tradingagents/graph/trading_graph.py:104-105` pins `temperature=0` only on the deep/quick LLM constructors. Per-agent `.invoke()` calls don't re-pin and never set `seed`. Examples: `bull_researcher.py:155`, `bear_researcher.py:172`, `trader.py:286`, `risk_manager.py:647`.
@@ -107,10 +108,12 @@ Each issue is tagged: **CRIT** (blocks ship), **HIGH** (must fix in 4 weeks), **
 - **Fix:** Require a JSON `action` field in the trader's structured output. Refuse to fall back to bare regex; emit `HOLD` + `parse_failed=True` and surface as a data-quality flag.
 - **Owner / status:** open.
 
-### O. `print()` calls in production code paths — **MED**
-- **Where:** `dataflows/y_finance.py:150, 377`, `dataflows/local.py:147`, others.
+### O. `print()` calls in production code paths — **MED** — PARTIALLY RESOLVED
+- **Where:** `dataflows/y_finance.py:150, 377`, `dataflows/local.py:147`, others. Escalated (2026-05-09): also found in `agents/risk_mgmt/risk_scorer.py` (production path: `_generate_atr_stop_loss()` and ADV throttle).
+- **Resolved (2026-05-09):** `risk_scorer.py` — 2 `print()` calls replaced with `logger.info()`.
+- **Remaining:** `dataflows/y_finance.py`, `dataflows/local.py`, and others.
 - **Fix:** Replace with `logging.getLogger("tradingagents.<module>")` per the project's stated standard.
-- **Owner / status:** open.
+- **Owner / status:** open (non-risk-scorer paths).
 
 ### P. Mubasher scraper is fragile — **MED**
 - **Where:** `dataflows/mubasher_scraper.py:95-100`. CSS selectors on `live.mubasher.info` change frequently. `max_retries=1` hardcoded.
@@ -149,6 +152,25 @@ Each issue is tagged: **CRIT** (blocks ship), **HIGH** (must fix in 4 weeks), **
 ### W. Magic numbers everywhere — **LOW**
 - `MAX_RECORDS=20`, `2000-char truncation`, `50_000` ADV floor, `0.10` price-limit, `0.189%` cost-side stack, `0.05` risk-free, `120-day` filing lag.
 - **Fix:** Pull into `tradingagents/egx_constants.py` with sourced citations (FRA decree, EGX rulebook, broker tariff).
+- **Owner / status:** open.
+
+### X. `agents/__init__.py` missing `create_hybrid_fundamentals_analyst` export — **CRIT** — RESOLVED (2026-05-09)
+- `setup.py:126` called `create_hybrid_fundamentals_analyst()` via `from tradingagents.agents import *` but the function was not exported → `NameError` at graph init when `use_hybrid_fundamental_analyst=True`.
+- **Resolved:** Added export to `agents/__init__.py`. All 409 core subsystem tests green.
+
+### Y. `check_short_selling_violation` over-corrected regex — **HIGH** — RESOLVED (2026-05-09)
+- `risk_scorer.py` regex fix (PR ~earlier) correctly avoided "short_term" false positives but missed bare `short TICKER.CA` language (e.g. `"short COMI.CA 1000 shares"`).
+- **Resolved:** Added `r"\bshort\s+(?:\w+\.ca|\d+)"` pattern to match "short [ticker].ca" or "short [quantity]" constructs on the lowercased plan text. `test_egx_constraints.py` 9/9 green.
+
+### Z. `run_all_risk_checks` missing from codebase — **HIGH** — RESOLVED (2026-05-09)
+- Tests and scripts imported `run_all_risk_checks` from `risk_manager.py` but function never existed anywhere.
+- `check_short_selling_violation`, `check_leverage_violation` also imported from `risk_manager` after being moved to `risk_scorer.py`.
+- **Resolved:** Added `run_all_risk_checks()` convenience function to `risk_scorer.py`. Added backward-compat re-exports block in `risk_manager.py`. All `test_egx_constraints.py` pass.
+
+### Z2. Integration tests require API keys but lacked skip markers — **MED**
+- `test_fundamentals_phase2b.py::TestPipelineIntegration::test_stage2_output_schema_valid` — calls real LLM, fails without API key in env. Previously "passing" only because hardcoded key in `default_config.py` was supplying it.
+- `test_reasoning_quality.py` — 15 tests error due to missing `--artifacts-dir` CLI flag (unrelated to API keys).
+- **Fix:** Mark LLM-calling tests with `@pytest.mark.integration` and add `pyproject.toml` filter.
 - **Owner / status:** open.
 
 ---
@@ -217,6 +239,8 @@ Each issue is tagged: **CRIT** (blocks ship), **HIGH** (must fix in 4 weeks), **
 > When an open issue is fixed, move it here with commit hash + date + 1-sentence description. Keep the historical record.
 
 - **§J — Scoring aggregation misleading (2026-05-02, PR 7)** — Replaced naive linear blend in `scoring.py` with confidence-weighted mean + quorum rule (≥2 directional analysts). `propagate_confidence()` now returns `overall_status` and `position_size_multiplier`. `calculate_unified_score()` returns 5-tuple. Sentiment never changes directional score; only multiplies confidence and position size.
+
+- **§A (partial) + §X + §Y + §Z — Secret exposure, missing export, short-sell regex, missing risk helper (2026-05-09, Batch 1 refactor)** — Removed 4 hardcoded API keys from `default_config.py` (GROQ/OPENAI/EODHD/Google), removed EODHD fallback from `eodhd.py`. Added `EGX_TICKERS` list to `default_config.py` (was missing, used by `taxonomy.py`, caused startup failure). Fixed import order in `main.py`, `run_egx_prediction.py`, `api_server.py` so `load_dotenv()` precedes tradingagents imports. Added `create_hybrid_fundamentals_analyst` export to `agents/__init__.py`. Added `run_all_risk_checks()` to `risk_scorer.py` + backward-compat re-exports in `risk_manager.py`. Fixed short-sell regex to match bare `short TICKER.CA` patterns. Replaced 2 `print()` calls in `risk_scorer.py` with `logger.info()`. Smoke test passes; 1396/1396 non-integration tests pass (was 1391, +5 net).
 
 ---
 

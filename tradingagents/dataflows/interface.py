@@ -6,19 +6,6 @@ logger = logging.getLogger("tradingagents.dataflows.interface")
 # Import from vendor-specific modules
 from .local import get_YFin_data, get_finnhub_news, get_finnhub_company_insider_sentiment, get_finnhub_company_insider_transactions, get_simfin_balance_sheet, get_simfin_cashflow, get_simfin_income_statements, get_reddit_global_news, get_reddit_company_news
 from .y_finance import get_YFin_data_online, get_stock_stats_indicators_window, get_balance_sheet as get_yfinance_balance_sheet, get_cashflow as get_yfinance_cashflow, get_income_statement as get_yfinance_income_statement, get_insider_transactions as get_yfinance_insider_transactions, get_fundamentals_summary as get_yfinance_fundamentals_summary
-from .google import get_google_news
-from .openai import get_stock_news_openai, get_global_news_openai, get_fundamentals_openai
-from .alpha_vantage import (
-    get_stock as get_alpha_vantage_stock,
-    get_indicator as get_alpha_vantage_indicator,
-    get_fundamentals as get_alpha_vantage_fundamentals,
-    get_balance_sheet as get_alpha_vantage_balance_sheet,
-    get_cashflow as get_alpha_vantage_cashflow,
-    get_income_statement as get_alpha_vantage_income_statement,
-    get_insider_transactions as get_alpha_vantage_insider_transactions,
-    get_news as get_alpha_vantage_news
-)
-from .alpha_vantage_common import AlphaVantageRateLimitError
 # EODHD.com API for EGX stock data
 from .eodhd import get_stock_data_eodhd, get_indicators_eodhd
 # egxpy - Native EGX data library (RECOMMENDED for EGX)
@@ -79,8 +66,6 @@ TOOLS_CATEGORIES = {
 VENDOR_LIST = [
     "local",
     "yfinance",
-    "openai",
-    "google",
     "eodhd",
     "egxpy",  # Native EGX library - RECOMMENDED for EGX
 ]
@@ -89,56 +74,44 @@ VENDOR_LIST = [
 VENDOR_METHODS = {
     # core_stock_apis
     "get_stock_data": {
-        "alpha_vantage": get_alpha_vantage_stock,
         "yfinance": get_YFin_data_online,
         "local": get_YFin_data,
         "eodhd": get_stock_data_eodhd,
-        "egxpy": get_stock_data_egxpy,  # Native EGX - RECOMMENDED
+        "egxpy": get_stock_data_egxpy,
     },
     # technical_indicators
     "get_indicators": {
-        "alpha_vantage": get_alpha_vantage_indicator,
         "yfinance": get_stock_stats_indicators_window,
         "local": get_stock_stats_indicators_window,
-        "eodhd": get_indicators_eodhd,  # EODHD.com with local calculation
+        "eodhd": get_indicators_eodhd,
     },
     # fundamental_data
     "get_fundamentals": {
-        "alpha_vantage": get_alpha_vantage_fundamentals,
-        "openai": get_fundamentals_openai,
         "yfinance": get_yfinance_fundamentals_summary,
     },
     "get_balance_sheet": {
-        "alpha_vantage": get_alpha_vantage_balance_sheet,
         "yfinance": get_yfinance_balance_sheet,
         "local": get_simfin_balance_sheet,
     },
     "get_cashflow": {
-        "alpha_vantage": get_alpha_vantage_cashflow,
         "yfinance": get_yfinance_cashflow,
         "local": get_simfin_cashflow,
     },
     "get_income_statement": {
-        "alpha_vantage": get_alpha_vantage_income_statement,
         "yfinance": get_yfinance_income_statement,
         "local": get_simfin_income_statements,
     },
     # news_data
     "get_news": {
-        "alpha_vantage": get_alpha_vantage_news,
-        "openai": get_stock_news_openai,
-        "google": get_google_news,
-        "local": [get_finnhub_news, get_reddit_company_news, get_google_news],
+        "local": [get_finnhub_news, get_reddit_company_news],
     },
     "get_global_news": {
-        "openai": get_global_news_openai,
         "local": get_reddit_global_news
     },
     "get_insider_sentiment": {
         "local": get_finnhub_company_insider_sentiment
     },
     "get_insider_transactions": {
-        "alpha_vantage": get_alpha_vantage_insider_transactions,
         "yfinance": get_yfinance_insider_transactions,
         "local": get_finnhub_company_insider_transactions,
     },
@@ -231,12 +204,6 @@ def route_to_vendor(method: str, *args, **kwargs):
                 vendor_results.append(result)
                 logger.info(f"SUCCESS: {impl_func.__name__} from vendor '{vendor_name}' completed successfully")
                     
-            except AlphaVantageRateLimitError as e:
-                if vendor == "alpha_vantage":
-                    logger.warning(f"RATE_LIMIT: Alpha Vantage rate limit exceeded, falling back to next available vendor")
-                    logger.debug(f"Rate limit details: {e}")
-                # Continue to next vendor for fallback
-                continue
             except Exception as e:
                 # Log error but continue with other implementations
                 logger.warning(f"FAILED: {impl_func.__name__} from vendor '{vendor_name}' failed: {e}")
