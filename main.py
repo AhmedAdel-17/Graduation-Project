@@ -1,8 +1,9 @@
-from tradingagents.graph.trading_graph import TradingAgentsGraph
-from tradingagents.default_config import DEFAULT_CONFIG
 from dotenv import load_dotenv
 
 load_dotenv()
+
+from tradingagents.graph.trading_graph import TradingAgentsGraph
+from tradingagents.default_config import DEFAULT_CONFIG
 
 # EGX market analysis config
 config = DEFAULT_CONFIG.copy()

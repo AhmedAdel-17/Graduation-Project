@@ -24,6 +24,13 @@ def log(msg):
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Load .env before any tradingagents import so env vars are available at module init
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from tradingagents.default_config import DEFAULT_CONFIG
 from tradingagents.dataflows.y_finance import get_YFin_data_online
 from datetime import datetime, timedelta

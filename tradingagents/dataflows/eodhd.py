@@ -14,7 +14,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
 # Get API key from environment or config
-EODHD_API_KEY = os.getenv("EODHD_API_KEY", "696cff318de733.38444726")
+EODHD_API_KEY = os.getenv("EODHD_API_KEY", "")
 EODHD_BASE_URL = "https://eodhd.com/api"
 
 # Default liquidity threshold for EGX

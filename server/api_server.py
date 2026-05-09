@@ -13,6 +13,13 @@ import sys
 import json
 import asyncio
 import logging
+
+# Load .env before any tradingagents import so keys are available at module init
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    _load_dotenv()
+except ImportError:
+    pass
 import traceback
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -1129,12 +1136,12 @@ async def test_random_egx(req: TestEgxRequest = TestEgxRequest()):
     # Lazy import to avoid circular dep issues early on
     try:
         from run_egx_prediction import analyze_ticker_for_api
-        from test_random_egx import EGX_TICKERS
+        from tradingagents.default_config import EGX_TICKERS
     except ImportError:
         # Fallback if imports fail (e.g. running from wrong dir)
         sys.path.append(str(PROJECT_ROOT))
         from run_egx_prediction import analyze_ticker_for_api
-        from test_random_egx import EGX_TICKERS
+        from tradingagents.default_config import EGX_TICKERS
 
     # Use provided ticker or pick a random one
     if req.ticker:
@@ -1257,12 +1264,8 @@ async def get_egx_tickers():
     """
     Returns the list of available EGX tickers for the stock picker.
     """
-    try:
-        from test_random_egx import EGX_TICKERS
-    except ImportError:
-        sys.path.append(str(PROJECT_ROOT))
-        from test_random_egx import EGX_TICKERS
-    
+    from tradingagents.default_config import EGX_TICKERS
+
     # Return tickers with friendly names
     ticker_list = [
         {"ticker": t, "name": t.replace(".CA", "")} 
