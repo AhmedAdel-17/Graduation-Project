@@ -1,4 +1,4 @@
-# SKILLS.md — Competency Map for the EGX Multi-Agent System
+﻿# SKILLS.md — Competency Map for the EGX Multi-Agent System
 
 > **Purpose.** A skills/knowledge reference for everyone — and every Claude Code session — working on this project. Organized by subsystem so you can map a task ("fix the backtester") to the exact competencies needed and find learning resources fast.
 >
@@ -268,7 +268,7 @@ Levels:
 ### D.2 Egyptian financial slang
 - **What:** "بامب" (pump), "تجميع" (accumulation), "تصريف" (distribution), "هيطلع" (it'll rise), "هينزل" (it'll fall), etc. — the actual vocabulary of Egyptian retail trader chatter.
 - **Why here:** v2 social pipeline depends on this. Generic Arabic NLP misses it.
-- **Where:** `scripts/twitter_pipeline/v2/intent.py` patterns; `dataflows/social_media_sources/sentiment_engine.py` lexicon.
+- **Where:** `scripts/social_pipeline/v2/intent.py` patterns; `dataflows/social_media_sources/sentiment_engine.py` lexicon.
 - **Level:** Expert (native-speaker territory).
 - **Learn:** Read 100 EGX retail FB posts. Talk to retail Egyptian traders. Watch Egyptian trading YouTube channels.
 

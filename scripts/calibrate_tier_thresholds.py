@@ -405,8 +405,8 @@ def main() -> int:
     parser.add_argument(
         "--results-dir",
         type=Path,
-        default=_HERE / "twitter_pipeline" / "v2" / "logs",
-        help="Directory containing results_*.json files (default: scripts/twitter_pipeline/v2/logs/)",
+        default=_HERE / "social_pipeline" / "v2" / "logs",
+        help="Directory containing results_*.json files (default: scripts/social_pipeline/v2/logs/)",
     )
     parser.add_argument(
         "--lookback-days",

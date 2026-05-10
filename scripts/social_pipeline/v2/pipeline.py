@@ -32,14 +32,13 @@ from typing import List
 
 # import path setup
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_V1 = os.path.abspath(os.path.join(_HERE, ".."))
+_PIPELINE_ROOT = os.path.abspath(os.path.join(_HERE, ".."))  # scripts/social_pipeline/
 _ROOT = os.path.abspath(os.path.join(_HERE, "..", "..", ".."))
-for path in (_ROOT, _V1, _HERE):
+for path in (_ROOT, _PIPELINE_ROOT, _HERE):
     if path not in sys.path:
         sys.path.insert(0, path)
 
-# v1 modules we re-use
-from scraper import Post  # noqa: E402
+from models import Post  # noqa: E402
 from relevance import classify as classify_relevance  # noqa: E402
 
 # shared normalization utilities
@@ -99,7 +98,7 @@ logging.basicConfig(
     handlers=[
         logging.StreamHandler(sys.stdout),
         logging.FileHandler(
-            os.path.join(LOG_DIR, "pipeline_v2.log"),
+            os.path.join(LOG_DIR, "pipeline.log"),
             encoding="utf-8",
         ),
     ],

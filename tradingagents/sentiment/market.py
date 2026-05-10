@@ -1,9 +1,9 @@
-"""Layer A: MarketSentiment aggregator with three binary hard gates.
+﻿"""Layer A: MarketSentiment aggregator with three binary hard gates.
 
 Input
 -----
 A sequence of :class:`MarketDataPoint` (timestamp, platform, sentiment_score,
-weight).  Convert from ``ScoredPost`` (scripts/twitter_pipeline/v2/aggregator)
+weight).  Convert from ``ScoredPost`` (scripts/social_pipeline/v2/aggregator)
 before calling :func:`compute_market_sentiment`.  Keeping this module inside
 the ``tradingagents`` package without importing the scripts tree is intentional.
 
