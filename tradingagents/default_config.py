@@ -99,6 +99,17 @@ DEFAULT_CONFIG = {
     # Falls back to silent no-op if Redis is not running.
     "redis_url": os.environ.get("REDIS_URL", "redis://localhost:6379"),
 
+    # ─── RL meta-policy (opt-in, Stage C) ────────────────────────────────────
+    # Offline-trained Conservative Q-Learning policy that adjusts position
+    # size *after* the LLM agents have decided BUY/SELL/HOLD. Default OFF so
+    # behavior is identical to main when the flag is unset. The policy can
+    # only SHRINK size (never amplify) and the deterministic risk veto still
+    # wins. See agent_docs/rl_meta_policy.md (Phase 4) for the architecture.
+    "rl_meta_policy_enabled": os.environ.get("RL_META_POLICY_ENABLED", "0").strip() in ("1", "true", "True", "yes"),
+    # Path to the trained checkpoint produced by scripts/train_rl_policy.py.
+    # Empty string ⇒ fail-closed to identity (size_multiplier=1.0).
+    "rl_model_path": os.environ.get("RL_MODEL_PATH", ""),
+
     # ─── Pre-fetch optimisation ──────────────────────────────────────────────
     # Pre-fetch data before graph execution (Phase 2a optimisation).
     # When True, DataPrefetcher fetches news and social data in parallel before

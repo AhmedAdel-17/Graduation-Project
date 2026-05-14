@@ -130,6 +130,69 @@ class BacktestingEngine:
         config = get_config()
         self.gateway = DataGateway(config)
 
+        # ── Stage C: RL meta-policy (opt-in, fail-closed) ──────────────────
+        # Default is the identity policy (size_multiplier = 1.0), which gives
+        # bit-for-bit identical behavior to pre-RL main when the feature flag
+        # is unset OR the model file is missing OR loading fails. The policy
+        # can only shrink size; the deterministic risk veto still wins below.
+        from tradingagents.rl.policy import RLSizingPolicy, identity_policy
+
+        self.rl_policy = identity_policy()
+        self.rl_policy_enabled = bool(config.get("rl_meta_policy_enabled", False))
+        rl_model_path = (config.get("rl_model_path") or "").strip()
+        if self.rl_policy_enabled and rl_model_path:
+            try:
+                self.rl_policy = RLSizingPolicy.load(rl_model_path)
+                logger.info(
+                    "[RL] meta-policy loaded from %s (fp=%s)",
+                    rl_model_path,
+                    self.rl_policy.model_fingerprint.get("weights_sha256_16", "?"),
+                )
+            except Exception as exc:
+                logger.warning(
+                    "[RL] failed to load meta-policy from %s; falling back to "
+                    "identity (size_multiplier=1.0): %s",
+                    rl_model_path, exc,
+                )
+                self.rl_policy = identity_policy()
+        elif self.rl_policy_enabled and not rl_model_path:
+            logger.warning(
+                "[RL] rl_meta_policy_enabled=True but rl_model_path is empty; "
+                "using identity policy (no-op)"
+            )
+
+    # =========================================================================
+    # Stage C — RL meta-policy helpers
+    # =========================================================================
+
+    def _portfolio_drawdown_so_far_pct(self) -> float:
+        """Peak-to-current drawdown from the daily portfolio history.
+
+        Returns 0.0 when there is no history yet. Capped at 1.0.
+        """
+        if not self.daily_history:
+            return 0.0
+        peak = max(
+            (row.get("portfolio_value", 0.0) for row in self.daily_history),
+            default=self.portfolio_value,
+        )
+        if peak <= 0:
+            return 0.0
+        dd = (peak - self.portfolio_value) / peak
+        return max(0.0, min(1.0, float(dd)))
+
+    def _settled_cash_pct(self) -> float:
+        """Settled cash / portfolio value, clipped to ``[0, 1]``."""
+        if self.portfolio_value <= 0:
+            return 0.0
+        return max(0.0, min(1.0, float(self.cash) / float(self.portfolio_value)))
+
+    def _build_rl_portfolio_ctx(self) -> Dict[str, float]:
+        return {
+            "portfolio_drawdown_so_far_pct": self._portfolio_drawdown_so_far_pct(),
+            "settled_cash_pct": self._settled_cash_pct(),
+        }
+
     # =========================================================================
     # Phase 1 — T+2 Settlement
     # =========================================================================
@@ -411,6 +474,7 @@ class BacktestingEngine:
         confidence: float,
         reasoning: str,
         low_liquidity: bool = False,
+        final_state: Optional[Dict] = None,
     ):
         """
         Execute portfolio changes based on the agent decision.
@@ -432,6 +496,41 @@ class BacktestingEngine:
 
         pos = self.positions.get(ticker, {"shares": 0, "avg_cost": 0.0})
 
+        # ── Stage C: RL meta-policy prediction (computed once per call) ───
+        # The prediction is consumed only inside the BUY branch — SELLs are
+        # always full exits, HOLDs do nothing. But we compute it here so the
+        # audit record always carries the meta-policy's intended size_mult
+        # even for HOLD decisions (useful for offline eval).
+        rl_size_mult: float = 1.0
+        rl_prediction = None
+        if (
+            self.rl_policy_enabled
+            and self.rl_policy.is_loaded
+            and isinstance(final_state, dict)
+        ):
+            try:
+                rl_prediction = self.rl_policy.predict(
+                    final_state,
+                    ticker=ticker,
+                    trade_date=date,
+                    portfolio_ctx=self._build_rl_portfolio_ctx(),
+                )
+                # Belt-and-braces clamp: policy already enforces this but the
+                # backtester re-checks as defense in depth (Plan §3.1).
+                rl_size_mult = max(0.0, min(1.0, float(rl_prediction.size_multiplier)))
+            except Exception as exc:
+                # Fail-closed: any error in the meta-policy reverts to identity.
+                logger.warning(
+                    "[RL] predict failed for %s on %s; falling back to identity: %s",
+                    ticker, date, exc,
+                )
+                rl_size_mult = 1.0
+                rl_prediction = None
+
+        # Expose the most recent prediction so the outer loop can write the
+        # audit row alongside the graph's session_id.
+        self._last_rl_prediction = rl_prediction
+
         if "BUY" in decision and "VETO" not in decision:
             # Start from the trader's suggested position size
             target_shares = execution_plan.get("position_sizing", {}).get("target_shares", 0)
@@ -449,6 +548,20 @@ class BacktestingEngine:
                     logger.info(
                         f"[CONFIDENCE SIZING] {original_target} → {target_shares} shares "
                         f"(confidence={confidence:.2f}, scalar={confidence_scalar:.2f})"
+                    )
+
+            # ── Stage C: apply RL meta-policy size multiplier ───────────────
+            # Identity (1.0) when the flag is off, the model is missing, or
+            # the predictor errored. The multiplier can only shrink, never
+            # amplify. We accept target_shares==0 as a valid "skip this BUY"
+            # signal from the RL policy — the BUY branch then no-ops cleanly.
+            if rl_size_mult < 1.0:
+                pre_rl_target = target_shares
+                target_shares = int(target_shares * rl_size_mult)
+                if target_shares < pre_rl_target:
+                    logger.info(
+                        f"[RL SIZING] {pre_rl_target} → {target_shares} shares "
+                        f"(size_mult={rl_size_mult:.4f})"
                     )
 
             exec_price, commission = self._apply_execution_costs(
@@ -520,6 +633,15 @@ class BacktestingEngine:
                 "confidence":    confidence,
                 "reasoning":     reasoning,
             }
+            # Stage C: RL audit. Always present (= 1.0 when flag off) so
+            # downstream readers see a uniform schema.
+            trade_record["rl_meta_policy_enabled"] = bool(self.rl_policy_enabled)
+            trade_record["rl_size_multiplier"] = round(float(rl_size_mult), 4)
+            if rl_prediction is not None:
+                fp = rl_prediction.model_fingerprint or {}
+                trade_record["rl_action_index"] = int(rl_prediction.action_index)
+                trade_record["rl_model_fingerprint"] = fp.get("weights_sha256_16")
+                trade_record["rl_feature_version"] = rl_prediction.feature_version
             self.trade_history.append(trade_record)
             logger.info(
                 f"[TRADE] {action} {shares_to_transact}x {ticker} "
@@ -854,7 +976,41 @@ class BacktestingEngine:
                 self.execute_trade(
                     date, ticker, decision, current_price,
                     execution_plan, confidence, reasoning, low_liquidity,
+                    final_state=final_state,
                 )
+
+                # ── Stage C: RL meta-policy audit row ──────────────────────
+                # Append the meta-policy decision into the same agent_events
+                # timeline as the graph itself. Best-effort: never crashes the
+                # backtest if Postgres is unavailable or the prediction is None.
+                _rl_pred = getattr(self, "_last_rl_prediction", None)
+                _session_id = getattr(graph, "session_id", None)
+                if _rl_pred is not None and _session_id:
+                    try:
+                        from tradingagents.db import audit_writer as _audit
+                        _audit.write_rl_meta_event(
+                            session_id=_session_id,
+                            prediction=_rl_pred,
+                            ticker=ticker,
+                            trade_date=date,
+                        )
+                    except Exception as _e:
+                        logger.debug(
+                            "[RL] audit write skipped (%s/%s): %s", ticker, date, _e
+                        )
+
+                # Reflect Stage C audit fields into the audit_log row too so
+                # the JSON report carries the same info as the trade record.
+                if _rl_pred is not None:
+                    fp_short = (_rl_pred.model_fingerprint or {}).get("weights_sha256_16")
+                    audit_entry["rl_size_multiplier"] = round(float(_rl_pred.size_multiplier), 4)
+                    audit_entry["rl_action_index"] = int(_rl_pred.action_index)
+                    audit_entry["rl_model_fingerprint"] = fp_short
+                else:
+                    audit_entry["rl_size_multiplier"] = 1.0
+                    audit_entry["rl_action_index"] = None
+                    audit_entry["rl_model_fingerprint"] = None
+                audit_entry["rl_meta_policy_enabled"] = bool(self.rl_policy_enabled)
 
                 # ── PR 7 / MEMORY.md §C2: capture (date, state) for end-of-run
                 # reflection. The in-loop `reflect_and_remember()` call was

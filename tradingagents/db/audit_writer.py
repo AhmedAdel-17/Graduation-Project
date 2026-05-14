@@ -256,6 +256,107 @@ def _build_agent_event_rows(
     return rows
 
 
+def write_rl_meta_event(
+    *,
+    session_id: str,
+    prediction: Any,
+    ticker: Optional[str] = None,
+    trade_date: Optional[Any] = None,
+) -> bool:
+    """Persist one RL meta-policy decision as an ``agent_events`` row.
+
+    The RL meta-policy fires *after* the graph's ``propagate()`` finishes
+    (it consumes the graph's final_state to choose a size multiplier), so
+    its decision can't be written by ``write_agent_events``. This helper
+    appends one extra row with ``agent_name='rl_meta_policy'`` and
+    ``event_type='rl_meta_size_adjustment'`` so the post-graph adjustment
+    is auditable in the same ``agent_events`` timeline.
+
+    ``prediction`` should be a ``tradingagents.rl.policy.PolicyPrediction``
+    (or any object exposing ``size_multiplier``, ``action_index``,
+    ``q_values``, ``feature_version``, ``model_fingerprint``). Strings are
+    accepted for forward compatibility and stored verbatim.
+
+    Returns True on a successful write, False otherwise. Never raises
+    into the caller. Silently no-ops when Postgres is unavailable so the
+    backtester keeps running on a developer machine without a DB.
+    """
+    if not is_postgres_available():
+        return False
+    if session_id is None:
+        return False
+
+    # Pull a structured payload from the prediction object. We accept dicts
+    # too so non-RL callers (or test doubles) can use the same helper.
+    structured: Dict[str, Any]
+    if hasattr(prediction, "size_multiplier"):
+        try:
+            q_vals = list(getattr(prediction, "q_values", ()) or ())
+            structured = {
+                "size_multiplier": float(prediction.size_multiplier),
+                "action_index": int(getattr(prediction, "action_index", -1)),
+                "q_values": [float(v) for v in q_vals],
+                "feature_version": str(getattr(prediction, "feature_version", "")),
+                "model_fingerprint": dict(getattr(prediction, "model_fingerprint", {}) or {}),
+            }
+        except (TypeError, ValueError) as exc:
+            logger.debug("rl audit: failed to coerce prediction: %s", exc)
+            structured = {"raw": repr(prediction)}
+    elif isinstance(prediction, dict):
+        structured = prediction
+    else:
+        structured = {"raw": repr(prediction)}
+
+    if ticker:
+        structured.setdefault("ticker", str(ticker))
+    if trade_date:
+        structured.setdefault("trade_date", str(trade_date))
+
+    confidence_score = None
+    fp = structured.get("model_fingerprint") if isinstance(structured, dict) else None
+    if isinstance(fp, dict):
+        # Surface the policy's best-val TD loss into confidence_score so
+        # existing dashboards / queries that read agent_events.confidence_score
+        # find a usable number.
+        raw_conf = fp.get("best_val_td_loss")
+        if raw_conf is not None:
+            try:
+                confidence_score = float(raw_conf)
+            except (TypeError, ValueError):
+                confidence_score = None
+
+    try:
+        with db_cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO agent_events (
+                    session_id, event_type, agent_name, opinion_type,
+                    opinion_summary, confidence_score, structured_output,
+                    model_fingerprint
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb)
+                """,
+                (
+                    session_id,
+                    "rl_meta_size_adjustment",
+                    "rl_meta_policy",
+                    "post_graph_sizing",
+                    _truncate(structured.get("model_fingerprint", {}).get("algorithm_version") if isinstance(structured.get("model_fingerprint"), dict) else None, limit=200)
+                    or _truncate(f"size_multiplier={structured.get('size_multiplier')}", limit=200),
+                    confidence_score,
+                    _to_jsonb(structured),
+                    _to_jsonb(structured.get("model_fingerprint") if isinstance(structured, dict) else None),
+                ),
+            )
+        logger.debug("rl audit: wrote rl_meta_size_adjustment row for %s", session_id)
+        return True
+    except Exception as exc:
+        logger.warning(
+            "rl audit write failed (session=%s): %s", session_id, exc,
+        )
+        return False
+
+
 def write_agent_events(
     *,
     session_id: str,

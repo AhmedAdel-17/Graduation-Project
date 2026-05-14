@@ -312,6 +312,36 @@ Each issue is tagged: **CRIT** (blocks ship), **HIGH** (must fix in 4 weeks), **
 
 ---
 
+## 4b. RL meta-policy progress (PRs A-D)
+
+> Tracks the offline-RL meta-policy work approved 2026-05-14 (plan: `C:\Users\ahmed\.claude\plans\1-role-you-crispy-mist.md`; operator guide: [agent_docs/rl_meta_policy.md](agent_docs/rl_meta_policy.md)). The policy is a single-step CQL Q-network sitting **above** the LLM graph; it modulates position size in ``[0, 1]`` after the directional decision and deterministic risk veto. **Flag is default OFF** until a walk-forward evaluation with adequate sample size clears the pre-registered PASS criterion. All PRs ship together with **241/241 tests green** and zero existing-feature regressions.
+
+- **PR A (2026-05-14) — Data infrastructure.** Added `tradingagents/rl/{feature_extractor,dataset}.py` + `scripts/generate_rl_training_data.py`. Feature extractor (`FEATURE_VERSION="rl_state_v1"`, 49 columns) is the single canonical state→vector mapping shared by training and inference. Dataset builder consumes `analysis_sessions.full_state` (Postgres preferred) or `backtest_results/report_*.json` (fallback) and joins to forward returns recomputed from raw OHLCV (avoids MEMORY §C1 inheritance). Post-hoc rewards: `r = log(1 + size·sign(action)·forward_return_20d) − λ_dd·max(0, dd-0.05) − tx_cost`, HOLD=0, clipped to ±0.5. Look-ahead guard `_no_lookahead_window` marks horizons not yet elapsed as PENDING. Tests: `tests/test_rl_{feature_extractor,dataset_integrity}.py` — **48 passing**. Smoke parquet at `data/rl/training_v1.parquet` (8 samples from 2 existing reports, 6 usable, 2 correctly PENDING).
+
+- **PR B (2026-05-14) — Training + offline eval.** Added `tradingagents/rl/{config,policy,train,eval}.py` + `scripts/train_rl_policy.py`. d3rlpy not installable on Python 3.13 / Windows / uv — used the plan's documented fallback: ~200-LoC hand-written single-step CQL (γ=0). `QNetwork = MLP(49→64→64→5)` with ReLU + dropout 0.1, ~5k params. CQL loss = MSE(Q(s,a_b), r) + α·(logsumexp(Q/τ) − Q(s,a_b)); α=1.0 default. Per-ticker chronological train/val split, seed-pinned (numpy+torch+cudnn). `RLSizingPolicy` wraps the network with identity fallback, weight-hash fingerprint (`weights_sha256_16`), and a `feature_version` mismatch guard on load. Three OPE estimators: FQE direct method, SNIPS with ε-greedy π̃ and empirical β̂, behavior-policy mean reward baseline. Tests: `tests/test_rl_{policy,train,eval}.py` — **37 passing**. Smoke checkpoint at `models/rl_meta_v1.pt`; training on the 6-sample parquet converged TD loss 0.0065 → 6×10⁻⁶ in 37 epochs (0.2s wall), with honestly-FAIL OPE summary (`preliminary_ok: false`, `snips_ess: 2.0`) — sample size far below the threshold for a useful model, as expected at this stage.
+
+- **PR C (2026-05-14) — Backtester integration (additive, default-off).** Three surgical edits to existing files, 268 net insertions, zero deletions:
+  - `tradingagents/default_config.py` — added `rl_meta_policy_enabled` (env `RL_META_POLICY_ENABLED`, default False) and `rl_model_path` (env `RL_MODEL_PATH`, default empty).
+  - `tradingagents/db/audit_writer.py` — added `write_rl_meta_event(session_id, prediction, ticker, trade_date)` that appends one `agent_events` row per decision with `event_type='rl_meta_size_adjustment'`. No schema change.
+  - `scripts/backtester.py` — `BacktestingEngine.__init__` loads the policy with try/except fail-closed fallback to `identity_policy()`; `execute_trade(..., final_state)` calls `RLSizingPolicy.predict` once (any error → fallback to 1.0), clamps `size_mult ∈ [0, 1]` defense-in-depth, multiplies `target_shares` AFTER the existing confidence-scaling line 444-452, records `rl_size_multiplier` + `rl_action_index` + `rl_model_fingerprint` + `rl_feature_version` on the trade record. Outer loop pipes `(graph.session_id, prediction)` to `write_rl_meta_event` and stamps the same fields onto `audit_log[i]`. Tests: `tests/test_rl_policy_safety.py` — **16 passing** covering RL-never-amplifies, risk-veto-wins, SELL-unaffected, fail-closed-on-load-failure, fail-closed-on-predict-error, default-off-yields-identity, audit-fields-present.
+
+- **PR D (2026-05-14) — Walk-forward comparison + Phase-4 docs.** Added `tradingagents/rl/walkforward.py` + `scripts/run_rl_evaluation.py` + `agent_docs/rl_meta_policy.md`. Comparison module recomputes Sharpe / Calmar from raw `daily_portfolio` series using `default_risk_free_rate() = 0.24` (CBE policy rate; closes MEMORY §C3 on the RL eval path even though `scripts/backtester.py` still uses 0.05). Closed-trade win rate uses realized PnL only — the legacy `"Hit Rate (fwd)"` field is intentionally NOT consumed (MEMORY §C1 still open). Wilson 95% CI on win rate. Bootstrap 95% CI on per-day mean-return difference (intersection of dates, seed-pinned). **Pre-registered PASS criterion:** Sharpe(rl_meta) − Sharpe(baseline) ≥ +0.20 AND bootstrap CI excludes zero; FAIL → flag stays default OFF. Tests: `tests/test_rl_walkforward.py` — **22 passing** including PASS/FAIL/CI-crosses-zero/no-overlapping-dates branches. Smoke at `eval_results/rl_vs_baseline_walkforward_smoke.json` correctly reports FAIL (n_paired_days=0; existing reports cover different date ranges).
+
+  **Cumulative test count for the RL meta-policy stream: 123 tests across 7 files, all passing. Full repo regression suite: 241/241 passing (excluding pre-existing `test_bm25_fallback.py` env failures unrelated to RL).**
+
+  **Files modified (existing, all additive):** `tradingagents/default_config.py`, `tradingagents/db/audit_writer.py`, `scripts/backtester.py`, `MEMORY.md` (this entry).
+  **Files added:** `tradingagents/rl/__init__.py` + 7 modules; `scripts/{generate_rl_training_data,train_rl_policy,run_rl_evaluation}.py`; 7 test files; `agent_docs/rl_meta_policy.md`; smoke artifacts under `data/rl/`, `models/`, `eval_results/`.
+
+  **Deferred to a follow-up PR (out of scope for this stream):** EGX-30 × walk-forward windows full evaluation run (requires multi-hundred-dollar LLM spend that's not feasible on a developer machine); the pipeline is in place, the verdict will be applied honestly when run.
+
+### Open follow-ups for the RL stream
+- Run `scripts/generate_rl_training_data.py` against an EGX-30 walk-forward Postgres history (≥30 tickers × ≥3 windows × ~50 dates) once such backtests have been generated. Retrain. Re-evaluate. Apply the pre-registered PASS/FAIL.
+- If PASS: enable `rl_meta_policy_enabled` by default in a separate PR with a "gradual rollout" plan (one ticker family at a time, model card published).
+- If FAIL: keep the infrastructure, document the negative result in `PROOF_OF_WORK.md`, do not flip the flag.
+- Once `analysis_sessions.full_state` is populated by live `propagate()` runs (PR 5 of the DB-infra pass), the dataset builder's Postgres path will produce dense feature vectors automatically; no code change needed.
+
+---
+
 ## 5. Decisions log
 
 > Architecture / product decisions made during the audit. Append-only.

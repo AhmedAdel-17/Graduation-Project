@@ -1,0 +1,19 @@
+{
+  "n_samples": 8,
+  "n_pending": 2,
+  "n_hold": 0,
+  "tickers": [
+    "COMI.CA"
+  ],
+  "n_tickers": 1,
+  "action_counts": {
+    "BUY": 8,
+    "SELL": 0,
+    "HOLD": 0
+  },
+  "reward_mean": 0.03361193176921216,
+  "reward_std": 0.02057085243370308,
+  "feature_version": "rl_state_v1",
+  "dataset_schema_version": "rl_dataset_v1",
+  "generated_at": "2026-05-14T15:42:57.850577Z"
+}
