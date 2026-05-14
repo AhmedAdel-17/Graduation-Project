@@ -76,6 +76,25 @@ DEFAULT_CONFIG = {
     #   psql egx_trading -f db_schema.sql
     "postgres_url": os.environ.get("POSTGRES_URL", ""),
 
+    # Vector memory backend. ChromaDB is the default stabilization path because
+    # it does not require a local Postgres + pgvector service.
+    # Set TRADINGAGENTS_MEMORY_BACKEND=postgres only when pgvector is installed
+    # and the Postgres schema has been prepared for vector(1536) columns.
+    "memory_backend": os.environ.get("TRADINGAGENTS_MEMORY_BACKEND", "chroma").strip().lower(),
+
+    # ChromaDB on-disk persistence path. When set, FinancialSituationMemory
+    # uses chromadb.PersistentClient so agent memories survive process
+    # restarts. Empty / unset → legacy in-memory client (data lost per run).
+    # Directory is gitignored (see .gitignore).
+    "chroma_persist_dir": os.environ.get("CHROMA_PERSIST_DIR", "./chroma_db"),
+
+    # Minimum similarity score (cosine, 1 - distance) below which a memory
+    # match is dropped from get_memories() results. Range: [0.0, 1.0].
+    # 0.0 disables filtering. 0.30 is the conservative default — high enough
+    # to keep clearly relevant past lessons out of unrelated prompts, low
+    # enough not to wipe out a sparse early store. Override via env or per-call.
+    "memory_min_similarity": float(os.environ.get("MEMORY_MIN_SIMILARITY", "0.30")),
+
     # Redis URL for real-time agent progress streaming to the dashboard WebSocket.
     # Falls back to silent no-op if Redis is not running.
     "redis_url": os.environ.get("REDIS_URL", "redis://localhost:6379"),

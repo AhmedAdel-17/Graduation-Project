@@ -25,7 +25,7 @@ import sys
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import pandas as pd
 import numpy as np
@@ -366,6 +366,7 @@ def run_bt_benchmark(
     for k, v in metrics.items():
         logger.info(f"  {k:<26}: {v}")
 
+    bt_run_id: Optional[str] = None
     if save_results:
         os.makedirs("backtest_results", exist_ok=True)
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -386,7 +387,37 @@ def run_bt_benchmark(
             json.dump(report, f, indent=4)
         logger.info(f"Saved Backtrader report → {path}")
 
-    return {"metrics": metrics, "trades": strat.trade_log, "daily_portfolio": daily_portfolio}
+        # Postgres mirror — best-effort, never raises.
+        try:
+            import uuid
+            from tradingagents.db import backtest_writer
+
+            bt_run_id = uuid.uuid4().hex
+            if backtest_writer.write_backtest_run(
+                run_id=bt_run_id,
+                ticker=ticker,
+                strategy="classical",
+                start_date=start_date,
+                end_date=end_date,
+                metrics=metrics,
+                config={"engine": "backtrader_classical_technical"},
+            ):
+                n = backtest_writer.write_backtest_trades(
+                    run_id=bt_run_id,
+                    trades=strat.trade_log,
+                    daily_portfolio=daily_portfolio,
+                )
+                logger.info(
+                    "Persisted classical backtest_runs row + %d trades for run_id=%s",
+                    n, bt_run_id,
+                )
+        except Exception as _e:  # pragma: no cover — defensive guard
+            logger.warning("Classical backtest Postgres persistence failed: %s", _e)
+
+    result = {"metrics": metrics, "trades": strat.trade_log, "daily_portfolio": daily_portfolio}
+    if bt_run_id is not None:
+        result["run_id"] = bt_run_id
+    return result
 
 
 # =============================================================================

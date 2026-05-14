@@ -14,9 +14,6 @@ import time
 from typing import Dict, Any, Optional, List
 
 from tradingagents.agents.utils.agent_utils import get_stock_data, get_indicators
-from tradingagents.agents.utils.fundamental_data_tools import (
-    get_egx_fundamentals, get_egx_income, get_egx_balance, get_egx_ratios,
-)
 from tradingagents.agents.analysts.market_analyst import (
     parse_technical_signals,
     calculate_confidence_score as calc_tech_confidence,
@@ -25,10 +22,7 @@ from tradingagents.agents.analysts.market_analyst import (
     EGX_DAILY_INDICATORS,
 )
 from tradingagents.agents.analysts.fundamentals_analyst import (
-    assess_financial_health,
-    determine_valuation_gap,
-    identify_key_risks,
-    calculate_data_completeness_score,
+    create_deterministic_fundamentals_analyst as _make_det_fundamentals,
 )
 from tradingagents.agents.managers.risk_manager import run_all_risk_checks
 from tradingagents.agents.trader.trader import calculate_position_limits
@@ -142,120 +136,12 @@ def deterministic_fundamentals_analyst(state: dict) -> dict:
     """
     Replace the LLM-based Fundamentals Analyst.
 
-    Calls the SAME tools directly, then uses the EXISTING deterministic
-    functions from fundamentals_analyst.py that are currently unused.
+    Delegates to create_deterministic_fundamentals_analyst() which is the
+    production-grade Phase 1A/1B deterministic pipeline (no LLM calls).
+    State schema is identical to the LLM-backed analyst.
     """
-    ticker = state["company_of_interest"]
-    trade_date = state["trade_date"]
-    config = get_config()
-
-    # 1. Fetch data
-    fundamentals_data = {}
-    try:
-        fundamentals_data = get_egx_fundamentals.invoke({"ticker": ticker})
-        if isinstance(fundamentals_data, str):
-            fundamentals_data = json.loads(fundamentals_data) if fundamentals_data.strip().startswith("{") else {}
-    except Exception:
-        fundamentals_data = {}
-
-    income_data = {}
-    balance_data = {}
-    ratios_data = {}
-    try:
-        income_data = get_egx_income.invoke({"ticker": ticker})
-        if isinstance(income_data, str):
-            income_data = json.loads(income_data) if income_data.strip().startswith("{") else {}
-    except Exception:
-        pass
-    try:
-        balance_data = get_egx_balance.invoke({"ticker": ticker})
-        if isinstance(balance_data, str):
-            balance_data = json.loads(balance_data) if balance_data.strip().startswith("{") else {}
-    except Exception:
-        pass
-    try:
-        ratios_data = get_egx_ratios.invoke({"ticker": ticker})
-        if isinstance(ratios_data, str):
-            ratios_data = json.loads(ratios_data) if ratios_data.strip().startswith("{") else {}
-    except Exception:
-        pass
-
-    # Merge into combined structure
-    combined = {
-        "income_statement": income_data if isinstance(income_data, dict) else {},
-        "balance_sheet": balance_data if isinstance(balance_data, dict) else {},
-        "key_ratios": ratios_data if isinstance(ratios_data, dict) else {},
-        **(fundamentals_data if isinstance(fundamentals_data, dict) else {}),
-    }
-
-    # 2. Run deterministic analysis
-    data_completeness = calculate_data_completeness_score(combined)
-    health = assess_financial_health(combined)
-    valuation = determine_valuation_gap(combined, state.get("current_price"))
-    risks = identify_key_risks(combined, health)
-
-    # 3. Compute confidence
-    confidence_raw = data_completeness * 30 + (
-        20 * sum(1 for dim in ["profitability", "leverage", "liquidity"]
-                 if health.get(dim, {}).get("status") != "unknown")
-    )
-    confidence = min(100, confidence_raw)
-
-    # 4. Build structured output
-    health_label = health.get("overall", "unknown")
-    if health_label in ("healthy",):
-        health_str = "Strong"
-    elif health_label in ("concerning",):
-        health_str = "Moderate"
-    elif health_label in ("critical",):
-        health_str = "Weak"
-    else:
-        health_str = "Unknown"
-
-    valuation_label = valuation.get("current_valuation", "unknown")
-    valuation_map = {
-        "potentially_undervalued": "Undervalued",
-        "potentially_overvalued": "Overvalued",
-        "fairly_valued": "Fair",
-    }
-
-    fvr = valuation.get("fair_value_range", {})
-    fvr_str = f"{fvr.get('low', 'N/A')}-{fvr.get('high', 'N/A')}" if fvr.get("low") else "N/A"
-
-    structured_analysis = {
-        "financial_health": health_str,
-        "valuation_gap": valuation_map.get(valuation_label, "Unknown"),
-        "fair_value_range": fvr_str,
-        "key_risks": [r["risk"] for r in risks[:5]],
-        "confidence_score": confidence,
-        "data_completeness": round(data_completeness * 100),
-        "reasoning": f"Health: {health_str}. {len(risks)} risks identified. Data completeness: {data_completeness:.0%}.",
-    }
-
-    # Text report
-    report_lines = [
-        f"## Fundamental Analysis for {ticker} ({trade_date})",
-        f"Financial Health: {health_str}",
-        f"Valuation: {valuation_map.get(valuation_label, 'Unknown')} (fair value range: {fvr_str} EGP)",
-        f"Confidence: {confidence:.0f}%",
-        "",
-        "### Health Assessment",
-    ]
-    for dim in ["profitability", "leverage", "liquidity"]:
-        info = health.get(dim, {})
-        for detail in info.get("details", []):
-            report_lines.append(f"- {detail}")
-    report_lines.append("")
-    report_lines.append("### Key Risks")
-    for r in risks[:5]:
-        report_lines.append(f"- [{r['severity'].upper()}] {r['risk']}: {r['description']}")
-
-    report = "\n".join(report_lines)
-
-    return {
-        "fundamentals_report": report,
-        "fundamental_analysis": structured_analysis,
-    }
+    node_fn = _make_det_fundamentals()
+    return node_fn(state)
 
 
 # =============================================================================

@@ -37,13 +37,13 @@ Each issue is tagged: **CRIT** (blocks ship), **HIGH** (must fix in 4 weeks), **
 - **Fix:** Define a single `LLM_INVOKE_KWARGS = {"temperature": 0, "seed": 42}` constant. Route every `.invoke(...)` through it. Persist model name + provider + fingerprint into `agent_events.structured_output` per call.
 - **Owner / status:** open.
 
-### C. Look-ahead bias in `scripts/backtester.py` — **CRIT** (overstates returns; due-diligence killer)
-- **C1.** `_evaluate_trade_outcomes()` at `scripts/backtester.py:942-1050` — labels trades WIN/LOSS using forward prices fetched after the backtest, then surfaces this as "Hit Rate (fwd)" in reports. Pure look-ahead.
-- **C2.** Reflection inside the loop — `scripts/backtester.py:855-881` calls `graph.reflect_and_remember(returns_losses)` per date with realized PnL, updating agent memory before the next decision date. Causal leakage even if no labels are reported.
-- **C3.** Risk-free rate hardcoded to 0.05 in `scripts/backtester.py:303` and `:358`. EGP policy rate is ~22–27% in 2024–2026. Sharpe is overstated by 0.5–1.0 across the board.
-- **C4.** Benchmark window misalignment at `scripts/backtester.py:587-621` — agents see ~252 days of pre-`start_date` data; benchmark return is measured only from `start_date` onward.
-- **Fix:** Delete `_evaluate_trade_outcomes`. Move reflection to a post-backtest batch with ≥10-trading-day return lag (`flush_reflection_queue` already exists). Make risk-free rate configurable, default to a CBE-published EGP rate. Align benchmark window with agent training window.
-- **Owner / status:** open.
+### C. Look-ahead bias in `scripts/backtester.py` — **CRIT** (overstates returns; due-diligence killer) — **PARTIALLY RESOLVED (C2 closed in DB-infra PR 7, 2026-05-14)**
+- **C1.** `_evaluate_trade_outcomes()` at `scripts/backtester.py:942-1050` — labels trades WIN/LOSS using forward prices fetched after the backtest, then surfaces this as "Hit Rate (fwd)" in reports. Pure look-ahead. **OPEN.**
+- **C2.** ~~Reflection inside the loop — `scripts/backtester.py:855-881` calls `graph.reflect_and_remember(returns_losses)` per date with realized PnL, updating agent memory before the next decision date. Causal leakage even if no labels are reported.~~ **RESOLVED (DB-infra PR 7).** In-loop call removed; per-date `(date, state)` captured into a queue; `_flush_reflection_with_forward_returns(graph, lag_days=10)` runs once after `_evaluate_trade_outcomes` using realized 20-day forward returns. Reflection memory rows now carry JSON-encoded `outcome` metadata. Regression gate test `test_in_loop_reflect_and_remember_call_removed` blocks reintroduction.
+- **C3.** Risk-free rate hardcoded to 0.05 in `scripts/backtester.py:303` and `:358`. EGP policy rate is ~22–27% in 2024–2026. Sharpe is overstated by 0.5–1.0 across the board. **OPEN.**
+- **C4.** Benchmark window misalignment at `scripts/backtester.py:587-621` — agents see ~252 days of pre-`start_date` data; benchmark return is measured only from `start_date` onward. **OPEN.**
+- **Fix for remaining open items:** Delete `_evaluate_trade_outcomes` (C1). Make risk-free rate configurable, default to a CBE-published EGP rate (C3). Align benchmark window with agent training window (C4).
+- **Owner / status:** C1/C3/C4 open — separate quant/backtest PR.
 
 ### D. Universe survivorship + sample-size — **HIGH**
 - **Where:** `scripts/run_real_backtests.py:31` runs only `["COMI.CA", "EAST.CA", "HRHO.CA"]`. Phase 2B (`PROOF_OF_WORK.md`) explicitly notes N=28 vs required 141 for 80% power.
@@ -54,6 +54,7 @@ Each issue is tagged: **CRIT** (blocks ship), **HIGH** (must fix in 4 weeks), **
 ### E. FastAPI server has no auth, CORS=*, no rate-limit, no heartbeat — **CRIT**
 - **Where:** `server/api_server.py:277` — `allow_origins=["*"]` with TODO. No auth middleware anywhere. `uvicorn.run(..., reload=True)` in `__main__` at line 1249.
 - **WebSocket:** `api_server.py:796-1095` — no ping/pong, no message ordering guarantee, no client-side reconnect protocol, `active_analyses[ticker]` lock is global (User A blocks User B on the same ticker).
+- **Stabilization note (2026-05-12):** Auth was explicitly deferred for the current runtime-stabilization pass. `/api/health` now surfaces Redis/Postgres/memory degraded-state diagnostics, but auth/CORS/rate-limit remain open production blockers.
 - **Fix:** JWT or OIDC + roles `{analyst, pm, risk, admin}`. CORS allow-list from env. `slowapi` rate limit. Pydantic validation on every endpoint. WebSocket `seq` field, ping/pong every 20 s, reconnect spec in client.
 - **Owner / status:** open.
 
@@ -62,11 +63,10 @@ Each issue is tagged: **CRIT** (blocks ship), **HIGH** (must fix in 4 weeks), **
 - **Fix:** `Dockerfile` (Python 3.13 slim, install via uv). `docker-compose.yml` (app + Postgres + Redis + nginx). GitHub Actions: `pytest -m "not integration"`, `ruff check`, `mypy --ignore-missing-imports`, build image. Adopt `alembic` for schema migrations.
 - **Owner / status:** open.
 
-### G. Audit trail is partial — **CRIT** (regulatory compliance)
+### G. Audit trail is partial — **CRIT** (regulatory compliance) — **RESOLVED (DB-infra PR 5 + 6, 2026-05-14)**
 - **Where:** `db_schema.sql` defines `analysis_sessions`, `agent_events`, `backtest_runs`, `backtest_trades` tables, but `server/api_server.py` writes audit lines from only 3 endpoints (lines 558, 617, 715). The graph itself writes to `eval_results/*.json` files only.
 - **Risk:** Egyptian FRA / SOC 2 / model-risk-management cannot reconstruct who triggered what decision and why. No user identity on any record.
-- **Fix:** Wire every `propagate()` and every agent invocation to insert into `analysis_sessions` + `agent_events` with: session_id, user_id (from auth), prompt fingerprint, model+version, tools called, data snapshot hash, output, timestamp, immutable.
-- **Owner / status:** open.
+- **Resolved:** PR 5 wires `propagate()` to mint a UUID session_id, write one `analysis_sessions` row + up to 13 `agent_events` rows per call via new `tradingagents/db/audit_writer.py`. PR 6 wires `scripts/backtester.py` + `scripts/bt_benchmark.py` to write `backtest_runs` + `backtest_trades`. `scripts/db/apply_schema_v2.sql` adds `user_id` (NULL until JWT lands per §E) + `model_fingerprint JSONB` columns idempotently. Writers never raise into the graph. See §4 resolved entry for full details.
 
 ### H. Symbol normalization inconsistency — **HIGH**
 - **Where:** `.CA`-suffix logic duplicated in `dataflows/gateway.py:530-534`, `dataflows/y_finance.py:62-68`, `dataflows/eodhd.py:72-86`. Each has subtly different rules.
@@ -83,10 +83,13 @@ Each issue is tagged: **CRIT** (blocks ship), **HIGH** (must fix in 4 weeks), **
 ### J. Scoring aggregation math is misleading — **HIGH** → **RESOLVED (PR 7)**
 - Replaced by confidence-weighted mean with quorum rule. See §4 (Resolved) for commit details.
 
-### K. Memory cold-start — **HIGH**
+### K. Memory cold-start — **HIGH** — **RESOLVED (DB-infra PR 3 + 4 + 8, 2026-05-14)**
 - **Where:** `tradingagents/agents/utils/memory.py:73` returns `[]` when the vector store is empty (steady state for first 10–20 trades, and **forever** when embeddings are disabled — lines 21-31). Bull/Bear/Trader/Risk-Manager receive empty `past_memory_str` and silently degrade.
-- **Fix:** (a) Seed corpus of 50–100 hand-curated EGX precedents (good and bad trades) with embeddings. (b) When embeddings disabled, fall back to BM25 keyword search over the seed corpus. (c) Telemetry: log when memory returns empty so we know how often it happens.
-- **Owner / status:** open.
+- **Stabilization note (2026-05-12):** ChromaDB is now the default vector-memory backend via `memory_backend="chroma"`. Postgres/pgvector memory is opt-in only (`TRADINGAGENTS_MEMORY_BACKEND=postgres`) so pgvector setup cannot block backend/dashboard startup.
+- **Resolved:**
+  - PR 3 — `chromadb.PersistentClient(path=CHROMA_PERSIST_DIR)` so memory survives restarts.
+  - PR 4 — `get_memories(where, min_similarity)` + canonical row metadata so filtered retrieval works.
+  - PR 8 — 29 hand-curated EGX seed memories in `tradingagents/agents/utils/seed_memories.py` auto-load on first init; BM25 keyword fallback (`rank-bm25`) handles embedding-disabled backends (DeepSeek/Groq); `memory.empty_return` telemetry logs sub-threshold returns. See §4 resolved entry for full details.
 
 ### L. Bare `except` clauses + silent failures — **HIGH**
 - **Where:** Multiple instances:
@@ -241,6 +244,36 @@ Each issue is tagged: **CRIT** (blocks ship), **HIGH** (must fix in 4 weeks), **
 - **§J — Scoring aggregation misleading (2026-05-02, PR 7)** — Replaced naive linear blend in `scoring.py` with confidence-weighted mean + quorum rule (≥2 directional analysts). `propagate_confidence()` now returns `overall_status` and `position_size_multiplier`. `calculate_unified_score()` returns 5-tuple. Sentiment never changes directional score; only multiplies confidence and position size.
 
 - **§A (partial) + §X + §Y + §Z — Secret exposure, missing export, short-sell regex, missing risk helper (2026-05-09, Batch 1 refactor)** — Removed 4 hardcoded API keys from `default_config.py` (GROQ/OPENAI/EODHD/Google), removed EODHD fallback from `eodhd.py`. Added `EGX_TICKERS` list to `default_config.py` (was missing, used by `taxonomy.py`, caused startup failure). Fixed import order in `main.py`, `run_egx_prediction.py`, `api_server.py` so `load_dotenv()` precedes tradingagents imports. Added `create_hybrid_fundamentals_analyst` export to `agents/__init__.py`. Added `run_all_risk_checks()` to `risk_scorer.py` + backward-compat re-exports in `risk_manager.py`. Fixed short-sell regex to match bare `short TICKER.CA` patterns. Replaced 2 `print()` calls in `risk_scorer.py` with `logger.info()`. Smoke test passes; 1396/1396 non-integration tests pass (was 1391, +5 net).
+
+- **Codebase cleanup — dead code, stale docs, broken ablation harness (2026-05-11)** — Pulled latest from `origin/main` (commit `d6f34e0`). Deleted `dashboard-simple/` (Vite build artifact — not a real dashboard; `dashboard/` with 48 TS files is the sole dashboard). Deleted `scripts/capture_reasoning_artifacts.py` and `scripts/score_reasoning_quality.py` (zero imports, zero references). Deleted `scripts/social_pipeline/models.py` and `scripts/social_pipeline/relevance.py` (v1 pipeline remnants not imported by v2). Deleted `PROJECT_CONTEXT.md` (25 KB stale doc, unreferenced). Fixed `tradingagents/ablation/deterministic_agents.py`: removed 4 dead imports (`assess_financial_health`, `determine_valuation_gap`, `identify_key_risks`, `calculate_data_completeness_score` — never existed in `fundamentals_analyst.py`); replaced `deterministic_fundamentals_analyst` body with delegation to `create_deterministic_fundamentals_analyst()` (the actual Phase 1A/1B pipeline); removed unused `get_egx_fundamentals/income/balance/ratios` tool imports. Ablation harness now imports cleanly (was `ImportError` on every load). Removed 3 unused dependencies from `pyproject.toml`: `praw` (Reddit uses `requests`), `parsel` (0 imports), `setuptools` (0 imports). Cleaned CLAUDE.md: removed reference to deleted `test_fb_sentiment.py` and 3 deleted test-file commands. Replaced `.claude/settings.local.json`: removed 44 stale pytest permission entries for deleted test files, kept 5 valid entries. All smoke tests pass.
+
+- **Runtime stabilization pass — Chroma default, diagnostics, API contract, frontend lint (2026-05-12)** — Implemented the agreed auth-free stabilization slice. `TradingAgentsGraph` now defaults to ChromaDB memory and only imports Postgres/pgvector memory when `memory_backend` explicitly requests it. `/api/health` reports memory/Postgres/Redis diagnostics and degraded reasons. Backtrader report responses are normalized to the same numeric snake_case dashboard contract as LLM reports. Quick-prediction LLM failures return `status="degraded"` and are not persisted as successful HOLD history entries. `main.py` no longer runs analysis at import time. Dashboard React hook lint errors were fixed and prediction/health API types were updated. Added `tests/test_stabilization.py`; `pytest tests/`, backend import smokes, `npm run lint`, `npm run build`, and live uvicorn API smoke pass. Remaining production blockers: auth/CORS/rate-limit, CI/Docker/migrations, complete audit DB wiring.
+
+- **DB & memory infrastructure pass (PRs 1–9, 2026-05-13 → 2026-05-14)** — End-to-end MVP+memory-quality slice of the persistence audit ([agent_docs/db_infrastructure.md](agent_docs/db_infrastructure.md) is the operator reference). All PRs ship together with **128/128 tests green** and zero existing-feature regressions.
+
+  - **PR 1 — Deps + secrets** `[MED]`. Added `diskcache>=5.6.0` (was imported but undeclared — broken on fresh `uv sync`), `psycopg2-binary>=2.9.9`+`pgvector>=0.3.0` as the `[postgres]` extra, `rank-bm25>=0.2.2`. `.env.example` documents `CHROMA_PERSIST_DIR` + secret-rotation note. `.gitignore` adds `chroma_db/`.
+
+  - **PR 2 — DB connection layer** `[MED, ADDED]`. New `tradingagents/db/connection.py` — `ThreadedConnectionPool` singleton with `cursor(register_pgvector, dict_cursor)` context manager (auto-commit / rollback / return-to-pool). `persistent_memory.py` refactored to route through it (was opening one raw `psycopg2.connect()` per memory instance — 5 connections for 5 collections). Sticky `_POOL_FAILED` flag; never raises into caller.
+
+  - **PR 3 — ChromaDB → PersistentClient** `[HIGH §K partial, RESOLVED]`. `FinancialSituationMemory.__init__` uses `chromadb.PersistentClient(path=config["chroma_persist_dir"])` when set; falls back to in-memory `Client(...)` only when path is unset (test paths). Agent memory survives process restarts. `/api/health` exposes `memory.chroma_persist_dir`, `memory.chroma_persistent`, `memory.chroma_collection_counts`, `memory.chroma_total_documents`. New `degraded_reasons` entry `chroma_memory_in_memory_only`.
+
+  - **PR 4 — Memory metadata + similarity threshold** `[HIGH, RESOLVED]`. `add_situations(metadatas, default_metadata)` and `get_memories(where, min_similarity)` extended. Canonical metadata keys: `ticker, trade_date, memory_type, agent_name, outcome, confidence`. Default threshold 0.30 via `MEMORY_MIN_SIMILARITY`. 5 read-side call-sites (bull, bear, trader, research_manager, risk_manager) pass `where={"ticker": ticker}`. `reflection.py` writes `memory_type="reflection"` + ticker + trade_date on every reflection row. Postgres backend mirrors the API; full column support pending future schema bump.
+
+  - **PR 5 — `propagate()` audit write-through** `[CRIT §G, RESOLVED]`. Every `propagate()` mints a UUID `session_id`, writes one `analysis_sessions` row + up to 13 `agent_events` rows (one per non-empty agent output) with `model_fingerprint` (provider, model, temperature, seed). New `tradingagents/db/audit_writer.py` is canonical. `scripts/db/apply_schema_v2.sql` adds `user_id TEXT NULL` + `model_fingerprint JSONB NULL` to both audit tables idempotently. Writers never raise into the graph.
+
+  - **PR 6 — Backtester persistence** `[HIGH, RESOLVED]`. `tradingagents/db/backtest_writer.py` parses string metrics (`"1.72%"`, `"1,017,197.11 EGP"`) into NUMERIC columns and bulk-inserts trades via `execute_values`. `scripts/backtester.py` + `scripts/bt_benchmark.py` now write to `backtest_runs` + `backtest_trades` after the JSON report is saved. `backtest_comparison` view ([db_schema.sql:167](db_schema.sql#L167)) finally has data. `ON CONFLICT (run_id) DO NOTHING` makes retries idempotent. JSON reports remain on-disk source of truth.
+
+  - **PR 7 — Reflection moved out of backtest loop** `[CRIT §C2, RESOLVED]`. In-loop `graph.reflect_and_remember()` call removed from `scripts/backtester.py`. Per-date `(date, state)` captured into `self._reflection_state_queue`. After `_evaluate_trade_outcomes`, `_flush_reflection_with_forward_returns(graph, lag_days=10)` walks the queue, looks up matching trades' realized `forward_return_20d`, swaps `graph.curr_state` to the historical snapshot, and calls `_run_reflections()`. Skips HOLDs + pending forward returns. `Reflector._default_metadata` propagates JSON-encoded `outcome` (verdict + forward_return) into the reflection memory rows. Regression gate: `test_in_loop_reflect_and_remember_call_removed` ensures the bug can't return.
+
+  - **PR 8 — Seed corpus + BM25 fallback** `[HIGH §K, RESOLVED]`. New `tradingagents/agents/utils/seed_memories.py` with 29 hand-curated EGX precedents (5–6 per agent collection × 6 tickers × balanced WIN/LOSS outcomes). `FinancialSituationMemory.__init__` auto-loads seeds into the BM25 corpus always; into Chroma when embeddings enabled + collection empty. New `_bm25_search()` provides keyword retrieval for embedding-disabled configs (DeepSeek/Groq — the default) with where-filter + tanh-normalized similarity. `get_memories()` emits `memory.empty_return` log line on `[]` return. Opt-out via `config["disable_seed_memories"]=True`.
+
+  - **PR 9 — Health endpoint hardening + docs** `[HIGH, ADDED]`. `/api/health` extended with `postgres.audit_write_lag_seconds` (NOW() − MAX(created_at) from `analysis_sessions`), `postgres.backtest_runs_count`, `memory.seeded` (per-collection bool), `memory.min_similarity`. New `degraded_reasons` entry `chroma_collections_unseeded`. New [agent_docs/db_infrastructure.md](agent_docs/db_infrastructure.md) is the operator reference (responsibilities table, setup commands, data-flow diagram, backup/reset, health-endpoint contract). CLAUDE.md config table + env keys updated.
+
+  **Cumulative test growth:** baseline 4 stabilization tests → **128 tests across 10 files** (+124 net, zero existing tests broken). Files touched: `tradingagents/agents/utils/memory.py`, `tradingagents/agents/utils/seed_memories.py` (new), `tradingagents/db/` (new: `__init__.py`, `connection.py`, `audit_writer.py`, `backtest_writer.py`), `tradingagents/graph/{trading_graph.py,reflection.py}`, `tradingagents/default_config.py`, `tradingagents/agents/{researchers,trader,managers}/*.py` (5 call-sites), `scripts/backtester.py`, `scripts/bt_benchmark.py`, `persistent_memory.py`, `server/api_server.py`, `pyproject.toml`, `.gitignore`, `.env.example`, `db_schema.sql` (additive via v2 migration), `scripts/db/apply_schema_v2.sql` (new), CLAUDE.md, [agent_docs/db_infrastructure.md](agent_docs/db_infrastructure.md) (new).
+
+  **Declined:** MongoDB. Postgres JSONB (`confidence_scores`, `full_state`, `metrics`, `structured_output`) covers the dynamic-log case at current scale (~30 tickers, end-of-day cadence). Adding a third datastore would triple the ops surface for no measurable benefit.
+
+  **Deferred to MEMORY.md §F (Week-3/4 ship):** Alembic migrations (this pass uses a single additive `apply_schema_v2.sql` script), Dockerfile/docker-compose, GitHub Actions CI, JWT auth (schema accepts NULL `user_id` so audit rows still write without auth).
 
 ---
 

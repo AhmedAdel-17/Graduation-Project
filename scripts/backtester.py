@@ -553,6 +553,15 @@ class BacktestingEngine:
             analysts = ["market", "fundamentals", "news", "social"]
 
         self._train_end_date = train_end_date  # stored for tagging inside the loop
+        # Retained so save_results() can pass them to the Postgres backtest writer.
+        self._bt_ticker = ticker
+        self._bt_start_date = start_date
+        self._bt_end_date = end_date
+
+        # PR 7: Post-backtest reflection queue. Captures (date, state_snapshot)
+        # for every decision date so reflection can run AFTER the loop with
+        # realized forward returns instead of look-ahead PnL. See MEMORY.md §C2.
+        self._reflection_state_queue: list = []
 
         split_info = (
             f" | Train ≤ {train_end_date} / Test > {train_end_date}"
@@ -847,38 +856,18 @@ class BacktestingEngine:
                     execution_plan, confidence, reasoning, low_liquidity,
                 )
 
-                # Resolve the action actually taken (execute_trade doesn't return it)
-                action = "HOLD"
-                if self.trade_history and self.trade_history[-1]["date"] == date:
-                    action = self.trade_history[-1]["action"]
-
-                # ---- Reflect on this decision for future learning ----
+                # ── PR 7 / MEMORY.md §C2: capture (date, state) for end-of-run
+                # reflection. The in-loop `reflect_and_remember()` call was
+                # removed because it fed look-ahead instantaneous PnL into the
+                # agent memory BEFORE the next decision date. Reflection is now
+                # batched in _flush_reflection_with_forward_returns() once the
+                # full backtest is complete and ≥10-day forward returns are
+                # realised. Live (non-backtest) propagate() calls do NOT trigger
+                # reflection — only this batch does.
                 try:
-                    if action != "HOLD" and len(self.trade_history) > 0:
-                        last_trade = self.trade_history[-1]
-                        returns_losses = {
-                            "action": last_trade["action"],
-                            "realized_pnl": last_trade.get("realized_pnl", 0),
-                            "confidence": last_trade.get("confidence", 0),
-                            "date": date,
-                        }
-                    else:
-                        # Even HOLD decisions get reflected on
-                        price_change_pct = 0.0
-                        if i > 0 and len(self.daily_history) >= 2:
-                            prev_val = self.daily_history[-2]["portfolio_value"]
-                            curr_val = self.daily_history[-1]["portfolio_value"]
-                            price_change_pct = (curr_val - prev_val) / prev_val if prev_val > 0 else 0
-                        returns_losses = {
-                            "action": "HOLD",
-                            "missed_opportunity": price_change_pct,
-                            "date": date,
-                        }
-
-                    graph.reflect_and_remember(returns_losses)
-                    logger.info(f"[REFLECTION] Agents reflected on {decision} decision")
-                except Exception as e:
-                    logger.warning(f"Reflection failed (non-critical): {e}")
+                    self._reflection_state_queue.append((date, dict(final_state)))
+                except Exception as _e:
+                    logger.debug("Could not queue reflection state for %s: %s", date, _e)
 
             except Exception as e:
                 import traceback
@@ -895,6 +884,17 @@ class BacktestingEngine:
         # the decision was profitable. Uses future data *intentionally* —
         # this is evaluation, not signal generation.
         self._evaluate_trade_outcomes(ticker, end_date)
+
+        # ---- Post-hoc reflection batch (MEMORY.md §C2 fix) ----
+        # The in-loop reflect_and_remember() call was removed because feeding
+        # realized PnL back into agent memory mid-backtest is look-ahead. Now
+        # that the loop is done AND _evaluate_trade_outcomes has populated
+        # forward returns on each trade, run reflection once per captured
+        # decision state with the realized 20-day forward outcome.
+        try:
+            self._flush_reflection_with_forward_returns(graph, lag_days=10)
+        except Exception as _e:
+            logger.warning("Post-backtest reflection batch failed: %s", _e)
 
         logger.info("\n" + "=" * 64)
         logger.info("BACKTEST COMPLETE")
@@ -934,6 +934,104 @@ class BacktestingEngine:
             logger.warning(self._run_error)
 
         self.save_results(ticker)
+
+    # =========================================================================
+    # Post-hoc Reflection Batch (MEMORY.md §C2)
+    # =========================================================================
+
+    def _flush_reflection_with_forward_returns(
+        self,
+        graph,
+        lag_days: int = 10,
+    ) -> dict:
+        """Replay queued per-date states through the reflection LLM using
+        realized forward returns instead of look-ahead instantaneous PnL.
+
+        Called after the main backtest loop completes AND
+        ``_evaluate_trade_outcomes`` has annotated every entry in
+        ``self.trade_history`` with ``forward_return_Nd`` and ``trade_result``.
+
+        For each (date, state) captured during the loop:
+          - look up the matching trade record by date
+          - skip when no realized forward return is available
+            (e.g., HOLDs, or trades within ``lag_days`` of backtest end)
+          - synthesize ``returns_losses`` with the realized verdict
+          - call ``graph._run_reflections()`` with the historical state restored
+
+        Args:
+            graph: the TradingAgentsGraph instance used during this backtest.
+            lag_days: minimum forward window required for a reflection to fire.
+                Defaults to 10 to satisfy MEMORY.md §C2 (≥10 trading days).
+
+        Returns:
+            dict: ``{"flushed": int, "skipped": int}`` for telemetry / tests.
+        """
+        queue = getattr(self, "_reflection_state_queue", []) or []
+        if not queue:
+            return {"flushed": 0, "skipped": 0}
+
+        # Use the longest available forward horizon if 20-day is recorded
+        # (matches _evaluate_trade_outcomes default). lag_days is the floor.
+        forward_horizon = max(lag_days, 20)
+        forward_key = f"forward_return_{forward_horizon}d"
+        # Fallback to whatever horizon is present on the trade record.
+        fallback_keys = ("forward_return_20d", "forward_return_10d", "forward_return_5d")
+
+        trades_by_date = {t["date"]: t for t in self.trade_history}
+        original_state = getattr(graph, "curr_state", None)
+        flushed = 0
+        skipped = 0
+
+        try:
+            for date, state in queue:
+                trade = trades_by_date.get(date)
+                if not trade:
+                    skipped += 1
+                    continue  # HOLD dates (no trade) — no realized PnL to reflect on
+
+                forward_ret = trade.get(forward_key)
+                if forward_ret is None:
+                    for fk in fallback_keys:
+                        if trade.get(fk) is not None:
+                            forward_ret = trade[fk]
+                            break
+                if forward_ret is None:
+                    skipped += 1
+                    continue  # forward window has not closed yet — skip to keep causal
+
+                verdict = trade.get("trade_result", "UNKNOWN")
+                returns_losses = {
+                    "action": trade.get("action", "HOLD"),
+                    "forward_return": forward_ret,
+                    "forward_horizon_days": forward_horizon,
+                    "verdict": verdict,
+                    "lag_days": lag_days,
+                    "date": date,
+                    "realized_pnl": trade.get("realized_pnl"),
+                }
+
+                try:
+                    # Swap graph state to the historical snapshot so reflection
+                    # prompts see what the agents saw on `date`, not what they
+                    # know now at end-of-run.
+                    graph.curr_state = state
+                    graph._run_reflections(returns_losses)
+                    flushed += 1
+                except Exception as exc:
+                    logger.warning(
+                        "Reflection failed for %s (skipping): %s", date, exc
+                    )
+                    skipped += 1
+        finally:
+            graph.curr_state = original_state
+            self._reflection_state_queue = []
+
+        logger.info(
+            "[REFLECTION] post-backtest batch: %d flushed, %d skipped "
+            "(lag_days=%d, horizon=%dd) — MEMORY.md §C2",
+            flushed, skipped, lag_days, forward_horizon,
+        )
+        return {"flushed": flushed, "skipped": skipped}
 
     # =========================================================================
     # Post-hoc Trade Outcome Evaluation
@@ -1155,6 +1253,46 @@ class BacktestingEngine:
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=4)
         logger.info(f"Saved full report  → {json_path}")
+
+        # ── Postgres persistence (best-effort) ────────────────────────────────
+        # Mirrors the JSON report into backtest_runs + backtest_trades so the
+        # dashboard, audit-log endpoint, and backtest_comparison view have
+        # structured data to query. Errors are logged and swallowed — the
+        # JSON file remains the authoritative on-disk record either way.
+        try:
+            import uuid
+            from tradingagents.db import backtest_writer
+
+            run_id = uuid.uuid4().hex
+            ticker_for_run = getattr(self, "_bt_ticker", session_name)
+            start_for_run = getattr(self, "_bt_start_date", None)
+            end_for_run = getattr(self, "_bt_end_date", None)
+            config_snapshot = getattr(self, "config", None) or getattr(self, "_config", None)
+
+            if backtest_writer.write_backtest_run(
+                run_id=run_id,
+                ticker=ticker_for_run,
+                strategy="llm",
+                start_date=start_for_run,
+                end_date=end_for_run,
+                metrics=metrics,
+                config=config_snapshot,
+            ):
+                rows_written = backtest_writer.write_backtest_trades(
+                    run_id=run_id,
+                    trades=self.trade_history,
+                    daily_portfolio=self.daily_history,
+                )
+                logger.info(
+                    "Persisted backtest_runs row + %d backtest_trades for run_id=%s",
+                    rows_written,
+                    run_id,
+                )
+                # Expose the run_id so external callers (CLI, tests) can join the
+                # Postgres rows back to the JSON file on disk.
+                self._bt_run_id = run_id
+        except Exception as _e:  # pragma: no cover — defensive guard
+            logger.warning("Backtest Postgres persistence failed: %s", _e)
 
 
 # =============================================================================

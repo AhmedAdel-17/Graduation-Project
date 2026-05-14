@@ -140,7 +140,7 @@ scripts/
 tests/                               <- pytest suite (Fundamentals strong; rest sparse)
 agent_docs/                          <- per-component design notes (read on demand)
 db_schema.sql                        <- Postgres schema (apply manually - no migration tool)
-persistent_memory.py                 <- Postgres + pgvector memory class (falls back to ChromaDB)
+persistent_memory.py                 <- Optional Postgres + pgvector memory class (ChromaDB is default)
 redis_pubsub.py                      <- AgentEventPublisher / Subscriber for WebSocket streaming
 ```
 
@@ -164,7 +164,10 @@ redis_pubsub.py                      <- AgentEventPublisher / Subscriber for Web
 | `auto_refresh_fundamentals` | `True` | Refresh CSVs older than 90 days |
 | `backtest_mode` | `True` | RELAXES single-stock concentration veto. Set `False` for live multi-stock portfolios. |
 | `prefetch_data` | `True` | Parallel news+social pre-fetch (saves ~2 LLM calls + 30-60 s/run) |
-| `postgres_url` / `redis_url` | env-driven | Falls back to in-memory ChromaDB / no-op if unset |
+| `memory_backend` | `"chroma"` | Vector memory backend. Set `TRADINGAGENTS_MEMORY_BACKEND=postgres` only when pgvector is installed and schema-aligned. |
+| `chroma_persist_dir` | `"./chroma_db"` | On-disk ChromaDB path (gitignored). Empty/unset → in-memory client (data lost on restart). |
+| `memory_min_similarity` | `0.30` | Cosine threshold for `get_memories()` — drop matches below this. Configurable via `MEMORY_MIN_SIMILARITY`. |
+| `postgres_url` / `redis_url` | env-driven | Postgres is optional for audit/backtest persistence; Redis is optional for WebSocket progress events. |
 
 ### `.env` keys (loaded via `python-dotenv`)
 
@@ -174,7 +177,12 @@ redis_pubsub.py                      <- AgentEventPublisher / Subscriber for Web
 - `APIFY_API_TOKEN` - Facebook Groups scraping (v2 social pipeline)
 - `POSTGRES_URL` - optional, enables persistent memory + audit
 - `REDIS_URL` - optional, enables WebSocket streaming
+- `TRADINGAGENTS_MEMORY_BACKEND` - optional; defaults to `chroma`, set to `postgres` only with pgvector ready
+- `CHROMA_PERSIST_DIR` - optional; defaults to `./chroma_db`. Path to the persistent ChromaDB vector store (gitignored).
+- `MEMORY_MIN_SIMILARITY` - optional; defaults to `0.30`. Floor for `get_memories()` cosine similarity (or tanh-normalized BM25 score).
 - `EGX_FB_STORAGE_STATE` / `EGX_X_STORAGE_STATE` - optional Playwright cookies
+
+**DB infrastructure reference:** see [agent_docs/db_infrastructure.md](agent_docs/db_infrastructure.md) for the full operator guide (responsibilities of each store, setup commands, health-endpoint contract, backup/reset procedures).
 
 **NEVER hardcode keys in source.** A live EODHD key is currently committed in `tradingagents/dataflows/eodhd.py` and `gateway.py`. Rotating + scrubbing this is a Week-1 task - see `MEMORY.md` issue A.
 
@@ -226,14 +234,8 @@ python scripts/run_real_backtests.py
 # Twitter/social v2 pipeline
 PYTHONIOENCODING=utf-8 python scripts/social_pipeline/v2/pipeline.py
 
-# Standalone Facebook scrape + sentiment test
-python scripts/social_pipeline/v2/test_fb_sentiment.py
-
 # Tests
 python -m pytest tests/ -v --tb=short
-python -m pytest tests/test_fundamentals_phase1a.py tests/test_fundamentals_phase2b.py -m "not integration" -q
-python3 tests/phase1b_audit.py
-python3 tests/phase2b_audit.py
 
 # Smoke test
 python -c "from tradingagents.graph.trading_graph import TradingAgentsGraph; print('OK')"

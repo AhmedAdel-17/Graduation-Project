@@ -13,6 +13,8 @@ import sys
 import json
 import asyncio
 import logging
+import importlib.util
+import socket
 
 # Load .env before any tradingagents import so keys are available at module init
 try:
@@ -25,6 +27,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from contextlib import asynccontextmanager
+from urllib.parse import urlparse
 
 logger = logging.getLogger("tradingagents.api_server")
 
@@ -119,6 +122,213 @@ def _parse_float(v: Any) -> Optional[float]:
         except ValueError:
             return None
     return None
+
+
+def _module_available(module_name: str) -> bool:
+    return importlib.util.find_spec(module_name) is not None
+
+
+def _tcp_reachable_from_url(url: str, *, timeout_seconds: float = 0.2) -> Optional[bool]:
+    if not url:
+        return None
+    parsed = urlparse(url)
+    host = parsed.hostname
+    port = parsed.port
+    if not host:
+        return None
+    if port is None:
+        if parsed.scheme.startswith("postgres"):
+            port = 5432
+        elif parsed.scheme.startswith("redis"):
+            port = 6379
+        else:
+            return None
+    try:
+        with socket.create_connection((host, port), timeout=timeout_seconds):
+            return True
+    except OSError:
+        return False
+
+
+_CHROMA_AGENT_COLLECTIONS = (
+    "bull_memory",
+    "bear_memory",
+    "trader_memory",
+    "invest_judge_memory",
+    "risk_manager_memory",
+)
+
+
+def _seed_count_per_collection() -> Dict[str, int]:
+    """Expected seed count per collection name. Used by /api/health to surface
+    a ``memory.seeded`` boolean — True when the collection has at least the
+    seeded number of rows. Best-effort; on any import failure returns an empty
+    dict (callers default to False).
+    """
+    try:
+        from tradingagents.agents.utils.seed_memories import EGX_SEED_MEMORIES
+    except Exception:  # pragma: no cover — defensive
+        return {}
+    counts: Dict[str, int] = {}
+    for entry in EGX_SEED_MEMORIES:
+        name = entry.get("agent_name")
+        if name:
+            counts[name] = counts.get(name, 0) + 1
+    return counts
+
+
+def _postgres_audit_diagnostics(postgres_url: str) -> Dict[str, Any]:
+    """Inspect the audit + backtest tables. Best-effort, fully guarded — a
+    failure here never crashes /api/health.
+
+    Returns a dict with:
+      - audit_write_lag_seconds: int | None — seconds since most recent
+        analysis_sessions row, or None when the table is empty / unreachable.
+      - backtest_runs_count: int | None — informational count.
+      - reachable: bool
+    """
+    info: Dict[str, Any] = {
+        "audit_write_lag_seconds": None,
+        "backtest_runs_count": None,
+        "reachable": False,
+    }
+    if not postgres_url:
+        return info
+    try:
+        from tradingagents.db import cursor as db_cursor
+        from tradingagents.db import is_postgres_available
+
+        if not is_postgres_available():
+            return info
+
+        with db_cursor() as cur:
+            cur.execute(
+                """
+                SELECT EXTRACT(EPOCH FROM (NOW() - MAX(created_at)))::int AS lag_seconds
+                FROM analysis_sessions;
+                """
+            )
+            row = cur.fetchone()
+            if row and row[0] is not None:
+                info["audit_write_lag_seconds"] = int(row[0])
+
+            cur.execute("SELECT COUNT(*) FROM backtest_runs;")
+            row = cur.fetchone()
+            if row is not None:
+                info["backtest_runs_count"] = int(row[0])
+
+        info["reachable"] = True
+    except Exception as exc:  # pragma: no cover — defensive
+        info["error"] = str(exc)
+    return info
+
+
+def _chroma_persistence_diagnostics(chroma_persist_dir: Optional[str]) -> Dict[str, Any]:
+    """Inspect the on-disk Chroma store. Best-effort — never raises into health."""
+    info: Dict[str, Any] = {
+        "persist_dir": chroma_persist_dir or None,
+        "persistent": bool(chroma_persist_dir),
+        "collection_counts": None,
+        "total_documents": None,
+    }
+    if not chroma_persist_dir:
+        return info
+    try:
+        import chromadb  # local import — keeps health endpoint cheap on import
+
+        if not os.path.isdir(chroma_persist_dir):
+            info["collection_counts"] = {}
+            info["total_documents"] = 0
+            return info
+        client = chromadb.PersistentClient(path=chroma_persist_dir)
+        counts: Dict[str, int] = {}
+        for name in _CHROMA_AGENT_COLLECTIONS:
+            try:
+                coll = client.get_or_create_collection(name=name)
+                counts[name] = int(coll.count())
+            except Exception:  # pragma: no cover — defensive
+                counts[name] = -1
+        info["collection_counts"] = counts
+        info["total_documents"] = sum(c for c in counts.values() if c >= 0)
+    except Exception as exc:  # pragma: no cover — defensive
+        info["error"] = str(exc)
+    return info
+
+
+def _runtime_diagnostics() -> Dict[str, Any]:
+    config = get_config()
+    memory_backend = str(config.get("memory_backend", "chroma")).strip().lower() or "chroma"
+    postgres_url = config.get("postgres_url") or os.environ.get("POSTGRES_URL", "")
+    redis_url = config.get("redis_url") or os.environ.get("REDIS_URL", "")
+    chroma_persist_dir = config.get("chroma_persist_dir") or os.environ.get("CHROMA_PERSIST_DIR", "")
+    postgres_reachable = _tcp_reachable_from_url(postgres_url)
+    redis_reachable = _tcp_reachable_from_url(redis_url)
+    redis_package_available = _module_available("redis")
+
+    chroma_info = _chroma_persistence_diagnostics(chroma_persist_dir or None) \
+        if memory_backend == "chroma" else {
+            "persist_dir": None,
+            "persistent": False,
+            "collection_counts": None,
+            "total_documents": None,
+        }
+
+    # PR 9: per-collection ``seeded`` flag — True when chroma_collection_count
+    # for that agent meets or exceeds the expected seed corpus size.
+    expected_seeds = _seed_count_per_collection()
+    chroma_counts = chroma_info.get("collection_counts") or {}
+    seeded: Dict[str, bool] = {}
+    for name in _CHROMA_AGENT_COLLECTIONS:
+        actual = chroma_counts.get(name, 0)
+        expected = expected_seeds.get(name, 0)
+        seeded[name] = bool(actual >= expected and expected > 0)
+
+    # PR 9: audit / backtest table diagnostics (best-effort).
+    pg_audit = _postgres_audit_diagnostics(postgres_url)
+
+    degraded_reasons: List[str] = []
+    if memory_backend in {"postgres", "pgvector", "persistent"} and postgres_reachable is not True:
+        degraded_reasons.append("postgres_vector_memory_unavailable")
+    if redis_url and (not redis_package_available or redis_reachable is not True):
+        degraded_reasons.append("redis_streaming_unavailable")
+    if memory_backend == "chroma" and not chroma_info.get("persistent"):
+        degraded_reasons.append("chroma_memory_in_memory_only")
+    if (
+        memory_backend == "chroma"
+        and chroma_info.get("persistent")
+        and expected_seeds
+        and not any(seeded.values())
+    ):
+        degraded_reasons.append("chroma_collections_unseeded")
+
+    return {
+        "memory": {
+            "backend": memory_backend,
+            "vector_store": "chromadb" if memory_backend == "chroma" else "postgres_pgvector",
+            "postgres_vector_required": memory_backend in {"postgres", "pgvector", "persistent"},
+            "chroma_persist_dir": chroma_info.get("persist_dir"),
+            "chroma_persistent": chroma_info.get("persistent"),
+            "chroma_collection_counts": chroma_info.get("collection_counts"),
+            "chroma_total_documents": chroma_info.get("total_documents"),
+            "seeded": seeded,
+            "min_similarity": float(config.get("memory_min_similarity", 0.30)),
+        },
+        "postgres": {
+            "configured": bool(postgres_url),
+            "reachable": postgres_reachable,
+            "audit_write_lag_seconds": pg_audit.get("audit_write_lag_seconds"),
+            "backtest_runs_count": pg_audit.get("backtest_runs_count"),
+            "purpose": "audit/backtest persistence only unless memory_backend=postgres",
+        },
+        "redis": {
+            "configured": bool(redis_url),
+            "package_available": redis_package_available,
+            "reachable": redis_reachable,
+            "purpose": "optional websocket progress streaming",
+        },
+        "degraded": bool(degraded_reasons),
+        "degraded_reasons": degraded_reasons,
+    }
 
 def _normalize_llm_report(report: Dict[str, Any], *, session_id: str) -> Dict[str, Any]:
     """
@@ -222,6 +432,67 @@ def _normalize_llm_report(report: Dict[str, Any], *, session_id: str) -> Dict[st
     }
 
 
+def _normalize_bt_report(report: Dict[str, Any], *, session_id: str) -> Dict[str, Any]:
+    """Normalize Backtrader benchmark JSON to the dashboard API contract."""
+    ticker = str(report.get("session") or "")
+    ticker_norm = _normalize_ticker(ticker) if ticker else ""
+    legacy = report.get("metrics") if isinstance(report.get("metrics"), dict) else {}
+    trades_raw = report.get("trades") if isinstance(report.get("trades"), list) else []
+    daily_raw = report.get("daily_portfolio") if isinstance(report.get("daily_portfolio"), list) else []
+
+    equity = []
+    for row in daily_raw:
+        if not isinstance(row, dict):
+            continue
+        d = row.get("date")
+        val = row.get("equity", row.get("value", row.get("portfolio_value")))
+        parsed = _parse_float(val)
+        if d and parsed is not None:
+            equity.append({"date": str(d), "equity": parsed})
+
+    trades = []
+    for row in trades_raw:
+        if not isinstance(row, dict):
+            continue
+        qty = row.get("shares", row.get("quantity", row.get("size")))
+        trades.append(
+            {
+                "date": row.get("date"),
+                "ticker": row.get("ticker") or ticker_norm,
+                "action": row.get("action"),
+                "price": _parse_float(row.get("exec_price", row.get("price", row.get("close_price")))),
+                "quantity": int(qty) if isinstance(qty, (int, float)) else qty,
+                "pnl": _parse_float(row.get("realized_pnl", row.get("pnl"))),
+            }
+        )
+
+    max_drawdown = _parse_percent(legacy.get("Max Drawdown"))
+    metrics: Dict[str, Any] = {
+        "total_return_pct": _parse_percent(legacy.get("Total Return")),
+        "benchmark_return_pct": _parse_percent(legacy.get("Benchmark Return")),
+        "alpha_pct": _parse_percent(legacy.get("Alpha")),
+        "sharpe_ratio": _parse_float(legacy.get("Sharpe Ratio")),
+        "calmar_ratio": _parse_float(legacy.get("Calmar Ratio")),
+        "max_drawdown_pct": abs(max_drawdown) if max_drawdown is not None else None,
+        "win_rate": _parse_percent(legacy.get("Win Rate")),
+        "total_trades": _parse_float(legacy.get("Total Trades")) or len(trades_raw),
+        "total_commissions": _parse_float(legacy.get("Total Commissions")),
+        "final_equity": _parse_float(legacy.get("Final Portfolio")) or (equity[-1]["equity"] if equity else None),
+        "initial_capital": equity[0]["equity"] if equity else None,
+    }
+    metrics = {k: v for k, v in metrics.items() if v is not None}
+
+    return {
+        "ticker": ticker_norm or ticker,
+        "bt": {
+            "session_id": session_id,
+            "metrics": metrics,
+            "trades": trades,
+            "daily_portfolio": equity,
+        },
+    }
+
+
 # =============================================================================
 # Pydantic Models
 # =============================================================================
@@ -305,10 +576,12 @@ app.add_middleware(
 
 @app.get("/api/health")
 async def health():
+    diagnostics = _runtime_diagnostics()
     return {
         "status": "ok",
         "timestamp": datetime.now().isoformat(),
         "egx_tools": EGX_TOOLS_AVAILABLE,
+        "diagnostics": diagnostics,
     }
 
 
@@ -611,11 +884,13 @@ async def list_backtests():
                 data = json.load(f)
             session_id = file.stem          # full stem: bt_report_COMI.CA_TIMESTAMP
             ticker = data.get("session", "")
+            normalized = _normalize_bt_report(data, session_id=session_id)
+            bt = (normalized.get("bt") or {}) if isinstance(normalized, dict) else {}
             sessions.append({
                 "session_id": session_id,
-                "ticker":     ticker,
+                "ticker":     normalized.get("ticker") or ticker,
                 "engine":     "classical_technical",
-                "metrics":    data.get("metrics", {}),
+                "metrics":    bt.get("metrics", {}) if isinstance(bt, dict) else {},
                 "total_trades": len(data.get("trades", [])),
             })
         except Exception:
@@ -668,12 +943,8 @@ async def compare_backtests(ticker: str):
     if bt_files:
         with open(bt_files[0], encoding="utf-8") as f:
             bt_data = json.load(f)
-        result["bt"] = {
-            "session_id":      bt_files[0].stem,
-            "metrics":         bt_data.get("metrics", {}),
-            "trades":          bt_data.get("trades", []),
-            "daily_portfolio": bt_data.get("daily_portfolio", []),
-        }
+        normalized = _normalize_bt_report(bt_data, session_id=bt_files[0].stem)
+        result["bt"] = (normalized.get("bt") if isinstance(normalized, dict) else None)
 
     return result
 
@@ -952,8 +1223,8 @@ async def _forward_redis_events(websocket: WebSocket, ticker: str):
                     })
                 except Exception:
                     break
-    except Exception:
-        pass  # Redis unavailable — silent no-op
+    except Exception as exc:
+        logger.warning("Redis websocket forwarding unavailable for %s: %s", ticker, exc)
 
 
 async def _run_streaming_analysis(
@@ -1040,64 +1311,71 @@ async def _run_streaming_analysis(
                     result[key] = str(value)
         return result
 
-    # Build and run the graph in a sync thread
-    def run_graph():
-        """Synchronous graph execution — runs in thread pool."""
-        # Inject debate/risk round settings into config
+    # True streaming: graph runs in a thread and pushes chunks into an asyncio
+    # Queue; this coroutine drains the queue and sends each chunk over the
+    # WebSocket as soon as it arrives — no buffering until completion.
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue = asyncio.Queue()
+    _SENTINEL = object()  # marks end-of-stream
+
+    def run_graph_streaming():
+        """Synchronous graph execution — runs in thread pool, pushes to queue."""
         run_config = {**config}
         run_config["max_debate_rounds"] = max_debate_rounds
         run_config["max_risk_discuss_rounds"] = max_risk_rounds
         graph = TradingAgentsGraph(
             config=run_config,
             selected_analysts=selected_analysts,
-            debug=True,  # Enable streaming mode
+            debug=True,
         )
         graph.ticker = ticker
 
         init_state = graph.propagator.create_initial_state(ticker, trade_date)
         args = graph.propagator.get_graph_args()
 
-        chunks = []
-        for chunk in graph.graph.stream(init_state, **args):
-            chunks.append(chunk)
+        try:
+            for chunk in graph.graph.stream(init_state, **args):
+                loop.call_soon_threadsafe(queue.put_nowait, chunk)
+        except Exception as exc:
+            loop.call_soon_threadsafe(queue.put_nowait, exc)
+        finally:
+            loop.call_soon_threadsafe(queue.put_nowait, _SENTINEL)
 
-        return chunks
+    # Launch graph in background thread
+    executor_future = loop.run_in_executor(None, run_graph_streaming)
 
-    # Run in thread pool to not block the event loop
-    loop = asyncio.get_event_loop()
-    chunks = await loop.run_in_executor(None, run_graph)
+    final_state: dict = {}
+    try:
+        while True:
+            item = await queue.get()
+            if item is _SENTINEL:
+                break
+            if isinstance(item, Exception):
+                raise item
 
-    # Stream chunks to client
-    for chunk in chunks:
-        if not chunk.get("messages") or len(chunk.get("messages", [])) == 0:
-            # Still send non-message state updates
-            if any(k != "messages" for k in chunk.keys()):
-                node, status, keys = get_node_from_chunk(chunk)
-                data = serialize_chunk_data(chunk)
-                await websocket.send_json({
-                    "type": "agent_update",
-                    "node": node,
-                    "status": status,
-                    "state_keys": keys,
-                    "data": data,
-                    "timestamp": datetime.now().isoformat(),
-                })
-            continue
+            chunk = item
+            final_state = chunk  # keep updating; last one is the final state
 
-        node, status, keys = get_node_from_chunk(chunk)
-        data = serialize_chunk_data(chunk)
+            has_non_msg = any(k != "messages" for k in chunk.keys())
+            msgs = chunk.get("messages") or []
 
-        await websocket.send_json({
-            "type": "agent_update",
-            "node": node,
-            "status": status,
-            "state_keys": keys,
-            "data": data,
-            "timestamp": datetime.now().isoformat(),
-        })
+            if not msgs and not has_non_msg:
+                continue
+
+            node, status, keys = get_node_from_chunk(chunk)
+            data = serialize_chunk_data(chunk)
+            await websocket.send_json({
+                "type": "agent_update",
+                "node": node,
+                "status": status,
+                "state_keys": keys,
+                "data": data,
+                "timestamp": datetime.now().isoformat(),
+            })
+    finally:
+        await executor_future  # ensure thread is fully done
 
     # Send completion
-    final_state = chunks[-1] if chunks else {}
     await websocket.send_json({
         "type": "complete",
         "node": "System",
@@ -1152,9 +1430,11 @@ async def test_random_egx(req: TestEgxRequest = TestEgxRequest()):
     try:
         # Run analysis in thread pool because it's blocking IO
         result = await asyncio.to_thread(analyze_ticker_for_api, selected_ticker)
-        
+
+        llm_failed = bool(result.get("error") or result.get("llm_error"))
+
         # Persist to audit_logs so History page can discover it
-        if not result.get("error"):
+        if not llm_failed:
             try:
                 import uuid
                 session_id = str(uuid.uuid4())[:8]
@@ -1254,6 +1534,8 @@ async def test_random_egx(req: TestEgxRequest = TestEgxRequest()):
                 # Don't fail the main response if audit logging fails
                 print(f"[WARN] Failed to write audit log: {audit_err}")
         
+        if llm_failed:
+            return {**result, "status": "degraded"}
         return result
     except Exception as e:
         return {"error": f"Analysis failed for {selected_ticker}: {str(e)}"}

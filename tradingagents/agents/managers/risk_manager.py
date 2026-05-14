@@ -198,7 +198,19 @@ def create_risk_manager(llm, memory):
         curr_situation = (
             f"{market_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}"
         )
-        past_memories = memory.get_memories(curr_situation, n_matches=2)
+        from tradingagents.default_config import DEFAULT_CONFIG
+        ticker = state.get("company_of_interest", "")
+        memory_where = {"ticker": ticker} if ticker else None
+        memory_threshold = float(
+            state.get("memory_min_similarity")
+            or DEFAULT_CONFIG.get("memory_min_similarity", 0.30)
+        )
+        past_memories = memory.get_memories(
+            curr_situation,
+            n_matches=2,
+            where=memory_where,
+            min_similarity=memory_threshold,
+        )
         past_memory_str = "".join(
             rec["recommendation"] + "\n\n" for rec in past_memories
         )

@@ -1,8 +1,9 @@
 """
 persistent_memory.py
 ====================
-Drop-in replacement for FinancialSituationMemory that stores agent memories
-in PostgreSQL + pgvector instead of in-memory ChromaDB.
+Optional drop-in replacement for FinancialSituationMemory that stores agent
+memories in PostgreSQL + pgvector. ChromaDB is the default memory backend for
+this project; use this class only when TRADINGAGENTS_MEMORY_BACKEND=postgres.
 
 Compatible with v17.4 config structure (DeepSeek backend, EGX market).
 
@@ -29,19 +30,23 @@ from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger("tradingagents.memory")
 
-# ── Optional deps: fall back gracefully if postgres is not available ──────────
+# All Postgres access routes through the centralized pool in tradingagents.db.
+# We still need the psycopg2.extras module locally for DictCursor row access,
+# and pgvector availability for the embedding column type.
 try:
-    import psycopg2
     import psycopg2.extras
-    from pgvector.psycopg2 import register_vector
+
     POSTGRES_AVAILABLE = True
 except ImportError:
     POSTGRES_AVAILABLE = False
     logger.warning(
-        "psycopg2 or pgvector not installed. "
-        "Install with: pip install psycopg2-binary pgvector\n"
+        "psycopg2 not installed. "
+        "Install via: pip install -e .[postgres]\n"
         "Falling back to in-memory ChromaDB."
     )
+
+from tradingagents.db import cursor as db_cursor
+from tradingagents.db import is_postgres_available
 
 try:
     from openai import OpenAI
@@ -119,26 +124,31 @@ class PersistentAgentMemory:
         self.name = name  # e.g. "bull_memory", "bear_memory"
         self.config = config
         self._embedder = _EmbeddingClient(config)
-        self._conn = None
+        self._use_postgres = False
         self._fallback = None  # ChromaDB fallback instance
 
-        postgres_url = config.get("postgres_url") or os.environ.get("POSTGRES_URL")
+        # A config-provided URL takes precedence; promote it into the env so the
+        # shared pool picks it up.
+        cfg_url = config.get("postgres_url")
+        if cfg_url and not os.environ.get("POSTGRES_URL"):
+            os.environ["POSTGRES_URL"] = cfg_url
 
-        if POSTGRES_AVAILABLE and postgres_url:
+        if POSTGRES_AVAILABLE and is_postgres_available():
             try:
-                self._conn = psycopg2.connect(postgres_url)
-                register_vector(self._conn)
                 self._ensure_schema()
-                logger.info("PersistentAgentMemory '%s' connected to PostgreSQL", name)
+                self._use_postgres = True
+                logger.info(
+                    "PersistentAgentMemory '%s' using pooled PostgreSQL", name
+                )
             except Exception as e:
                 logger.warning(
-                    "PostgreSQL connection failed (%s). Falling back to ChromaDB in-memory: %s",
-                    postgres_url, e,
+                    "PostgreSQL memory init failed. "
+                    "Falling back to ChromaDB in-memory: %s",
+                    e,
                 )
-                self._conn = None
                 self._init_chromadb_fallback(config)
         else:
-            if not postgres_url:
+            if not os.environ.get("POSTGRES_URL"):
                 logger.info(
                     "POSTGRES_URL not set. Using in-memory ChromaDB for '%s'. "
                     "Set POSTGRES_URL to persist memories across restarts.",
@@ -150,7 +160,7 @@ class PersistentAgentMemory:
 
     def _ensure_schema(self):
         """Create the agent_memories table and index if they don't exist."""
-        with self._conn.cursor() as cur:
+        with db_cursor(register_pgvector=True) as cur:
             cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS agent_memories (
@@ -167,13 +177,14 @@ class PersistentAgentMemory:
                 CREATE INDEX IF NOT EXISTS idx_agent_memories_agent
                 ON agent_memories (agent_name);
             """)
-            self._conn.commit()
 
     def _try_create_ivfflat_index(self):
         """Create ivfflat vector index once there is enough data (>=100 rows)."""
         try:
-            with self._conn.cursor() as cur:
-                cur.execute("SELECT COUNT(*) FROM agent_memories WHERE embedding IS NOT NULL;")
+            with db_cursor(register_pgvector=True) as cur:
+                cur.execute(
+                    "SELECT COUNT(*) FROM agent_memories WHERE embedding IS NOT NULL;"
+                )
                 count = cur.fetchone()[0]
                 if count >= 100:
                     cur.execute("""
@@ -182,9 +193,8 @@ class PersistentAgentMemory:
                         USING ivfflat (embedding vector_cosine_ops)
                         WITH (lists = 10);
                     """)
-                    self._conn.commit()
-        except Exception:
-            pass  # Non-critical
+        except Exception as exc:
+            logger.debug("ivfflat index creation skipped: %s", exc)
 
     # ── ChromaDB fallback ──────────────────────────────────────────────────────
 
@@ -200,36 +210,119 @@ class PersistentAgentMemory:
 
     # ── Public interface (identical to FinancialSituationMemory) ──────────────
 
-    def add_situations(self, situations_and_advice: List[Tuple[str, str]]):
+    def add_situations(
+        self,
+        situations_and_advice: List[Tuple[str, str]],
+        metadatas: Optional[List[Dict]] = None,
+        *,
+        default_metadata: Optional[Dict] = None,
+    ):
         """
         Add financial situations and their corresponding advice.
-        Parameter: list of (situation, recommendation) tuples.
+
+        Args:
+            situations_and_advice: list of (situation, recommendation) tuples.
+            metadatas: optional list of dicts parallel to ``situations_and_advice``.
+            default_metadata: optional dict applied to every row in the batch.
+
+        Note: until the Postgres ``agent_memories`` schema is extended (PR 6),
+        only the ``ticker`` key from metadata is persisted (existing column).
+        Other canonical keys (memory_type, trade_date, outcome, confidence) are
+        accepted on the API but logged at DEBUG and dropped.
         """
         if not situations_and_advice:
             return
 
-        if self._conn:
-            self._add_to_postgres(situations_and_advice)
+        if self._use_postgres:
+            self._add_to_postgres(
+                situations_and_advice,
+                metadatas=metadatas,
+                default_metadata=default_metadata,
+            )
         elif self._fallback:
-            self._fallback.add_situations(situations_and_advice)
+            self._fallback.add_situations(
+                situations_and_advice,
+                metadatas=metadatas,
+                default_metadata=default_metadata,
+            )
 
-    def get_memories(self, current_situation: str, n_matches: int = 1) -> List[Dict]:
+    def get_memories(
+        self,
+        current_situation: str,
+        n_matches: int = 1,
+        *,
+        where: Optional[Dict] = None,
+        min_similarity: Optional[float] = None,
+    ) -> List[Dict]:
         """
         Find matching recommendations using vector similarity.
-        Returns list of dicts: {matched_situation, recommendation, similarity_score}.
+
+        Args:
+            current_situation: free-text query.
+            n_matches: top-k.
+            where: optional metadata filter. Currently only ``{"ticker": ...}``
+                is honoured by the Postgres backend; other keys are ignored
+                with a debug log. The Chroma fallback supports all canonical
+                keys.
+            min_similarity: drop rows with cosine similarity below this value.
+
+        Returns list of dicts: {matched_situation, recommendation,
+        similarity_score, metadata}.
         """
-        if self._conn:
-            return self._query_postgres(current_situation, n_matches)
+        if self._use_postgres:
+            return self._query_postgres(
+                current_situation,
+                n_matches,
+                where=where,
+                min_similarity=min_similarity,
+            )
         elif self._fallback:
-            return self._fallback.get_memories(current_situation, n_matches)
+            return self._fallback.get_memories(
+                current_situation,
+                n_matches,
+                where=where,
+                min_similarity=min_similarity,
+            )
         return []
 
     # ── PostgreSQL internals ───────────────────────────────────────────────────
 
-    def _add_to_postgres(self, situations_and_advice: List[Tuple[str, str]]):
-        ticker = self.config.get("company_of_interest")  # may be None at init time
-        with self._conn.cursor() as cur:
-            for situation, recommendation in situations_and_advice:
+    _SUPPORTED_PG_METADATA = ("ticker",)
+
+    def _resolve_ticker(
+        self,
+        per_item: Optional[Dict],
+        default: Optional[Dict],
+    ) -> Optional[str]:
+        """Pick the ticker for a row: per-item override > default > config."""
+        for source in (per_item, default):
+            if source and source.get("ticker"):
+                return str(source["ticker"])
+        return self.config.get("company_of_interest")
+
+    def _add_to_postgres(
+        self,
+        situations_and_advice: List[Tuple[str, str]],
+        metadatas: Optional[List[Dict]] = None,
+        default_metadata: Optional[Dict] = None,
+    ):
+        # Log unsupported metadata keys once per batch so users know what's dropped
+        # until PR 6 extends the schema.
+        if default_metadata:
+            extras = [
+                k for k in default_metadata
+                if k not in self._SUPPORTED_PG_METADATA and default_metadata[k] is not None
+            ]
+            if extras:
+                logger.debug(
+                    "Postgres backend dropped metadata keys %s — schema upgrade pending (PR 6)",
+                    extras,
+                )
+
+        with db_cursor(register_pgvector=True) as cur:
+            for i, (situation, recommendation) in enumerate(situations_and_advice):
+                per_item = metadatas[i] if metadatas else None
+                ticker = self._resolve_ticker(per_item, default_metadata)
                 embedding = self._embedder.embed(situation)
                 cur.execute(
                     """
@@ -245,57 +338,110 @@ class PersistentAgentMemory:
                         embedding,  # psycopg2+pgvector accepts list or None
                     ),
                 )
-        self._conn.commit()
         self._try_create_ivfflat_index()
-        logger.debug("Stored %d memories in PostgreSQL for '%s'", len(situations_and_advice), self.name)
+        logger.debug(
+            "Stored %d memories in PostgreSQL for '%s'",
+            len(situations_and_advice),
+            self.name,
+        )
 
-    def _query_postgres(self, current_situation: str, n_matches: int) -> List[Dict]:
+    def _query_postgres(
+        self,
+        current_situation: str,
+        n_matches: int,
+        *,
+        where: Optional[Dict] = None,
+        min_similarity: Optional[float] = None,
+    ) -> List[Dict]:
         embedding = self._embedder.embed(current_situation)
 
-        with self._conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+        # Resolve metadata filter. Only ticker is supported in the Postgres
+        # schema today; other keys are logged + ignored.
+        ticker_filter: Optional[str] = None
+        if where:
+            unsupported = [
+                k for k in where if k not in self._SUPPORTED_PG_METADATA and where[k] is not None
+            ]
+            if unsupported:
+                logger.debug(
+                    "Postgres backend ignored filter keys %s — schema upgrade pending (PR 6)",
+                    unsupported,
+                )
+            if where.get("ticker"):
+                ticker_filter = str(where["ticker"])
+
+        with db_cursor(dict_cursor=True, register_pgvector=True) as cur:
             if embedding is not None:
                 # Vector similarity search
-                cur.execute(
-                    """
-                    SELECT situation,
-                           recommendation,
-                           1 - (embedding <=> %s::vector) AS similarity
-                    FROM agent_memories
-                    WHERE agent_name = %s
-                      AND embedding IS NOT NULL
-                    ORDER BY embedding <=> %s::vector
-                    LIMIT %s
-                    """,
-                    (embedding, self.name, embedding, n_matches),
-                )
+                if ticker_filter:
+                    cur.execute(
+                        """
+                        SELECT ticker, situation, recommendation,
+                               1 - (embedding <=> %s::vector) AS similarity
+                        FROM agent_memories
+                        WHERE agent_name = %s
+                          AND embedding IS NOT NULL
+                          AND ticker = %s
+                        ORDER BY embedding <=> %s::vector
+                        LIMIT %s
+                        """,
+                        (embedding, self.name, ticker_filter, embedding, n_matches),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT ticker, situation, recommendation,
+                               1 - (embedding <=> %s::vector) AS similarity
+                        FROM agent_memories
+                        WHERE agent_name = %s
+                          AND embedding IS NOT NULL
+                        ORDER BY embedding <=> %s::vector
+                        LIMIT %s
+                        """,
+                        (embedding, self.name, embedding, n_matches),
+                    )
             else:
                 # No embeddings — return most recent memories
-                cur.execute(
-                    """
-                    SELECT situation, recommendation, 0.5 AS similarity
-                    FROM agent_memories
-                    WHERE agent_name = %s
-                    ORDER BY created_at DESC
-                    LIMIT %s
-                    """,
-                    (self.name, n_matches),
-                )
+                if ticker_filter:
+                    cur.execute(
+                        """
+                        SELECT ticker, situation, recommendation, 0.5 AS similarity
+                        FROM agent_memories
+                        WHERE agent_name = %s AND ticker = %s
+                        ORDER BY created_at DESC
+                        LIMIT %s
+                        """,
+                        (self.name, ticker_filter, n_matches),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT ticker, situation, recommendation, 0.5 AS similarity
+                        FROM agent_memories
+                        WHERE agent_name = %s
+                        ORDER BY created_at DESC
+                        LIMIT %s
+                        """,
+                        (self.name, n_matches),
+                    )
 
             rows = cur.fetchall()
 
-        return [
-            {
-                "matched_situation": row["situation"],
-                "recommendation": row["recommendation"],
-                "similarity_score": float(row["similarity"]),
-            }
-            for row in rows
-        ]
+        results = []
+        for row in rows:
+            similarity = float(row["similarity"])
+            if min_similarity is not None and similarity < min_similarity:
+                continue
+            results.append(
+                {
+                    "matched_situation": row["situation"],
+                    "recommendation": row["recommendation"],
+                    "similarity_score": similarity,
+                    "metadata": {"ticker": row["ticker"]} if row.get("ticker") else {},
+                }
+            )
+        return results
 
     def close(self):
-        """Close the database connection."""
-        if self._conn:
-            try:
-                self._conn.close()
-            except Exception:
-                pass
+        """No-op: connections are owned by the shared pool now."""
+        return None

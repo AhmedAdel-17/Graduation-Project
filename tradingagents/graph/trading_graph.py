@@ -16,13 +16,6 @@ from tradingagents.agents import *
 from tradingagents.default_config import DEFAULT_CONFIG
 from tradingagents.agents.utils.memory import FinancialSituationMemory
 
-# Persistent memory (PostgreSQL + pgvector). Falls back to ChromaDB automatically
-# when POSTGRES_URL is not set, so existing dev workflows are unaffected.
-try:
-    from persistent_memory import PersistentAgentMemory
-    _MEMORY_CLASS = PersistentAgentMemory
-except ImportError:
-    _MEMORY_CLASS = FinancialSituationMemory
 from tradingagents.agents.utils.agent_states import (
     AgentState,
     InvestDebateState,
@@ -72,6 +65,19 @@ from .reflection import Reflector
 from .signal_processing import SignalProcessor
 
 
+def _resolve_memory_class(config: Dict[str, Any]):
+    """Return the configured memory backend class."""
+    backend = str(config.get("memory_backend", "chroma")).strip().lower()
+    if backend in {"postgres", "pgvector", "persistent"}:
+        try:
+            from persistent_memory import PersistentAgentMemory
+
+            return PersistentAgentMemory
+        except ImportError:
+            return FinancialSituationMemory
+    return FinancialSituationMemory
+
+
 class TradingAgentsGraph:
     """Main class that orchestrates the trading agents framework."""
 
@@ -113,12 +119,14 @@ class TradingAgentsGraph:
         else:
             raise ValueError(f"Unsupported LLM provider: {self.config['llm_provider']}")
         
-        # Initialize memories — PersistentAgentMemory if available, else ChromaDB
-        self.bull_memory         = _MEMORY_CLASS("bull_memory",         self.config)
-        self.bear_memory         = _MEMORY_CLASS("bear_memory",         self.config)
-        self.trader_memory       = _MEMORY_CLASS("trader_memory",       self.config)
-        self.invest_judge_memory = _MEMORY_CLASS("invest_judge_memory", self.config)
-        self.risk_manager_memory = _MEMORY_CLASS("risk_manager_memory", self.config)
+        # Initialize memories. ChromaDB is the default; Postgres/pgvector is
+        # available only when explicitly selected by config.
+        memory_class = _resolve_memory_class(self.config)
+        self.bull_memory         = memory_class("bull_memory",         self.config)
+        self.bear_memory         = memory_class("bear_memory",         self.config)
+        self.trader_memory       = memory_class("trader_memory",       self.config)
+        self.invest_judge_memory = memory_class("invest_judge_memory", self.config)
+        self.risk_manager_memory = memory_class("risk_manager_memory", self.config)
 
         # Create tool nodes
         self.tool_nodes = self._create_tool_nodes()
@@ -193,8 +201,20 @@ class TradingAgentsGraph:
             ),
         }
 
-    def propagate(self, company_name, trade_date):
-        """Run the trading agents graph for a company on a specific date."""
+    def propagate(self, company_name, trade_date, *, user_id: Optional[str] = None):
+        """Run the trading agents graph for a company on a specific date.
+
+        Args:
+            company_name: ticker symbol (e.g. ``COMI.CA``).
+            trade_date: ISO date string.
+            user_id: optional user identifier for the audit row. NULL until
+                auth lands (MEMORY.md §E); the analysis_sessions.user_id
+                column accepts NULL.
+        """
+        import uuid
+
+        session_id = uuid.uuid4().hex
+        self.session_id = session_id
 
         # Pre-flight data freshness check (zero LLM tokens)
         if (self.config.get("target_market") == "EGX"
@@ -272,6 +292,33 @@ class TradingAgentsGraph:
 
         # Log state
         self._log_state(trade_date, final_state)
+
+        # Audit write-through: persist this propagate() call into Postgres
+        # (analysis_sessions + agent_events). Never crashes the graph — the
+        # writer logs on failure and degrades silently when Postgres is
+        # unavailable. See MEMORY.md §G.
+        try:
+            from tradingagents.db import audit_writer
+
+            fingerprint = audit_writer.build_model_fingerprint(self.config)
+            audit_writer.write_analysis_session(
+                session_id=session_id,
+                ticker=company_name,
+                trade_date=trade_date,
+                final_state=final_state,
+                model_fingerprint=fingerprint,
+                user_id=user_id,
+            )
+            audit_writer.write_agent_events(
+                session_id=session_id,
+                final_state=final_state,
+                model_fingerprint=fingerprint,
+            )
+        except Exception as _e:
+            import logging
+            logging.getLogger("tradingagents").warning(
+                "Audit write-through failed (graph keeps running): %s", _e
+            )
 
         # Publish final decision to Redis so WebSocket clients get the result
         _publisher.final_decision(

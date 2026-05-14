@@ -119,7 +119,14 @@ def create_trader(llm, memory):
 """
 
         curr_situation = f"{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}"
-        past_memories = memory.get_memories(curr_situation, n_matches=2)
+        memory_where = {"ticker": ticker} if ticker else None
+        memory_threshold = float(config.get("memory_min_similarity", 0.30))
+        past_memories = memory.get_memories(
+            curr_situation,
+            n_matches=2,
+            where=memory_where,
+            min_similarity=memory_threshold,
+        )
 
         past_memory_str = ""
         if past_memories:

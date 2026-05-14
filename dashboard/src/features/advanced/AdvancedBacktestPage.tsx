@@ -85,11 +85,14 @@ export function AdvancedBacktestPage() {
   useEffect(() => {
     if (!running) return;
     if (latestForTickerId && latestForTickerId !== startSnapshotRef.current) {
-      append("success", `Report emitted: ${latestForTickerId}`);
-      append("info", "Fetching final metrics & equity curve…");
-      setRunning(null);
-      refetchCompare();
-      toast.success("Backtest finished");
+      const id = window.setTimeout(() => {
+        append("success", `Report emitted: ${latestForTickerId}`);
+        append("info", "Fetching final metrics & equity curve...");
+        setRunning(null);
+        refetchCompare();
+        toast.success("Backtest finished");
+      }, 0);
+      return () => window.clearTimeout(id);
     }
   }, [latestForTickerId, running, refetchCompare]);
 

@@ -1,11 +1,15 @@
 import chromadb
 from chromadb.config import Settings
 from openai import OpenAI
+import logging
+import math
 import os
 import json
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
+
+logger = logging.getLogger("tradingagents.memory")
 
 # =============================================================================
 # Memory Module with Audit-Grade Logging
@@ -18,6 +22,7 @@ from typing import Dict, Any, List, Optional
 
 class FinancialSituationMemory:
     def __init__(self, name, config):
+        self.name = name
         backend_url = config.get("backend_url", "")
         if "localhost:11434" in backend_url:
             self.embedding = "nomic-embed-text"
@@ -31,8 +36,23 @@ class FinancialSituationMemory:
             self.embeddings_enabled = False
 
         self.client = OpenAI(base_url=backend_url) if self.embeddings_enabled else None
-        self.chroma_client = chromadb.Client(Settings(allow_reset=True))
+
+        # Chroma persistence: when chroma_persist_dir is set we use PersistentClient
+        # so agent memories survive process restarts. Empty / None path keeps the
+        # legacy in-memory client (useful for unit tests that want a clean store).
+        chroma_path = config.get("chroma_persist_dir")
+        self.chroma_persist_dir = str(chroma_path) if chroma_path else None
+        if self.chroma_persist_dir:
+            self.chroma_client = chromadb.PersistentClient(path=self.chroma_persist_dir)
+        else:
+            self.chroma_client = chromadb.Client(Settings(allow_reset=True))
         self.situation_collection = self.chroma_client.get_or_create_collection(name=name)
+
+        # PR 8: BM25 corpus for embedding-disabled fallback + seed-corpus bootstrap.
+        # Stores (document, metadata) tuples in-memory. Rebuilt lazily on query.
+        self._bm25_corpus: List[tuple] = []
+        self._bm25_index = None  # rank_bm25.BM25Okapi, lazily constructed
+        self._load_seed_corpus(config)
 
     def get_embedding(self, text):
         """Get OpenAI embedding for a text"""
@@ -43,52 +63,344 @@ class FinancialSituationMemory:
         )
         return response.data[0].embedding
 
-    def add_situations(self, situations_and_advice):
-        """Add financial situations and their corresponding advice. Parameter is a list of tuples (situation, rec)"""
+    # Canonical metadata keys persisted alongside each memory row. Used by
+    # filtered retrieval (`get_memories(where=...)`) and surfaced back to the
+    # caller in the returned dict.
+    METADATA_KEYS = (
+        "ticker",
+        "trade_date",
+        "memory_type",  # one of: thesis | execution | risk_decision | reflection
+        "agent_name",
+        "outcome",  # optional JSON-serializable summary of realised result
+        "confidence",  # optional float in [0, 1]
+    )
+
+    def _load_seed_corpus(self, config: Dict[str, Any]) -> None:
+        """Bootstrap empty collections with the hand-curated EGX seed corpus.
+
+        PR 8 / MEMORY.md §K fix. The seeds are always loaded into the in-memory
+        BM25 corpus so embedding-disabled configs have something to retrieve.
+        When the Chroma collection is empty AND embeddings are enabled, the
+        seeds are also written into Chroma so vector similarity has signal too.
+
+        Seeds are filtered by ``agent_name`` so each collection only sees rows
+        relevant to its agent. Disable with ``config["disable_seed_memories"]=True``.
+        """
+        if config.get("disable_seed_memories"):
+            return
+        try:
+            from tradingagents.agents.utils.seed_memories import get_seeds_for_agent
+        except Exception as exc:  # pragma: no cover — defensive
+            logger.debug("Seed corpus import failed: %s", exc)
+            return
+
+        seeds = get_seeds_for_agent(self.name)
+        if not seeds:
+            return
+
+        # Always populate the in-memory BM25 corpus.
+        for entry in seeds:
+            metadata = {
+                k: v for k, v in entry.items()
+                if k in self.METADATA_KEYS and v is not None
+            }
+            metadata["recommendation"] = entry.get("recommendation", "")
+            self._bm25_corpus.append((entry["situation"], metadata))
+        self._bm25_index = None  # invalidate; rebuild on first query
+
+        # If Chroma is fresh AND embeddings are enabled, also persist seeds
+        # into Chroma so vector similarity benefits too. Each Chroma row carries
+        # the same metadata block, identified by id="seed_<i>" so they can be
+        # distinguished from reflection-written rows.
+        if not self.embeddings_enabled:
+            logger.debug(
+                "Seed corpus loaded into BM25 only for %s (embeddings disabled, %d entries)",
+                self.name, len(seeds),
+            )
+            return
+        if self.situation_collection.count() > 0:
+            return  # already populated this run / prior run
+
+        try:
+            ids = [f"seed_{i}" for i in range(len(seeds))]
+            documents = [e["situation"] for e in seeds]
+            metadatas = []
+            for e in seeds:
+                meta = {k: e[k] for k in self.METADATA_KEYS if k in e and e[k] is not None}
+                meta["recommendation"] = e.get("recommendation", "")
+                metadatas.append(meta)
+            embeddings = [self.get_embedding(doc) for doc in documents]
+            self.situation_collection.add(
+                documents=documents,
+                metadatas=metadatas,
+                embeddings=embeddings,
+                ids=ids,
+            )
+            logger.info("Seeded %d entries into Chroma collection '%s'", len(seeds), self.name)
+        except Exception as exc:
+            logger.warning("Seed load into Chroma failed for '%s': %s", self.name, exc)
+
+    def _rebuild_bm25_index(self) -> None:
+        """Tokenize the BM25 corpus and build a fresh index. Idempotent."""
+        if not self._bm25_corpus:
+            self._bm25_index = None
+            return
+        try:
+            from rank_bm25 import BM25Okapi
+        except ImportError:
+            logger.warning("rank_bm25 not installed; BM25 fallback disabled")
+            self._bm25_index = None
+            return
+        tokenized = [doc.lower().split() for doc, _ in self._bm25_corpus]
+        self._bm25_index = BM25Okapi(tokenized)
+
+    def _bm25_search(
+        self,
+        query: str,
+        n_matches: int,
+        where: Optional[Dict] = None,
+        min_similarity: Optional[float] = None,
+    ) -> List[Dict[str, Any]]:
+        """Keyword retrieval over the in-memory BM25 corpus.
+
+        Used when embeddings are disabled (DeepSeek / Groq backends) and as a
+        graceful fallback when the Chroma collection is empty even though
+        embeddings are configured.
+
+        BM25 raw scores are unbounded; we squash with ``tanh(score / 5)`` so
+        the returned ``similarity_score`` lives in the same [0, 1] range as
+        the cosine-similarity path — letting ``min_similarity`` thresholds
+        behave consistently across backends.
+        """
+        if self._bm25_index is None:
+            self._rebuild_bm25_index()
+        if self._bm25_index is None or not self._bm25_corpus:
+            return []
+
+        tokens = query.lower().split() if query else []
+        if not tokens:
+            return []
+
+        scores = self._bm25_index.get_scores(tokens)
+        ranked = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)
+
+        results: List[Dict[str, Any]] = []
+        for idx, raw_score in ranked:
+            if len(results) >= n_matches:
+                break
+            if raw_score <= 0:
+                continue  # no token overlap at all
+            doc, meta = self._bm25_corpus[idx]
+            if where:
+                if not all(meta.get(k) == v for k, v in where.items()):
+                    continue
+            similarity = math.tanh(float(raw_score) / 5.0)
+            if min_similarity is not None and similarity < min_similarity:
+                continue
+            results.append(
+                {
+                    "matched_situation": doc,
+                    "recommendation": meta.get("recommendation", ""),
+                    "similarity_score": similarity,
+                    "metadata": {
+                        k: meta.get(k)
+                        for k in self.METADATA_KEYS
+                        if meta.get(k) is not None
+                    },
+                }
+            )
+        return results
+
+    def _build_metadata(self, recommendation, per_item, default):
+        """Merge default + per-item metadata + recommendation. Chroma rejects
+        ``None`` values in metadatas, so we drop unset keys defensively."""
+        merged = {}
+        if default:
+            merged.update({k: v for k, v in default.items() if v is not None})
+        if per_item:
+            merged.update({k: v for k, v in per_item.items() if v is not None})
+        # Keep only the canonical keys plus recommendation, in case callers
+        # passed extras we don't want polluting the collection.
+        whitelisted = {
+            k: v for k, v in merged.items() if k in self.METADATA_KEYS and v is not None
+        }
+        whitelisted["recommendation"] = recommendation
+        return whitelisted
+
+    def add_situations(
+        self,
+        situations_and_advice,
+        metadatas=None,
+        *,
+        default_metadata=None,
+    ):
+        """Add financial situations and their advice, with optional metadata.
+
+        Args:
+            situations_and_advice: list of (situation, recommendation) tuples.
+            metadatas: optional list of dicts parallel to ``situations_and_advice``;
+                per-row metadata merged onto ``default_metadata``.
+            default_metadata: optional dict applied to every row in the batch
+                (e.g. ``{"ticker": "COMI.CA", "agent_name": "bull_memory",
+                "memory_type": "reflection"}``). Recognized keys are listed in
+                ``FinancialSituationMemory.METADATA_KEYS``; unrecognized keys
+                are dropped.
+
+        When embeddings are disabled (DeepSeek / Groq backends), rows are
+        appended to the in-memory BM25 corpus only — Chroma vector add is
+        skipped because there's no embedding to attach.
+        """
+        if not situations_and_advice:
+            return
+
+        if metadatas is not None and len(metadatas) != len(situations_and_advice):
+            raise ValueError(
+                "metadatas length must equal situations_and_advice length"
+            )
+
+        # Always append to BM25 corpus so retrieval works even when embeddings
+        # are disabled or vector search misses (e.g. cold-start).
+        for i, (situation, recommendation) in enumerate(situations_and_advice):
+            per_item = metadatas[i] if metadatas else None
+            meta = self._build_metadata(recommendation, per_item, default_metadata)
+            self._bm25_corpus.append((situation, meta))
+        self._bm25_index = None  # invalidate
+
         if not self.embeddings_enabled:
             return
 
         situations = []
-        advice = []
         ids = []
         embeddings = []
+        built_metadatas = []
 
         offset = self.situation_collection.count()
 
         for i, (situation, recommendation) in enumerate(situations_and_advice):
+            per_item = metadatas[i] if metadatas else None
             situations.append(situation)
-            advice.append(recommendation)
             ids.append(str(offset + i))
             embeddings.append(self.get_embedding(situation))
+            built_metadatas.append(
+                self._build_metadata(recommendation, per_item, default_metadata)
+            )
 
         self.situation_collection.add(
             documents=situations,
-            metadatas=[{"recommendation": rec} for rec in advice],
+            metadatas=built_metadatas,
             embeddings=embeddings,
             ids=ids,
         )
 
-    def get_memories(self, current_situation, n_matches=1):
-        """Find matching recommendations using OpenAI embeddings"""
-        if not self.embeddings_enabled or self.situation_collection.count() == 0:
-            return []
+    def get_memories(
+        self,
+        current_situation,
+        n_matches=1,
+        *,
+        where=None,
+        min_similarity=None,
+    ):
+        """Find matching recommendations using vector similarity, with BM25
+        keyword fallback for embedding-disabled backends or empty stores.
+
+        Args:
+            current_situation: free-text query.
+            n_matches: top-k.
+            where: optional Chroma metadata filter, e.g. ``{"ticker": "COMI.CA"}``.
+                Rows lacking the filtered key are excluded by Chroma automatically.
+            min_similarity: optional float in [0, 1]. Matches with
+                ``similarity_score`` strictly below this threshold are dropped.
+                ``None`` disables the filter; ``0.0`` keeps everything.
+
+        Returns:
+            list of dicts: ``{matched_situation, recommendation, similarity_score,
+            metadata}`` — ``metadata`` carries the canonical keys persisted with
+            the row (ticker, trade_date, memory_type, …).
+
+        Telemetry: emits ``logger.info("memory.empty_return …")`` whenever
+        retrieval returns ``[]`` so we can measure cold-start frequency.
+        """
+        # PR 8: BM25 fallback when embeddings disabled (DeepSeek / Groq backends).
+        if not self.embeddings_enabled:
+            results = self._bm25_search(
+                current_situation,
+                n_matches=n_matches,
+                where=where,
+                min_similarity=min_similarity,
+            )
+            if not results:
+                logger.info(
+                    "memory.empty_return (collection=%s, backend=bm25, where=%s, threshold=%s)",
+                    self.name, where, min_similarity,
+                )
+            return results
+
+        # Vector path (embeddings enabled). When Chroma is empty, fall back to
+        # BM25 over the seed corpus so we never silently return [] just because
+        # no reflection has run yet.
+        if self.situation_collection.count() == 0:
+            results = self._bm25_search(
+                current_situation,
+                n_matches=n_matches,
+                where=where,
+                min_similarity=min_similarity,
+            )
+            if not results:
+                logger.info(
+                    "memory.empty_return (collection=%s, backend=bm25_fallback, "
+                    "where=%s, threshold=%s)",
+                    self.name, where, min_similarity,
+                )
+            return results
 
         query_embedding = self.get_embedding(current_situation)
 
-        results = self.situation_collection.query(
-            query_embeddings=[query_embedding],
-            n_results=n_matches,
-            include=["metadatas", "documents", "distances"],
-        )
+        query_kwargs = {
+            "query_embeddings": [query_embedding],
+            "n_results": n_matches,
+            "include": ["metadatas", "documents", "distances"],
+        }
+        if where:
+            query_kwargs["where"] = where
+
+        results = self.situation_collection.query(**query_kwargs)
+
+        # When Chroma returns nothing matching the filter, "documents" can be
+        # [[]]; defend against that.
+        docs = results.get("documents") or [[]]
+        metas = results.get("metadatas") or [[]]
+        dists = results.get("distances") or [[]]
+        if not docs or not docs[0]:
+            logger.info(
+                "memory.empty_return (collection=%s, backend=chroma, where=%s, threshold=%s)",
+                self.name, where, min_similarity,
+            )
+            return []
 
         matched_results = []
-        for i in range(len(results["documents"][0])):
+        for i in range(len(docs[0])):
+            meta = metas[0][i] if metas and metas[0] else {}
+            similarity = 1 - dists[0][i] if dists and dists[0] else 0.0
+            if min_similarity is not None and similarity < min_similarity:
+                continue
             matched_results.append(
                 {
-                    "matched_situation": results["documents"][0][i],
-                    "recommendation": results["metadatas"][0][i]["recommendation"],
-                    "similarity_score": 1 - results["distances"][0][i],
+                    "matched_situation": docs[0][i],
+                    "recommendation": meta.get("recommendation", ""),
+                    "similarity_score": similarity,
+                    "metadata": {
+                        k: meta.get(k)
+                        for k in self.METADATA_KEYS
+                        if meta.get(k) is not None
+                    },
                 }
+            )
+
+        if not matched_results:
+            logger.info(
+                "memory.empty_return (collection=%s, backend=chroma, where=%s, "
+                "threshold=%s, raw_hits=%d)",
+                self.name, where, min_similarity, len(docs[0]),
             )
 
         return matched_results

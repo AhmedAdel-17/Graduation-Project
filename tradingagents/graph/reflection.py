@@ -1,6 +1,6 @@
 # TradingAgents/graph/reflection.py
 
-from typing import Dict, Any
+from typing import Any, Dict, Optional
 from langchain_openai import ChatOpenAI
 
 
@@ -70,6 +70,57 @@ Adhere strictly to these instructions, and ensure your output is detailed, accur
         result = self.quick_thinking_llm.invoke(messages).content
         return result
 
+    def _default_metadata(
+        self,
+        current_state: Dict[str, Any],
+        agent_name: str,
+        returns_losses: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Build the canonical metadata block attached to every reflection
+        memory row.
+
+        Args:
+            current_state: agent graph state at the time of the decision.
+            agent_name: collection identifier (e.g. ``"bull_memory"``).
+            returns_losses: post-hoc outcome dict from the backtester batch
+                reflection (PR 7). When present, the ``verdict`` and
+                ``forward_return`` fields are surfaced into the row's
+                ``outcome`` and ``confidence`` metadata so future retrieval
+                can rank by realized quality.
+
+        Only includes keys whose value is non-empty so Chroma's ``None``-rejection
+        rule is satisfied.
+        """
+        meta: Dict[str, Any] = {"agent_name": agent_name, "memory_type": "reflection"}
+        ticker = current_state.get("company_of_interest")
+        trade_date = current_state.get("trade_date")
+        if ticker:
+            meta["ticker"] = str(ticker)
+        if trade_date:
+            meta["trade_date"] = str(trade_date)
+
+        if returns_losses:
+            verdict = returns_losses.get("verdict")
+            forward_ret = returns_losses.get("forward_return")
+            if verdict or forward_ret is not None:
+                # Chroma metadata values must be scalar — JSON-encode the dict
+                # so retrieval can re-parse it. memory._build_metadata also
+                # coerces non-scalar values defensively (added in PR 7).
+                import json as _json
+
+                outcome_payload = {
+                    "verdict": verdict,
+                    "forward_return": forward_ret,
+                    "horizon_days": returns_losses.get("forward_horizon_days"),
+                    "action": returns_losses.get("action"),
+                }
+                outcome_payload = {
+                    k: v for k, v in outcome_payload.items() if v is not None
+                }
+                if outcome_payload:
+                    meta["outcome"] = _json.dumps(outcome_payload, ensure_ascii=False)
+        return meta
+
     def reflect_bull_researcher(self, current_state, returns_losses, bull_memory):
         """Reflect on bull researcher's analysis and update memory."""
         situation = self._extract_current_situation(current_state)
@@ -78,7 +129,10 @@ Adhere strictly to these instructions, and ensure your output is detailed, accur
         result = self._reflect_on_component(
             "BULL", bull_debate_history, situation, returns_losses
         )
-        bull_memory.add_situations([(situation, result)])
+        bull_memory.add_situations(
+            [(situation, result)],
+            default_metadata=self._default_metadata(current_state, "bull_memory", returns_losses),
+        )
 
     def reflect_bear_researcher(self, current_state, returns_losses, bear_memory):
         """Reflect on bear researcher's analysis and update memory."""
@@ -88,7 +142,10 @@ Adhere strictly to these instructions, and ensure your output is detailed, accur
         result = self._reflect_on_component(
             "BEAR", bear_debate_history, situation, returns_losses
         )
-        bear_memory.add_situations([(situation, result)])
+        bear_memory.add_situations(
+            [(situation, result)],
+            default_metadata=self._default_metadata(current_state, "bear_memory", returns_losses),
+        )
 
     def reflect_trader(self, current_state, returns_losses, trader_memory):
         """Reflect on trader's decision and update memory."""
@@ -98,7 +155,10 @@ Adhere strictly to these instructions, and ensure your output is detailed, accur
         result = self._reflect_on_component(
             "TRADER", trader_decision, situation, returns_losses
         )
-        trader_memory.add_situations([(situation, result)])
+        trader_memory.add_situations(
+            [(situation, result)],
+            default_metadata=self._default_metadata(current_state, "trader_memory", returns_losses),
+        )
 
     def reflect_invest_judge(self, current_state, returns_losses, invest_judge_memory):
         """Reflect on investment judge's decision and update memory."""
@@ -108,7 +168,10 @@ Adhere strictly to these instructions, and ensure your output is detailed, accur
         result = self._reflect_on_component(
             "INVEST JUDGE", judge_decision, situation, returns_losses
         )
-        invest_judge_memory.add_situations([(situation, result)])
+        invest_judge_memory.add_situations(
+            [(situation, result)],
+            default_metadata=self._default_metadata(current_state, "invest_judge_memory", returns_losses),
+        )
 
     def reflect_risk_manager(self, current_state, returns_losses, risk_manager_memory):
         """Reflect on risk manager's decision and update memory."""
@@ -118,4 +181,7 @@ Adhere strictly to these instructions, and ensure your output is detailed, accur
         result = self._reflect_on_component(
             "RISK JUDGE", judge_decision, situation, returns_losses
         )
-        risk_manager_memory.add_situations([(situation, result)])
+        risk_manager_memory.add_situations(
+            [(situation, result)],
+            default_metadata=self._default_metadata(current_state, "risk_manager_memory", returns_losses),
+        )

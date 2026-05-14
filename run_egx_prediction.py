@@ -180,7 +180,7 @@ def run_prediction(target_tickers=None):
         llm = ChatOpenAI(
             model=DEFAULT_CONFIG["quick_think_llm"],
             base_url=DEFAULT_CONFIG["backend_url"],
-            temperature=0.2
+            temperature=0
         )
         
         price_table = "\n".join([
@@ -323,7 +323,7 @@ def analyze_ticker_for_api(ticker):
         llm = ChatOpenAI(
             model=DEFAULT_CONFIG["quick_think_llm"],
             base_url=DEFAULT_CONFIG["backend_url"],
-            temperature=0.2
+            temperature=0
         )
         
         price_table = "\n".join([
@@ -456,6 +456,7 @@ RECOMMENDATION:
             "full_text": recommendation_text
         }
     except Exception as e:
+        llm_error = str(e)
         recommendation = {
             "signal": "HOLD",
             "confidence": "LOW",
@@ -469,6 +470,8 @@ RECOMMENDATION:
             "recommendation": "",
             "full_text": f"Error: {str(e)}"
         }
+    else:
+        llm_error = None
     
     # Return structured data
     return {
@@ -498,7 +501,8 @@ RECOMMENDATION:
             }
             for d in price_data["data"][-7:]
         ],
-        "recommendation": recommendation
+        "recommendation": recommendation,
+        "llm_error": llm_error,
     }
 
 

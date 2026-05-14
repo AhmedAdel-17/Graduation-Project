@@ -13,6 +13,26 @@ export interface HealthResponse {
   status: string;
   timestamp: string;
   egx_tools: boolean;
+  diagnostics?: {
+    memory?: {
+      backend: string;
+      vector_store: string;
+      postgres_vector_required: boolean;
+    };
+    postgres?: {
+      configured: boolean;
+      reachable: boolean | null;
+      purpose: string;
+    };
+    redis?: {
+      configured: boolean;
+      package_available: boolean;
+      reachable: boolean | null;
+      purpose: string;
+    };
+    degraded: boolean;
+    degraded_reasons: string[];
+  };
 }
 
 export interface StockBar {
@@ -74,7 +94,9 @@ export interface PredictionResult {
   price?: PriceBlock;
   indicators?: IndicatorsBlock;
   recommendation?: Recommendation;
-  history?: StockBar[];
+  price_history?: StockBar[];
+  llm_error?: string | null;
+  status?: string;
   // Allow arbitrary extra keys
   [k: string]: unknown;
 }

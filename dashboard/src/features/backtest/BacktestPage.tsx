@@ -43,9 +43,12 @@ export function BacktestPage() {
   useEffect(() => {
     if (!polling) return;
     if (latestForTicker && latestForTicker !== lastSessionIdAtStart) {
-      setPolling(false);
-      refetchCompare();
-      toast.success("New backtest results available", { duration: 4000 });
+      const id = window.setTimeout(() => {
+        setPolling(false);
+        refetchCompare();
+        toast.success("New backtest results available", { duration: 4000 });
+      }, 0);
+      return () => window.clearTimeout(id);
     }
   }, [latestForTicker, lastSessionIdAtStart, polling, refetchCompare]);
 
