@@ -36,7 +36,7 @@ IMPORTANT: Your conclusion MUST include:
 3. RISK/REWARD ASSESSMENT: e.g., "2:1 favoring BUY"
 Do NOT sit on the fence. You are the tiebreaker — commit to a recommendation."""
 
-        response = llm.invoke(prompt)
+        response = llm.invoke(prompt, temperature=0, seed=42)
 
         argument = f"Neutral Analyst: {response.content}"
 

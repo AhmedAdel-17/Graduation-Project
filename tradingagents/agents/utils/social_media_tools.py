@@ -11,6 +11,7 @@ import json
 
 from tradingagents.dataflows.social_media_sources.aggregator import get_social_media_data
 from tradingagents.dataflows.social_media_sources.sentiment_engine import analyze_social_sentiment
+from tradingagents.agents.utils.input_sanitizer import sanitize_external_text
 
 
 @tool
@@ -121,7 +122,7 @@ def get_social_sentiment(
         ],
     }
     
-    return json.dumps(report, indent=2, ensure_ascii=False, default=str)
+    return sanitize_external_text(json.dumps(report, indent=2, ensure_ascii=False, default=str))
 
 
 @tool
@@ -187,4 +188,4 @@ def get_social_media_posts(
         "posts": posts_formatted,
     }
     
-    return json.dumps(result, indent=2, ensure_ascii=False, default=str)
+    return sanitize_external_text(json.dumps(result, indent=2, ensure_ascii=False, default=str))

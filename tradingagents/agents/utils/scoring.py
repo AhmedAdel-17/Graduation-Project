@@ -73,11 +73,17 @@ def _init_mult_tables() -> None:
         MarketRegime.EUPHORIA:  (0.70, 0.60),
         MarketRegime.NO_SIGNAL: (1.00, 1.00),
     }
+    # (confidence_multiplier, position_size_multiplier)
+    # RISK_ON = 1.00: Egypt's post-2016 inflation-hedge regime means negative
+    # real yields are equity-supportive, not risk-adverse.  Ablation (May 2026)
+    # confirmed the 0.95 haircut was directionally wrong.
+    # RISK_OFF = (0.80, 0.80): high real yields + rate shock pull capital into
+    # fixed income; reduce both confidence and position size.
     _MACRO_DIRECTION_CONF_MULT = {
-        MacroDirection.RISK_OFF:  0.80,
-        MacroDirection.RISK_ON:   0.95,
-        MacroDirection.NEUTRAL:   1.00,
-        MacroDirection.NO_SIGNAL: 1.00,
+        MacroDirection.RISK_OFF:  (0.80, 0.80),
+        MacroDirection.RISK_ON:   (1.00, 1.00),
+        MacroDirection.NEUTRAL:   (1.00, 1.00),
+        MacroDirection.NO_SIGNAL: (1.00, 1.00),
     }
 
 
@@ -127,11 +133,12 @@ def blend_sentiment(
     if macro is not None:
         from tradingagents.sentiment.contracts import MacroDirection
         direction = getattr(macro, "composite_regime", MacroDirection.NO_SIGNAL)
-        c = _MACRO_DIRECTION_CONF_MULT.get(direction, 1.00)
+        c, s = _MACRO_DIRECTION_CONF_MULT.get(direction, (1.00, 1.00))
         conf_mult *= c
+        size_mult *= s
         dir_val = direction.value if hasattr(direction, "value") else str(direction)
-        if c != 1.0:
-            parts.append(f"macro={dir_val}(conf×{c:.2f})")
+        if c != 1.0 or s != 1.0:
+            parts.append(f"macro={dir_val}(conf×{c:.2f},size×{s:.2f})")
         else:
             parts.append(f"macro={dir_val}(pass-through)")
     else:
@@ -164,6 +171,83 @@ def blend_sentiment(
         position_size_multiplier=round(size_mult, 4),
         audit=audit,
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 wiring: build typed sentiment inputs from new analyst state dicts
+# ---------------------------------------------------------------------------
+
+def _macro_input_from_state(state: dict):
+    """Construct a duck-typed macro input for blend_sentiment from macro_analysis.
+
+    The macro analyst (Phase 2.1) emits ``state["macro_analysis"]["composite_direction"]``
+    as one of "RISK_ON" / "RISK_OFF" / "NEUTRAL". We map that to the existing
+    MacroDirection enum so blend_sentiment's multiplier table applies cleanly.
+    Returns None when the analyst was not run.
+    """
+    macro = state.get("macro_analysis") or {}
+    direction_str = macro.get("composite_direction")
+    if not direction_str:
+        return None
+    try:
+        from tradingagents.sentiment.contracts import MacroDirection
+        direction = MacroDirection(direction_str)
+    except (ValueError, ImportError):
+        return None
+
+    class _MacroIn:
+        composite_regime = direction
+    return _MacroIn()
+
+
+def _market_input_from_state(state: dict):
+    """Construct a duck-typed market input for blend_sentiment from regime_analysis.
+
+    The regime analyst (Phase 2.3) emits ``state["regime_analysis"]["market_regime_enum"]``
+    as "PANIC" / "FEAR" / "NEUTRAL" / "GREED". We map that to MarketRegime so
+    the existing market-regime multiplier table applies.
+    Returns None when the analyst was not run.
+    """
+    regime = state.get("regime_analysis") or {}
+    enum_str = regime.get("market_regime_enum")
+    if not enum_str:
+        return None
+    try:
+        from tradingagents.sentiment.contracts import LayerStatus, MarketRegime
+        market_regime = MarketRegime(enum_str)
+    except (ValueError, ImportError):
+        return None
+
+    class _MarketIn:
+        status = LayerStatus.SIGNAL
+        regime = market_regime
+    return _MarketIn()
+
+
+# Liquidity confidence haircut — applied post-blend, never directional.
+_LIQUIDITY_CONF_HAIRCUT = {
+    "SEVERELY_ILLIQUID": 0.60,
+    "ILLIQUID":          0.80,
+    "MODERATE_CONCERN":  0.95,
+    "ADEQUATE":          1.00,
+}
+
+
+def _liquidity_haircut(state: dict) -> Tuple[float, str]:
+    """Return (multiplier, audit_string) for liquidity confidence haircut.
+
+    The Liquidity Analyst (Phase 2.2) does NOT flow through blend_sentiment.
+    Instead, severe illiquidity reduces confidence directly. This is a
+    risk-style modifier, not a sentiment one.
+    """
+    liq = state.get("liquidity_analysis") or {}
+    cls = liq.get("liquidity_classification")
+    if not cls:
+        return 1.0, "liquidity=absent(pass-through)"
+    mult = _LIQUIDITY_CONF_HAIRCUT.get(cls, 1.00)
+    if mult == 1.0:
+        return 1.0, f"liquidity={cls}(pass-through)"
+    return mult, f"liquidity={cls}(conf×{mult:.2f})"
 
 
 def blend_from_dict(blend_dict: Optional[Dict[str, Any]]) -> Optional[SentimentBlend]:
@@ -421,19 +505,50 @@ def calculate_unified_score(
     ) if structural_weight_sum > 0 else 0.50
 
     # ── Resolve sentiment blend ────────────────────────────────────────────
+    # 1. Start with any pre-existing blend (e.g. from social sentiment pipeline)
     if sentiment_blend is None:
         raw_blend = state.get("sentiment_blend_result")
         if raw_blend:
             sentiment_blend = blend_from_dict(raw_blend)
 
+    # 2. Always layer macro/regime on top — even when a prior blend exists.
+    #    Macro/regime are non-directional modifiers that stack multiplicatively.
+    #    They NEVER flip BUY/SELL/HOLD direction.
+    macro_in  = _macro_input_from_state(state)
+    market_in = _market_input_from_state(state)
+    macro_regime_blend = None
+    if macro_in is not None or market_in is not None:
+        macro_regime_blend = blend_sentiment(macro=macro_in, market=market_in)
+
+    # 3. Combine: multiply through both blend layers
+    blended_conf = unblended_conf
+    pos_size_mult = 1.0
+    audit_parts: list[str] = []
+
     if sentiment_blend is not None:
-        blended_conf = min(1.0, max(0.10, unblended_conf * sentiment_blend.confidence_multiplier))
-        pos_size_mult = sentiment_blend.position_size_multiplier
-        blend_audit   = sentiment_blend.audit
+        blended_conf *= sentiment_blend.confidence_multiplier
+        pos_size_mult *= sentiment_blend.position_size_multiplier
+        audit_parts.append(f"prior_blend({sentiment_blend.audit})")
+
+    if macro_regime_blend is not None:
+        blended_conf *= macro_regime_blend.confidence_multiplier
+        pos_size_mult *= macro_regime_blend.position_size_multiplier
+        audit_parts.append(f"macro_regime({macro_regime_blend.audit})")
+
+    blended_conf = min(1.0, max(0.10, blended_conf))
+
+    if not audit_parts:
+        blend_audit = "no_blend"
     else:
-        blended_conf  = unblended_conf
-        pos_size_mult = 1.0
-        blend_audit   = "no_blend"
+        blend_audit = " + ".join(audit_parts)
+
+    # 4. Liquidity haircut (separate from sentiment blend by design)
+    liq_mult, liq_audit = _liquidity_haircut(state)
+    if liq_mult != 1.0:
+        blended_conf = min(1.0, max(0.10, blended_conf * liq_mult))
+        if liq_mult <= 0.80:
+            pos_size_mult *= liq_mult
+    blend_audit = f"{blend_audit} | {liq_audit}"
 
     # ── Decision thresholds ────────────────────────────────────────────────
     decision = "HOLD"

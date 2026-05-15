@@ -1385,6 +1385,8 @@ async def _run_streaming_analysis(
             "final_trade_decision": final_state.get("final_trade_decision", ""),
             "risk_assessment": final_state.get("risk_assessment", {}),
             "message": "Analysis complete",
+            "review_status": "pending_human_review",
+            "disclaimer": "AI-generated research analysis for educational purposes only. Not financial, investment, or trading advice.",
         },
         "timestamp": datetime.now().isoformat(),
     })
@@ -1534,9 +1536,13 @@ async def test_random_egx(req: TestEgxRequest = TestEgxRequest()):
                 # Don't fail the main response if audit logging fails
                 print(f"[WARN] Failed to write audit log: {audit_err}")
         
+        _disclaimer = {
+            "review_status": "pending_human_review",
+            "disclaimer": "AI-generated research analysis for educational purposes only. Not financial, investment, or trading advice.",
+        }
         if llm_failed:
-            return {**result, "status": "degraded"}
-        return result
+            return {**result, **_disclaimer, "status": "degraded"}
+        return {**result, **_disclaimer}
     except Exception as e:
         return {"error": f"Analysis failed for {selected_ticker}: {str(e)}"}
 

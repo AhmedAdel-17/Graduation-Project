@@ -54,6 +54,27 @@ class ConditionalLogic:
             return "tools_fundamentals"
         return "Msg Clear Fundamentals"
 
+    def should_continue_macro(self, state: AgentState):
+        """Determine if macro analysis should continue."""
+        msgs = state.get("macro_messages") or []
+        if msgs and msgs[-1].tool_calls:
+            return "tools_macro"
+        return "Msg Clear Macro"
+
+    def should_continue_liquidity(self, state: AgentState):
+        """Determine if liquidity analysis should continue."""
+        msgs = state.get("liquidity_messages") or []
+        if msgs and msgs[-1].tool_calls:
+            return "tools_liquidity"
+        return "Msg Clear Liquidity"
+
+    def should_continue_regime(self, state: AgentState):
+        """Determine if regime analysis should continue."""
+        msgs = state.get("regime_messages") or []
+        if msgs and msgs[-1].tool_calls:
+            return "tools_regime"
+        return "Msg Clear Regime"
+
     def should_continue_debate(self, state: AgentState) -> str:
         """Determine if debate should continue."""
         

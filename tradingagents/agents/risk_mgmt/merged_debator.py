@@ -80,6 +80,10 @@ def create_merged_risk_debator(llm):
 
         low_liquidity = state.get("low_liquidity", False)
         ticker = state.get("company_of_interest", "")
+        macro_analysis = state.get("macro_analysis", {}) or {}
+        regime_analysis = state.get("regime_analysis", {}) or {}
+        liquidity_analysis = state.get("liquidity_analysis", {}) or {}
+        risk_metrics = state.get("risk_metrics", {}) or {}
 
         egx_note = ""
         if is_egx:
@@ -111,6 +115,36 @@ def create_merged_risk_debator(llm):
 ## Trader's Execution Plan (excerpt)
 {trader_summary}
 
+## Macro / Regime / Liquidity Constitution (clauses 16-21 — apply in your debate)
+- **Clause 16 — Macro blackout:** Avoid new positions immediately after a CBE rate shock (≥200 bps).
+- **Clause 17 — FX stress:** Reduce conviction when EGP/USD has dislocated; halt new entries on extreme dislocation.
+- **Clause 18 — Regime awareness:** In CRASH/BEAR regimes, halve per-stock allocation and tighten stops.
+- **Clause 19 — Zero-return veto:** Stocks with zero-return frequency >40% are non-tradeable (price discovery broken).
+- **Clause 20 — Parallel FX premium:** A widening parallel-rate gap signals 6-18 month devaluation risk; require deeper margin of safety.
+- **Clause 21 — Volatility persistence:** When high-vol regime persists (Joseph Effect), reduce sustainable position size.
+
+The Risk Manager may explain these but may NOT override the hard vetoes (clauses 17-extreme, 19).
+
+## Macro Snapshot
+```json
+{json.dumps(macro_analysis, indent=2, default=str)}
+```
+
+## Regime Snapshot
+```json
+{json.dumps(regime_analysis, indent=2, default=str)}
+```
+
+## Liquidity Snapshot
+```json
+{json.dumps(liquidity_analysis, indent=2, default=str)}
+```
+
+## Pre-computed Risk Metrics
+```json
+{json.dumps(risk_metrics, indent=2, default=str)}
+```
+
 ---
 
 Present the risk debate in THREE clearly labeled sections:
@@ -129,7 +163,7 @@ In 2-3 sentences, summarize the key risk tensions and what the Risk Manager shou
 
 Be specific with prices, percentages, and timeframes. Output conversationally, no special formatting needed within each section."""
 
-        response = llm.invoke(prompt)
+        response = llm.invoke(prompt, temperature=0, seed=42)
         debate_text = response.content
 
         # Parse out individual perspective sections for state compatibility

@@ -7,6 +7,7 @@ from typing import Dict, Any, List, Optional
 from tradingagents.agents.utils.agent_utils import get_news, get_global_news
 from tradingagents.agents.utils.news_data_tools import get_egx_company_news, get_egx_market_news
 from tradingagents.dataflows.config import get_config
+from tradingagents.agents.utils.input_sanitizer import sanitize_external_text, wrap_external_content
 
 logger = logging.getLogger("tradingagents.news_analyst")
 
@@ -161,8 +162,10 @@ def create_news_analyst(llm):
         # If DataPrefetcher has already fetched the news before the graph ran,
         # skip the tool-calling round-trip entirely. The LLM still reasons over
         # the data; it just doesn't need to call tools to get it.
-        prefetched_company_news = state.get("prefetched_company_news", "")
-        prefetched_market_news = state.get("prefetched_market_news", "")
+        _raw_company = sanitize_external_text(state.get("prefetched_company_news", ""))
+        prefetched_company_news = wrap_external_content(_raw_company, "company news") if _raw_company else ""
+        _raw_market = sanitize_external_text(state.get("prefetched_market_news", ""))
+        prefetched_market_news = wrap_external_content(_raw_market, "market news") if _raw_market else ""
         has_prefetched = bool(prefetched_company_news or prefetched_market_news)
 
         if has_prefetched:
@@ -208,7 +211,7 @@ Analyze the above news for {ticker}. You MUST:
 Current date: {current_date} | Company: {ticker} | Market: {market_context}"""
 
             from langchain_core.messages import AIMessage
-            result = llm.invoke(prefetch_prompt)
+            result = llm.invoke(prefetch_prompt, temperature=0, seed=42)
         else:
             # Standard tool-calling path (fallback when no prefetch available)
             system_message = f"""You are a News & Sentiment Analyst ("Journalist") specializing in {market_context}.
@@ -279,7 +282,7 @@ First use the tools to retrieve news, then provide your analysis with the JSON s
             prompt = prompt.partial(ticker=ticker)
             prompt = prompt.partial(market=market_context)
 
-            chain = prompt | llm.bind_tools(tools)
+            chain = prompt | llm.bind_tools(tools).bind(temperature=0, seed=42)
             result = chain.invoke(
                 state.get("news_messages") or [("human", ticker)]
             )

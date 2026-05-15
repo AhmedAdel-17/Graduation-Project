@@ -176,6 +176,13 @@ Each issue is tagged: **CRIT** (blocks ship), **HIGH** (must fix in 4 weeks), **
 - **Fix:** Mark LLM-calling tests with `@pytest.mark.integration` and add `pyproject.toml` filter.
 - **Owner / status:** open.
 
+### Z3. External input sanitization — **RESOLVED (2026-05-15)**
+- **Where:** All external text (news, social) entering LLM prompts now passes through `tradingagents/agents/utils/input_sanitizer.py`.
+- **What:** `sanitize_external_text()` strips HTML, decodes entities, detects 12 injection patterns (two-pass: before and after entity decode), truncates to 4000 chars, normalizes whitespace. `wrap_external_content()` adds `[EXTERNAL_CONTENT]` delimiters for prefetch paths.
+- **Protected paths:** 4 news tool returns (`news_data_tools.py`), 2 social tool returns (`social_media_tools.py`), news analyst prefetch (sanitize + wrap), CLI + API disclaimer fields.
+- **Tests:** 40 tests in `tests/test_input_sanitizer.py` (normal text preservation, injection neutralization including entity-encoded, HTML stripping, truncation, prefetch integration, tool-output integration).
+- **Remaining:** `get_insider_sentiment` / `get_insider_transactions` not sanitized (not used in EGX mode). Unicode homoglyph attacks not covered.
+
 ---
 
 ## 2. Solid subsystems (don't break these)

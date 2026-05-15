@@ -93,6 +93,17 @@ def get_YFin_data_online(
             
             errors.append(f"Date range returned empty, using period='{period}' fallback")
             data = ticker.history(period=period, interval="1d")
+
+            # Filter out bars after end_date to prevent future data leakage
+            # in backtests. period-based fetch is anchored to wall-clock today,
+            # not to end_date, so without this filter a historical backtest
+            # would see prices from after the simulated trade_date.
+            if not data.empty:
+                import pandas as pd
+                end_dt_ts = pd.Timestamp(end_date)
+                if data.index.tz is not None:
+                    end_dt_ts = end_dt_ts.tz_localize(data.index.tz)
+                data = data[data.index <= end_dt_ts]
             
     except Exception as e:
         return {
@@ -415,11 +426,12 @@ def _get_stock_stats_bulk(
             raise Exception("Stockstats fail: Yahoo Finance data not fetched yet!")
     else:
         # Online data fetching with caching
-        today_date = pd.Timestamp.today()
+        # Use curr_date (the simulated trade date) as end_date, NOT today.
+        # Using today_date would leak future indicator values into backtests.
         curr_date_dt = pd.to_datetime(curr_date)
-        
-        end_date = today_date
-        start_date = today_date - pd.DateOffset(years=15)
+
+        end_date = curr_date_dt
+        start_date = end_date - pd.DateOffset(years=15)
         start_date_str = start_date.strftime("%Y-%m-%d")
         end_date_str = end_date.strftime("%Y-%m-%d")
         

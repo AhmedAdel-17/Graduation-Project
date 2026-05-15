@@ -33,12 +33,9 @@ Literature grounding:
 """
 
 import json
-import logging
 import re
 from typing import Dict, Any, List, Tuple, Optional
 from tradingagents.dataflows.config import get_config
-
-logger = logging.getLogger("tradingagents.risk_scorer")
 
 
 # =============================================================================
@@ -416,8 +413,8 @@ def check_stop_loss_atr(
     }
     execution_plan["exit_logic"] = exit_logic
 
-    logger.info(
-        "[RiskScorer] Auto-generated stop-loss at %.2f EGP (%s)", stop_price, note
+    print(
+        f"[RiskScorer] Auto-generated stop-loss at {stop_price:.2f} EGP ({note})"
     )
     return None  # No violation — stop generated
 
@@ -485,9 +482,7 @@ def check_short_selling_violation(execution_plan: dict) -> Optional[RiskViolatio
 
     plan_text = json.dumps(execution_plan).lower()
 
-    # Word-boundary patterns — only match actual short-selling language.
-    # Avoids false positives on "short-term", "short_term", "short_horizon".
-    # The last pattern catches "short COMI.CA 1000" (verb + ticker or quantity).
+    # Word-boundary patterns — only match actual short-selling language
     short_sell_patterns = [
         r"\bshort[\s_-]sell(ing)?\b",
         r"\bsell[\s_-]short\b",
@@ -495,7 +490,7 @@ def check_short_selling_violation(execution_plan: dict) -> Optional[RiskViolatio
         r"\bshort[\s_-]position\b",
         r"\bgo[\s_-]short\b",
         r"\bopen[\s_-]short\b",
-        r"\bshort\s+(?:\w+\.ca|\d+)",  # "short comi.ca 1000" (plan_text is lowercased)
+        r"\bshort\s+[a-z]{2,6}(\.[a-z]{1,2})?\b",  # "short comi.ca" / "short aapl" (plan_text is lowercased)
     ]
 
     for pattern in short_sell_patterns:
@@ -637,6 +632,199 @@ def check_egx_price_band(
 
 
 # =============================================================================
+# Phase 4 checks: macro / regime / liquidity (new analyst outputs)
+# =============================================================================
+
+# Severe illiquidity: zero-return days dominate the window — true price-discovery failure.
+# Sussex/African Markets (2023): zero-return frequency > 0.40 indicates a stock that
+# should not be traded at institutional size on EGX.
+ZERO_RETURN_VETO_THRESHOLD = 0.40
+
+# FX stress: per CLAUDE.md and constitution clauses 17/20, EGP shocks of this size
+# warrant scaling back conviction. Hard veto only at extreme stress (>20%).
+FX_STRESS_WARN_PCT = 0.05
+FX_STRESS_VETO_PCT = 0.20
+
+
+def check_zero_return_veto(liquidity_analysis: dict) -> Optional[RiskViolation]:
+    """Hard VETO when zero-return frequency exceeds 40%.
+
+    Severe illiquidity means price discovery is broken — even small orders move
+    the tape. Constitution clause 19 makes this non-negotiable.
+    """
+    if not isinstance(liquidity_analysis, dict) or not liquidity_analysis:
+        return None
+    zr = liquidity_analysis.get("zero_return_frequency_21d")
+    if zr is None:
+        return None
+    try:
+        zr = float(zr)
+    except (ValueError, TypeError):
+        return None
+    if zr <= ZERO_RETURN_VETO_THRESHOLD:
+        return None
+    return RiskViolation(
+        rule_name="ZERO_RETURN_VETO",
+        severity="critical",
+        limit_value=ZERO_RETURN_VETO_THRESHOLD,
+        actual_value=round(zr, 4),
+        explanation=(
+            f"Zero-return frequency {zr:.1%} over the last 21 days exceeds the "
+            f"{ZERO_RETURN_VETO_THRESHOLD:.0%} hard limit. Price discovery is broken "
+            "and institutional execution is not viable (Sussex 2023; constitution clause 19)."
+        ),
+        remediation="Avoid this stock until liquidity recovers. Re-evaluate after 21 days.",
+    )
+
+
+def check_fx_stress(macro_analysis: dict) -> Optional[RiskViolation]:
+    """WARN/VETO on extreme EGP/USD moves.
+
+    Uses a static reference (~48.5 EGP/USD post-2024 float) as the de-stress
+    baseline. When the macro analyst supplies real point-in-time data this
+    becomes a live reference. Constitution clause 17.
+    """
+    if not isinstance(macro_analysis, dict) or not macro_analysis:
+        return None
+    egp_usd = macro_analysis.get("egp_usd")
+    if egp_usd is None:
+        return None
+    try:
+        egp_usd = float(egp_usd)
+    except (ValueError, TypeError):
+        return None
+
+    # Use fx_change_30d from macro analyst (Phase 5) when available,
+    # otherwise fall back to static reference comparison.
+    fx_change_30d = macro_analysis.get("fx_change_30d")
+    if fx_change_30d is not None:
+        move_pct = abs(fx_change_30d)
+    else:
+        reference = 48.5  # Post-March-2024 float static fallback
+        if reference <= 0:
+            return None
+        move_pct = abs(egp_usd - reference) / reference
+
+    if move_pct >= FX_STRESS_VETO_PCT:
+        return RiskViolation(
+            rule_name="FX_STRESS_EXTREME",
+            severity="critical",
+            limit_value=FX_STRESS_VETO_PCT,
+            actual_value=round(move_pct, 4),
+            explanation=(
+                f"EGP/USD moved {move_pct:.1%} vs reference — extreme FX dislocation. "
+                "New positions blocked until FX stabilizes (constitution clause 17)."
+            ),
+            remediation="Wait for EGP to stabilize. Halt new EGX entries.",
+        )
+    if move_pct >= FX_STRESS_WARN_PCT:
+        return RiskViolation(
+            rule_name="FX_STRESS_ELEVATED",
+            severity="medium",
+            limit_value=FX_STRESS_WARN_PCT,
+            actual_value=round(move_pct, 4),
+            explanation=(
+                f"EGP/USD moved {move_pct:.1%} vs reference. Reduce conviction "
+                "and prefer staged entries (constitution clause 17)."
+            ),
+            remediation="Cut target_shares ~25% and use TWAP/staged limit orders.",
+        )
+    return None
+
+
+def check_macro_blackout(macro_analysis: dict) -> Optional[RiskViolation]:
+    """WARN when a recent CBE rate shock has occurred.
+
+    A ≥200 bps single move (rate_shock=True) reorders the entire EM-fixed-income/
+    equity hierarchy; new positions in the days after deserve a deliberate pause.
+    Constitution clause 16.
+    """
+    if not isinstance(macro_analysis, dict) or not macro_analysis:
+        return None
+    if not macro_analysis.get("rate_shock"):
+        return None
+    return RiskViolation(
+        rule_name="MACRO_RATE_SHOCK_BLACKOUT",
+        severity="medium",
+        limit_value=0,
+        actual_value=1,
+        explanation=(
+            "Recent CBE rate change ≥200 bps detected (macro analyst). New EGX "
+            "positions in the immediate aftermath face elevated revaluation risk."
+        ),
+        remediation="Defer new BUY entries by 2-3 trading sessions or scale into half-size.",
+    )
+
+
+def check_volatility_persistence(regime_analysis: dict) -> Optional[RiskViolation]:
+    """WARN when high-vol regime has persisted (Joseph Effect — Ezzat 2013).
+
+    Persistent high vol on EGX is a real long-memory phenomenon, not a passing
+    spike. Reduces sustainable position size. Constitution clause 21.
+    """
+    if not isinstance(regime_analysis, dict) or not regime_analysis:
+        return None
+    if not regime_analysis.get("vol_persistence_flag"):
+        return None
+    age = regime_analysis.get("regime_age_days", 0)
+    return RiskViolation(
+        rule_name="VOLATILITY_PERSISTENCE",
+        severity="medium",
+        limit_value=0,
+        actual_value=1,
+        explanation=(
+            f"High-vol regime has persisted (~{age} trading days). Long-memory "
+            "volatility on EGX (Ezzat 2013, Joseph Effect) warrants reduced exposure."
+        ),
+        remediation="Halve standard position size; tighten stops to ~2×ATR or less.",
+    )
+
+
+def check_regime_conditional_limits(
+    execution_plan: dict,
+    regime_analysis: dict,
+) -> Optional[RiskViolation]:
+    """In CRASH/BEAR regimes, halve the per-stock allocation cap.
+
+    Mutates ``execution_plan["position_sizing"]["target_shares"]`` only when the
+    plan already exceeds the regime-adjusted cap, and emits a WARN. Constitution
+    clause 18.
+    """
+    if not isinstance(regime_analysis, dict) or not regime_analysis:
+        return None
+    regime = regime_analysis.get("regime")
+    if regime not in ("CRASH", "BEAR"):
+        return None
+
+    ps = execution_plan.get("position_sizing") or {}
+    alloc_str = ps.get("portfolio_allocation", "0%")
+    try:
+        if isinstance(alloc_str, str):
+            alloc_pct = float(alloc_str.replace("%", "")) / 100
+        else:
+            alloc_pct = float(alloc_str)
+    except (ValueError, TypeError):
+        alloc_pct = 0.0
+
+    regime_cap = EGX_RISK_LIMITS["max_single_stock_pct"] * 0.5  # halved
+
+    if alloc_pct <= regime_cap:
+        return None
+
+    return RiskViolation(
+        rule_name="REGIME_CONDITIONAL_LIMIT",
+        severity="high",
+        limit_value=regime_cap,
+        actual_value=round(alloc_pct, 4),
+        explanation=(
+            f"Regime is {regime}; per-stock cap is halved to {regime_cap:.1%} "
+            f"(proposed {alloc_pct:.1%}). Constitution clause 18."
+        ),
+        remediation=f"Reduce portfolio_allocation to ≤{regime_cap:.1%} until regime normalizes.",
+    )
+
+
+# =============================================================================
 # Risk Action Classification and Throttling
 # =============================================================================
 
@@ -707,9 +895,10 @@ def apply_throttle_adjustments(
         "effective_adv": effective_adv,
         "throttle_threshold_pct": EGX_RISK_LIMITS["throttle_adv_threshold"],
     }
-    logger.info(
-        "[RiskScorer] THROTTLE applied: max_shares_per_day %s → %s (5%% of %s ADV), execution_days → %s",
-        f"{old_daily:,.0f}", f"{throttle_daily:,}", f"{effective_adv:,.0f}", new_days,
+    print(
+        f"[RiskScorer] THROTTLE applied: max_shares_per_day "
+        f"{old_daily:,.0f} → {throttle_daily:,} (5% of {effective_adv:,.0f} ADV), "
+        f"execution_days → {new_days}"
     )
     return adjustment
 
@@ -909,6 +1098,9 @@ def create_risk_scorer_node():
         current_price = state.get("current_price") or 50.0
         low_liquidity = state.get("low_liquidity", False)
         technical_analysis = state.get("technical_analysis") or {}
+        macro_analysis = state.get("macro_analysis") or {}
+        regime_analysis = state.get("regime_analysis") or {}
+        liquidity_analysis = state.get("liquidity_analysis") or {}
 
         # Backtest mode: relax single-stock concentration limit
         _orig_pct = EGX_RISK_LIMITS["max_single_stock_pct"]
@@ -929,6 +1121,12 @@ def create_risk_scorer_node():
             check_short_selling_violation(exec_plan),
             check_leverage_violation(exec_plan),
             check_egx_price_band(exec_plan, current_price),
+            # Phase 4 — macro / regime / liquidity checks (constitution clauses 16-21)
+            check_zero_return_veto(liquidity_analysis),
+            check_fx_stress(macro_analysis),
+            check_macro_blackout(macro_analysis),
+            check_volatility_persistence(regime_analysis),
+            check_regime_conditional_limits(exec_plan, regime_analysis),
         ]:
             if result is not None:
                 violations.append(result)
@@ -976,6 +1174,11 @@ def create_risk_scorer_node():
                 "short_selling",
                 "leverage",
                 "egx_price_band",
+                "zero_return_veto",
+                "fx_stress",
+                "macro_rate_shock_blackout",
+                "volatility_persistence",
+                "regime_conditional_limits",
             ],
         }
 
@@ -1040,35 +1243,29 @@ def risk_veto_node(state: dict) -> dict:
     }
 
 
-# =============================================================================
-# Convenience runner (backward-compatibility entry point)
-# =============================================================================
-
 def run_all_risk_checks(
     execution_plan: dict,
-    portfolio_value: float,
-    avg_daily_volume: float,
-    current_price: float,
+    portfolio_value: float = 10_000_000,
+    avg_daily_volume: float = 100_000,
+    current_price: float = 50.0,
     low_liquidity: bool = False,
-    technical_analysis: dict | None = None,
-) -> tuple[bool, List[RiskViolation]]:
-    """Run all deterministic EGX risk checks and return (approved, violations).
+) -> tuple:
+    """Run all deterministic risk checks and return (approved, violations).
 
-    ``approved`` is True when there are no critical violations.
-    This function is the programmatic entry point used by tests and scripts;
-    the graph uses ``create_risk_scorer_node()`` instead.
+    Compatibility wrapper used by tests. The graph uses
+    create_risk_scorer_node() instead.
     """
     _normalize_execution_plan(execution_plan)
-    _decision = (execution_plan.get("decision") or "").strip().upper()
+    technical_analysis: dict = {}
+
+    decision = (execution_plan.get("decision") or "").strip().upper()
 
     violations: List[RiskViolation] = []
     for result in [
         check_position_size_limit(execution_plan, portfolio_value),
         check_liquidity_participation(execution_plan, avg_daily_volume, low_liquidity),
         check_exit_horizon(execution_plan, avg_daily_volume, low_liquidity),
-        check_stop_loss_atr(
-            execution_plan, _decision, current_price, technical_analysis or {}
-        ),
+        check_stop_loss_atr(execution_plan, decision, current_price, technical_analysis),
         check_max_trade_loss(execution_plan, portfolio_value, current_price),
         check_short_selling_violation(execution_plan),
         check_leverage_violation(execution_plan),
@@ -1077,6 +1274,6 @@ def run_all_risk_checks(
         if result is not None:
             violations.append(result)
 
-    critical = [v for v in violations if v.severity == "critical"]
-    approved = len(critical) == 0
+    has_critical = any(v.severity == "critical" for v in violations)
+    approved = not has_critical
     return approved, violations

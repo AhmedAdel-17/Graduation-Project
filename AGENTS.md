@@ -1,4 +1,4 @@
-﻿# AGENTS.md — Project Instructions
+# AGENTS.md — Project Instructions
 
 ## Project Overview
 
@@ -130,18 +130,18 @@ python -c "from tradingagents.graph.trading_graph import TradingAgentsGraph; pri
 | `cli/main.py` | Interactive CLI with Rich dashboard |
 | `server/api_server.py` | FastAPI REST + WebSocket backend |
 | `scripts/backtester.py` | Full backtesting engine |
-| `scripts/social_pipeline/pipeline_test.py` | v1 script-only social-scrape -> sentiment pipeline (no APIs) |
-| `scripts/social_pipeline/v2/pipeline.py` | **v2 trading-signal engine** — multi-source, entity + intent + content-type, weighted per-stock + market sentiment |
+| `scripts/twitter_pipeline/pipeline_test.py` | v1 script-only social-scrape -> sentiment pipeline (no APIs) |
+| `scripts/twitter_pipeline/v2/pipeline_v2.py` | **v2 trading-signal engine** — multi-source, entity + intent + content-type, weighted per-stock + market sentiment |
 
 ---
 
 ## Twitter / Social Scraping Pipeline (Validation Run, 2026-04-25)
 
-A new module `scripts/social_pipeline/` was added to satisfy the
+A new module `scripts/twitter_pipeline/` was added to satisfy the
 "Twitter scraping -> sentiment analysis with NO APIs" requirement.
 
 ```
-scripts/social_pipeline/
+scripts/twitter_pipeline/
   scraper.py         # multi-strategy social scraper (Nitter + DDG + Reddit)
   relevance.py       # strict EGX-stock relevance classifier (finance ∧ EGX signal)
   sentiment.py       # wraps project sentiment engine + VADER baseline
@@ -152,7 +152,7 @@ scripts/social_pipeline/
 ## Data Integrity Report (2026-04-25, strict-classifier rebuild)
 
 After a feedback round, the loose keyword filter was replaced with a strict
-two-signal classifier in `scripts/social_pipeline/relevance.py`. A post
+two-signal classifier in `scripts/twitter_pipeline/relevance.py`. A post
 passes ONLY IF it carries BOTH:
 
   (A) a finance/trading signal — `stock`, `share`, `buy`, `sell`, `EPS`,
@@ -223,10 +223,10 @@ Label disagreement EGX-vs-VADER: 14/38 = 36.8%
 ### How to run
 
 ```bash
-python scripts/social_pipeline/pipeline_test.py
+python scripts/twitter_pipeline/pipeline_test.py
 ```
 
-Outputs: console summary, `scripts/social_pipeline/logs/pipeline.log`,
+Outputs: console summary, `scripts/twitter_pipeline/logs/pipeline.log`,
 and timestamped `results_*.json` + `results_*.csv` under `logs/`.
 
 ### What is working
@@ -289,13 +289,13 @@ and timestamped `results_*.json` + `results_*.csv` under `logs/`.
 
 ## Trading-Signal Pipeline v2 (2026-04-25)
 
-A second-generation pipeline lives under `scripts/social_pipeline/v2/`.
+A second-generation pipeline lives under `scripts/twitter_pipeline/v2/`.
 It turns the v1 "scrape + relevance filter + sentiment" flow into a
 **layered trading-signal engine** with per-stock attribution and explicit
 trader-intent extraction. v1 is unchanged and still runnable.
 
 ```
-scripts/social_pipeline/v2/
+scripts/twitter_pipeline/v2/
   __init__.py
   entities.py            # SYMBOL_REGISTRY (COMI, ETEL, OCI, …) + extract()
                          # returns Mention(symbol, confidence, evidence)
@@ -312,7 +312,7 @@ scripts/social_pipeline/v2/
                          # split_outputs() splits market vs per-stock,
                          # enforces MIN_TOTAL_POSTS=50 (-> NO_SIGNAL)
                          # and MIN_MENTIONS_PER_STOCK=5
-  pipeline.py         # 7-stage orchestrator + metrics + persistence
+  pipeline_v2.py         # 7-stage orchestrator + metrics + persistence
                          # loads .env via python-dotenv at startup
   sources/
     __init__.py          # re-exports v1 Post schema
@@ -330,7 +330,7 @@ scripts/social_pipeline/v2/
   logs/                  # auto-generated run artefacts
 ```
 
-### Stage chain (pipeline.py)
+### Stage chain (pipeline_v2.py)
 
 1. **SCRAPE** — pluggable sources, Facebook (Apify) is PRIMARY
 2. **RELEVANCE** (Layer-0) — strict EGX classifier from v1
@@ -413,15 +413,15 @@ confidence = 0.6 * quality + 0.4 * size
 
 ```bash
 # .env at repo root must contain APIFY_API_TOKEN=...
-PYTHONIOENCODING=utf-8 python scripts/social_pipeline/v2/pipeline.py
+PYTHONIOENCODING=utf-8 python scripts/twitter_pipeline/v2/pipeline_v2.py
 ```
 
 Optional one-time logins (only needed for the Playwright-based fallbacks;
 the Apify FB source needs no local login):
 
 ```bash
-python scripts/social_pipeline/v2/sources/facebook_groups.py --login
-python scripts/social_pipeline/v2/sources/twitter_authed.py  --login
+python scripts/twitter_pipeline/v2/sources/facebook_groups.py --login
+python scripts/twitter_pipeline/v2/sources/twitter_authed.py  --login
 export EGX_FB_STORAGE_STATE=$(pwd)/fb_storage_state.json
 export EGX_X_STORAGE_STATE=$(pwd)/x_storage_state.json
 ```
@@ -431,7 +431,7 @@ export EGX_X_STORAGE_STATE=$(pwd)/x_storage_state.json
 To quickly manually test the Facebook Apify scraper, entity extraction, and sentiment scoring without running the full pipeline orchestration:
 
 ```bash
-python scripts/social_pipeline/v2/test_fb_sentiment.py
+python scripts/twitter_pipeline/v2/test_fb_sentiment.py
 ```
 
 This standalone script:
@@ -439,7 +439,7 @@ This standalone script:
 - Scrapes a small sample from the target Facebook groups.
 - Extracts EGX entities from the text.
 - Scores the text using the project's multi-model transformer engine (or lexicon fallback).
-- Outputs the results to the console (UTF-8 safe) and saves a detailed JSON log under `scripts/social_pipeline/v2/logs/test_fb_results_<stamp>.json`.
+- Outputs the results to the console (UTF-8 safe) and saves a detailed JSON log under `scripts/twitter_pipeline/v2/logs/test_fb_results_<stamp>.json`.
 
 ### Outstanding gaps (honest)
 

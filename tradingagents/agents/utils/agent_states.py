@@ -144,3 +144,22 @@ class AgentState(MessagesState):
     # EGX-specific market context
     target_market: Annotated[Optional[str], "Target market identifier (e.g. 'EGX')"]
     trading_currency: Annotated[Optional[str], "Trading currency (e.g. 'EGP')"]
+
+    # Investment horizon (Phase 1.3)
+    trade_horizon_months: Annotated[Optional[int], "Investment horizon in months (default 6)"]
+
+    # ── Phase 2: New analyst channels and outputs ──────────────────────────
+    # Per-analyst message channels (same pattern as market_messages, etc.)
+    macro_messages:     Annotated[List[BaseMessage], add_messages]
+    liquidity_messages: Annotated[List[BaseMessage], add_messages]
+    regime_messages:    Annotated[List[BaseMessage], add_messages]
+
+    # Text reports (same pattern as market_report, etc.)
+    macro_report:     Annotated[str, "Report from the Macro/FX/Rates Analyst"]
+    liquidity_report: Annotated[str, "Report from the Liquidity/Flow Analyst"]
+    regime_report:    Annotated[str, "Report from the Regime Detection Analyst"]
+
+    # Structured analysis dicts (same pattern as technical_analysis, etc.)
+    macro_analysis:     Annotated[Optional[Dict], "Structured output from Macro Analyst"]
+    liquidity_analysis: Annotated[Optional[Dict], "Structured output from Liquidity Analyst"]
+    regime_analysis:    Annotated[Optional[Dict], "Structured output from Regime Analyst"]

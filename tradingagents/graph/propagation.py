@@ -78,7 +78,14 @@ class Propagator:
             "fundamentals_report": "",
             "sentiment_report": "",
             "news_report": "",
+            # Phase 2: New analyst reports
+            "macro_report": "",
+            "liquidity_report": "",
+            "regime_report": "",
         }
+
+        # Investment horizon (Phase 1.3)
+        state["trade_horizon_months"] = config.get("trade_horizon_months", 6)
 
         if is_egx:
             state.update(
@@ -121,6 +128,10 @@ class Propagator:
                     # Portfolio context (for position sizing)
                     "portfolio_value": config.get("portfolio_value", 10_000_000),
                     "current_price": 0,
+                    # Phase 2: New analyst structured outputs
+                    "macro_analysis": {},
+                    "liquidity_analysis": {},
+                    "regime_analysis": {},
                     # Phase 3 (PR 7): sentiment blend result written by social_media_analyst
                     "sentiment_blend_result": None,
                 }

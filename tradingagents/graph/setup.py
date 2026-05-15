@@ -59,16 +59,19 @@ class GraphSetup:
         self.conditional_logic = conditional_logic
 
     def setup_graph(
-        self, selected_analysts=["market", "social", "news", "fundamentals"]
+        self, selected_analysts=["market", "social", "news", "fundamentals", "macro", "liquidity", "regime"]
     ):
         """Set up and compile the agent workflow graph.
 
         Args:
             selected_analysts (list): List of analyst types to include. Options are:
-                - "market": Market analyst
+                - "market": Market analyst (technical/OHLCV)
                 - "social": Social media analyst
                 - "news": News analyst
                 - "fundamentals": Fundamentals analyst
+                - "macro": Macro/FX/Rates analyst (Phase 2)
+                - "liquidity": Liquidity/Flow analyst (Phase 2)
+                - "regime": Regime Detection analyst (Phase 2)
         """
         if len(selected_analysts) == 0:
             raise ValueError("Trading Agents Graph Setup Error: no analysts selected!")
@@ -84,6 +87,9 @@ class GraphSetup:
             "social":       "social_messages",
             "news":         "news_messages",
             "fundamentals": "fundamentals_messages",
+            "macro":        "macro_messages",
+            "liquidity":    "liquidity_messages",
+            "regime":       "regime_messages",
         }
 
         if "market" in selected_analysts:
@@ -137,6 +143,33 @@ class GraphSetup:
                 tool_nodes["fundamentals"] = PerAnalystToolNode(
                     self.tool_nodes["fundamentals"], _msg_field["fundamentals"]
                 )
+
+        # ── Phase 2: New analyst agents ──────────────────────────────────────
+        if "macro" in selected_analysts:
+            from tradingagents.agents.analysts.macro_analyst import create_macro_analyst
+            analyst_nodes["macro"] = create_macro_analyst(
+                self.quick_thinking_llm, self.deep_thinking_llm
+            )
+            delete_nodes["macro"] = create_msg_delete(_msg_field["macro"])
+            # Macro analyst is mostly deterministic (optional LLM narrative).
+            # No tool node needed — it fetches data inline.
+            tool_nodes["macro"] = lambda state: {}  # No-op
+
+        if "liquidity" in selected_analysts:
+            from tradingagents.agents.analysts.liquidity_analyst import (
+                create_deterministic_liquidity_analyst,
+            )
+            analyst_nodes["liquidity"] = create_deterministic_liquidity_analyst()
+            delete_nodes["liquidity"] = create_msg_delete(_msg_field["liquidity"])
+            tool_nodes["liquidity"] = lambda state: {}  # No-op: fully deterministic
+
+        if "regime" in selected_analysts:
+            from tradingagents.agents.analysts.regime_analyst import (
+                create_deterministic_regime_analyst,
+            )
+            analyst_nodes["regime"] = create_deterministic_regime_analyst()
+            delete_nodes["regime"] = create_msg_delete(_msg_field["regime"])
+            tool_nodes["regime"] = lambda state: {}  # No-op: fully deterministic
 
         # Create researcher and manager nodes
         bull_researcher_node = create_bull_researcher(

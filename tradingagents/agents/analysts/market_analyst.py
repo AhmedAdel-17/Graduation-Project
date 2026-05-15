@@ -1,7 +1,8 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+import math
 import time
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 from tradingagents.agents.utils.agent_utils import get_stock_data, get_indicators
 from tradingagents.dataflows.config import get_config
 
@@ -345,7 +346,7 @@ First call get_stock_data to retrieve OHLCV data, then use get_indicators for ea
         prompt = prompt.partial(low_liquidity=str(low_liquidity))
         prompt = prompt.partial(volume_missing=str(volume_missing))
 
-        chain = prompt | llm.bind_tools(tools)
+        chain = prompt | llm.bind_tools(tools).bind(temperature=0, seed=42)
 
         result = chain.invoke(
             state.get("market_messages") or [("human", ticker)]
@@ -472,6 +473,112 @@ def _compute_sma_signal(closes: list, period: int = 50) -> Dict[str, Any]:
         }
 
 
+# =============================================================================
+# Six-month horizon factor helpers (Phase 1.2)
+# =============================================================================
+# All functions are pure computations on price/volume arrays.
+# They return None when insufficient data is available.
+# =============================================================================
+
+# Confidence penalty when zero-return frequency exceeds threshold
+ZERO_RETURN_CONFIDENCE_PENALTY = 0.15
+ZERO_RETURN_WARNING_THRESHOLD = 0.30
+
+
+def _compute_momentum_6m(closes: List[float]) -> Optional[float]:
+    """Six-month momentum with 21-day skip (Jegadeesh-Titman 1993).
+
+    Returns (close_t-21 / close_t-126) - 1, skipping most recent 21 days
+    to avoid short-term reversal contamination.
+    Requires at least 126 data points.
+    """
+    if len(closes) < 126:
+        return None
+    try:
+        recent = closes[-22]   # ~1 month ago (skip most recent 21 days)
+        past = closes[-126]    # ~6 months ago
+        if past <= 0:
+            return None
+        return (recent / past) - 1.0
+    except (IndexError, ZeroDivisionError):
+        return None
+
+
+def _compute_realized_vol(closes: List[float], window: int = 63) -> Optional[float]:
+    """Annualized realized volatility from daily log returns.
+
+    Uses a 63-day window (~3 months of trading days).
+    Returns annualized stdev (multiplied by sqrt(252)).
+    """
+    if len(closes) < window + 1:
+        return None
+    try:
+        log_returns = []
+        for i in range(-window, 0):
+            if closes[i - 1] > 0 and closes[i] > 0:
+                log_returns.append(math.log(closes[i] / closes[i - 1]))
+        if len(log_returns) < window // 2:
+            return None
+        mean_r = sum(log_returns) / len(log_returns)
+        variance = sum((r - mean_r) ** 2 for r in log_returns) / (len(log_returns) - 1)
+        daily_vol = math.sqrt(variance)
+        return daily_vol * math.sqrt(252)
+    except (ValueError, ZeroDivisionError):
+        return None
+
+
+def _compute_amihud_illiq(
+    closes: List[float], volumes: List[float], window: int = 21
+) -> Optional[float]:
+    """Amihud (2002) illiquidity ratio: mean(|r_t| / volume_t).
+
+    Higher values indicate less liquid stocks. Uses absolute daily returns
+    divided by daily volume. Window defaults to 21 trading days (~1 month).
+    """
+    n = min(len(closes), len(volumes))
+    if n < window + 1:
+        return None
+    try:
+        ratios = []
+        for i in range(-window, 0):
+            prev_close = closes[i - 1]
+            cur_close = closes[i]
+            vol = volumes[i]
+            if prev_close > 0 and vol > 0:
+                abs_return = abs(cur_close / prev_close - 1.0)
+                ratios.append(abs_return / vol)
+        if len(ratios) < window // 2:
+            return None
+        return sum(ratios) / len(ratios)
+    except (IndexError, ZeroDivisionError):
+        return None
+
+
+def _compute_zero_return_freq(closes: List[float], window: int = 21) -> Optional[float]:
+    """Fraction of days with zero returns (BHL 2007; Sussex/African Markets 2023).
+
+    Sussex (2023) shows this outperforms Amihud on EGX specifically.
+    A high zero-return frequency indicates poor price discovery / illiquidity.
+    """
+    if len(closes) < window + 1:
+        return None
+    try:
+        zero_count = 0
+        total = 0
+        for i in range(-window, 0):
+            prev_close = closes[i - 1]
+            cur_close = closes[i]
+            if prev_close > 0:
+                total += 1
+                if abs(cur_close / prev_close - 1.0) < 1e-8:
+                    zero_count += 1
+        if total == 0:
+            return None
+        return zero_count / total
+    except (IndexError, ZeroDivisionError):
+        return None
+
+
 def create_deterministic_market_analyst():
     """
     Create a deterministic Technical Analyst node that calls data tools directly
@@ -493,16 +600,18 @@ def create_deterministic_market_analyst():
         low_liquidity = state.get("low_liquidity", False)
         volume_missing = state.get("volume_missing", False)
 
-        # ── 1. Fetch price data (90 days lookback for indicators) ──────────────
+        # ── 1. Fetch price data (~250 calendar days for 6-month momentum) ─────
         start_date = (
-            datetime.strptime(trade_date, "%Y-%m-%d") - relativedelta(days=120)
+            datetime.strptime(trade_date, "%Y-%m-%d") - relativedelta(days=250)
         ).strftime("%Y-%m-%d")
 
         price_result = get_eodhd_stock_data(ticker, start_date, trade_date)
 
         closes = []
+        volumes = []
         if price_result and price_result.get("data"):
             closes = [bar["close"] for bar in price_result["data"]]
+            volumes = [bar.get("volume", 0) for bar in price_result["data"]]
             # Propagate liquidity flags from fresh data if not already set
             if not low_liquidity:
                 low_liquidity = price_result.get("low_liquidity", False)
@@ -548,15 +657,31 @@ def create_deterministic_market_analyst():
         trend = determine_trend_direction(signals)
         invalidations = generate_invalidation_conditions(trend, signals)
 
+        # ── 5b. Compute 6-month horizon factors (Phase 1.2) ───────────────────
+        momentum_6m = _compute_momentum_6m(closes) if closes else None
+        realized_vol_63d = _compute_realized_vol(closes, window=63) if closes else None
+        amihud_21d = _compute_amihud_illiq(closes, volumes, window=21) if closes and volumes else None
+        zero_return_21d = _compute_zero_return_freq(closes, window=21) if closes else None
+
+        # Apply zero-return confidence penalty
+        confidence_adjustments = (
+            [f"Low liquidity penalty: -{LIQUIDITY_CONFIDENCE_PENALTY:.0%}"]
+            if low_liquidity else []
+        )
+        liquidity_warning = None
+        if zero_return_21d is not None and zero_return_21d > ZERO_RETURN_WARNING_THRESHOLD:
+            confidence = max(MIN_CONFIDENCE, confidence - ZERO_RETURN_CONFIDENCE_PENALTY)
+            confidence_adjustments.append(
+                f"High zero-return frequency ({zero_return_21d:.1%}): -{ZERO_RETURN_CONFIDENCE_PENALTY:.0%}"
+            )
+            liquidity_warning = "HIGH_ZERO_RETURN"
+
         # ── 6. Build the structured analysis (same schema as LLM output) ───────
         structured_analysis = {
             "trend_direction": trend,
             "indicator_signals": signals,
             "confidence_score": confidence,
-            "confidence_adjustments": (
-                [f"Low liquidity penalty: -{LIQUIDITY_CONFIDENCE_PENALTY:.0%}"]
-                if low_liquidity else []
-            ),
+            "confidence_adjustments": confidence_adjustments,
             "invalidation_conditions": invalidations,
             "data_quality": {
                 "missing_candles": data_quality.get("missing_indicators", 0),
@@ -564,13 +689,23 @@ def create_deterministic_market_analyst():
                 "sufficient_history": len(closes) >= 50,
                 "total_bars": len(closes),
             },
+            # Phase 1.2: 6-month horizon factors
+            "six_month_momentum": round(momentum_6m, 4) if momentum_6m is not None else None,
+            "realized_volatility_63d": round(realized_vol_63d, 4) if realized_vol_63d is not None else None,
+            "amihud_illiq_21d": amihud_21d,  # Already small float, no rounding needed
+            "zero_return_frequency_21d": round(zero_return_21d, 4) if zero_return_21d is not None else None,
+            "liquidity_warning": liquidity_warning,
         }
 
         # Build a compact text report for backward-compatible `market_report`
+        mom_str = f"{momentum_6m:+.1%}" if momentum_6m is not None else "N/A"
+        vol_str = f"{realized_vol_63d:.1%}" if realized_vol_63d is not None else "N/A"
+        zr_str = f"{zero_return_21d:.1%}" if zero_return_21d is not None else "N/A"
         report = (
             f"Deterministic Technical Analysis for {ticker} on {trade_date}:\n"
             f"Trend: {trend['direction']} ({trend['strength']})\n"
             f"RSI: {indicator_results['rsi']} | MACD: {indicator_results['macd']}\n"
+            f"6M Momentum: {mom_str} | Realized Vol (63d): {vol_str} | Zero-Return Freq (21d): {zr_str}\n"
             f"Confidence: {confidence:.2f}"
         )
 

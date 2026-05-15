@@ -729,6 +729,23 @@ def display_complete_report(final_state):
     except Exception:
         pass  # never crash the CLI display on sentiment surfacing failures
 
+    # VII. Human Review Required + Disclaimer
+    console.print(
+        Panel(
+            Text(
+                "STATUS: PENDING HUMAN REVIEW\n\n"
+                "This recommendation requires review by a qualified analyst "
+                "before any trading action is taken.\n\n"
+                "DISCLAIMER: This is an AI-generated research analysis for "
+                "educational purposes only. It is not financial, investment, "
+                "or trading advice.",
+            ),
+            title="VII. Review & Disclaimer",
+            border_style="bright_red",
+            padding=(1, 2),
+        )
+    )
+
 
 def update_research_team_status(status):
     """Update status for all research team members and trader."""

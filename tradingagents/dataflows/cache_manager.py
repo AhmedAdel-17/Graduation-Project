@@ -39,6 +39,9 @@ DEFAULT_TTL = {
     "fundamentals": 24 * 3600,  # 24 hours — quarterly data
     "news": 30 * 60,            # 30 minutes — freshness matters
     "social_media": 1 * 3600,   # 1 hour
+    "macro": 24 * 3600,         # 24 hours — CBE decisions are infrequent
+    "regime": 24 * 3600,        # 24 hours — regime shifts daily at most
+    "foreign_flow": 24 * 3600,  # 24 hours — FPI data published daily
     "default": 1 * 3600,        # 1 hour fallback
 }
 

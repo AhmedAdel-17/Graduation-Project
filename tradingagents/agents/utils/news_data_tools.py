@@ -1,6 +1,7 @@
 from langchain_core.tools import tool
 from typing import Annotated
 from tradingagents.dataflows.interface import route_to_vendor
+from tradingagents.agents.utils.input_sanitizer import sanitize_external_text
 
 @tool
 def get_news(
@@ -24,7 +25,7 @@ def get_news(
     _trade_date = _get_cfg().get("trade_date")
     if _trade_date and end_date > _trade_date:
         end_date = _trade_date
-    return route_to_vendor("get_news", ticker, start_date, end_date)
+    return sanitize_external_text(route_to_vendor("get_news", ticker, start_date, end_date))
 
 @tool
 def get_global_news(
@@ -47,7 +48,7 @@ def get_global_news(
     _trade_date = _get_cfg().get("trade_date")
     if _trade_date and curr_date > _trade_date:
         curr_date = _trade_date
-    return route_to_vendor("get_global_news", curr_date, look_back_days, limit)
+    return sanitize_external_text(route_to_vendor("get_global_news", curr_date, look_back_days, limit))
 
 @tool
 def get_insider_sentiment(
@@ -121,7 +122,7 @@ def get_egx_company_news(
     if _trade_date and curr_date > _trade_date:
         curr_date = _trade_date
     result = get_egx_news_combined(ticker, curr_date, look_back_days)
-    return json.dumps(result, indent=2, ensure_ascii=False, default=str)
+    return sanitize_external_text(json.dumps(result, indent=2, ensure_ascii=False, default=str))
 
 
 @tool
@@ -146,5 +147,5 @@ def get_egx_market_news(
     if _trade_date and curr_date > _trade_date:
         curr_date = _trade_date
     result = get_egx_news_from_csv("ALL", curr_date, look_back_days)
-    return json.dumps(result, indent=2, ensure_ascii=False, default=str)
+    return sanitize_external_text(json.dumps(result, indent=2, ensure_ascii=False, default=str))
 
