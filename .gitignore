@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+env/
+
+# Environment files
+.env
+.env.local
+
+# OS metadata
+.DS_Store
+__MACOSX/
+
+# IDE / Tool configs
+.claude/
+.idea/
+.vscode/
+*.swp
+
+# Test caches
+.pytest_cache/
+
+# Logs and temp files
+*.log
+*.html
+
+# Data caches
+tradingagents/dataflows/data_cache/
+backtest_results/
+eval_results/
+results/
+audit_logs/
+
+# ChromaDB persistent vector store (agent memory)
+chroma_db/
+
+# Dashboard
+node_modules/
+dashboard/dist/
+
+# CSV data files
+*.csv
