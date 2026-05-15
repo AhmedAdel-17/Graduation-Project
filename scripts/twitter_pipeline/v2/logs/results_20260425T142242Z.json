@@ -1,0 +1,136 @@
+{
+  "generated_at": "2026-04-25T14:22:42.251787+00:00",
+  "source_counts": {
+    "facebook": 0,
+    "twitter_authed": 0,
+    "telegram": 5,
+    "reddit": 77,
+    "mubasher": 0
+  },
+  "thresholds": {
+    "min_total_posts": 50,
+    "min_mentions_per_stock": 5
+  },
+  "status": "NO_SIGNAL",
+  "reason": "insufficient data: total_posts=0 < MIN_TOTAL_POSTS=50",
+  "market_sentiment": null,
+  "per_stock_sentiment": {},
+  "metrics": {
+    "raw_posts": 82,
+    "relevant_posts": 12,
+    "quality_kept": 0,
+    "search_precision_pct": 14.63,
+    "posts_with_intent": 0,
+    "opinion_grade_posts": 0,
+    "posts_with_symbol": 0
+  },
+  "quality_gate": {
+    "counts": {
+      "no-trading-intent": 8,
+      "too-long": 4
+    },
+    "examples": [
+      {
+        "reason": "no-trading-intent(['NONE'])",
+        "intent": [
+          "NONE"
+        ],
+        "content": "NEWS",
+        "text": "📰 البورصة تعلن نهاية حق وموعد توزيع كوبون البنك التجاري الدولي"
+      },
+      {
+        "reason": "no-trading-intent(['NONE'])",
+        "intent": [
+          "NONE"
+        ],
+        "content": "OPINION",
+        "text": "📰 ارتفاع مؤشرات بورصة مصر بالتعاملات الصباحية والثلاثيني يقفز 1.39%"
+      },
+      {
+        "reason": "no-trading-intent(['NONE'])",
+        "intent": [
+          "NONE"
+        ],
+        "content": "OPINION",
+        "text": "📰 مؤشر EGX 30 يختبر مستويات حرجة وسط ضعف الزخم الشرائي"
+      },
+      {
+        "reason": "too-long(254w)",
+        "intent": [
+          "REACTION",
+          "BUY",
+          "SELL"
+        ],
+        "content": "OTHER",
+        "text": "سيكولوجية السوق ليه أغلب الناس بتشتري في القمة وتبيع في القاع في البورصة المصرية\n# سيكولوجية الثراء والخسارة: لماذا تنتص"
+      },
+      {
+        "reason": "no-trading-intent(['NONE'])",
+        "intent": [
+          "NONE"
+        ],
+        "content": "QUESTION",
+        "text": "اي ابليكيشن لشراء الأسهم في البورصة المصرية ؟\nمرحبا ازيكم ؟ ايه البرنامج يلي بتنصحوا بيه علشان استثمر فلوسي في البورصة ا"
+      }
+    ]
+  },
+  "per_symbol_full": {},
+  "items": [],
+  "dropped_examples": [
+    {
+      "text": "🎯 صيدة جديدة مكتشفة! 🔥 تنبيه ذكي: MPCI.CA 📊 المؤشرات الفنية: EMA20: 155.07 | EMA50: 153.79 • RSI: 52 | MACD: 1.28 🌊 قوة ",
+      "hits": {
+        "finance_hits": [
+          "buy",
+          "مؤشر",
+          "تحليل",
+          "خسارة",
+          "تداول"
+        ],
+        "egx_hits": [],
+        "cashtags": []
+      }
+    },
+    {
+      "text": "🎯 صيدة جديدة مكتشفة! 🔥 تنبيه ذكي: MPCI.CA 📊 المؤشرات الفنية: EMA20: 155.07 | EMA50: 153.79 • RSI: 52 | MACD: 1.28 🌊 قوة ",
+      "hits": {
+        "finance_hits": [
+          "buy",
+          "مؤشر",
+          "تحليل",
+          "خسارة",
+          "تداول"
+        ],
+        "egx_hits": [],
+        "cashtags": []
+      }
+    },
+    {
+      "text": "Jon Stewart Is STILL The Best Choice For 2028 Backed By His Own Quotes\nHey r/JonStewart, \n\nLoved the energy in the origi",
+      "hits": {
+        "finance_hits": [],
+        "egx_hits": [],
+        "cashtags": []
+      }
+    },
+    {
+      "text": "Is it normal in Egypt for the man to pay for everything and buy a house in the woman’s name?\nأنا بتكلم مع واحدة مصرية عل",
+      "hits": {
+        "finance_hits": [
+          "buy",
+          "أشتري"
+        ],
+        "egx_hits": [],
+        "cashtags": []
+      }
+    },
+    {
+      "text": "Top 500 words used in ULTRAKILL's ALL 4825 negative reviews\nlol I don't know why I did this",
+      "hits": {
+        "finance_hits": [],
+        "egx_hits": [],
+        "cashtags": []
+      }
+    }
+  ]
+}

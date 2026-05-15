@@ -71,7 +71,6 @@ def _resolve_memory_class(config: Dict[str, Any]):
     if backend in {"postgres", "pgvector", "persistent"}:
         try:
             from persistent_memory import PersistentAgentMemory
-
             return PersistentAgentMemory
         except ImportError:
             return FinancialSituationMemory
@@ -108,8 +107,8 @@ class TradingAgentsGraph:
 
         # Initialize LLMs
         if self.config["llm_provider"].lower() == "openai" or self.config["llm_provider"] == "ollama" or self.config["llm_provider"] == "openrouter":
-            self.deep_thinking_llm = ChatOpenAI(model=self.config["deep_think_llm"], base_url=self.config["backend_url"], temperature=0)
-            self.quick_thinking_llm = ChatOpenAI(model=self.config["quick_think_llm"], base_url=self.config["backend_url"], temperature=0)
+            self.deep_thinking_llm = ChatOpenAI(model=self.config["deep_think_llm"], base_url=self.config["backend_url"], temperature=0, seed=42)
+            self.quick_thinking_llm = ChatOpenAI(model=self.config["quick_think_llm"], base_url=self.config["backend_url"], temperature=0, seed=42)
         elif self.config["llm_provider"].lower() == "anthropic":
             self.deep_thinking_llm = ChatAnthropic(model=self.config["deep_think_llm"], base_url=self.config["backend_url"], temperature=0)
             self.quick_thinking_llm = ChatAnthropic(model=self.config["quick_think_llm"], base_url=self.config["backend_url"], temperature=0)
@@ -202,17 +201,8 @@ class TradingAgentsGraph:
         }
 
     def propagate(self, company_name, trade_date, *, user_id: Optional[str] = None):
-        """Run the trading agents graph for a company on a specific date.
-
-        Args:
-            company_name: ticker symbol (e.g. ``COMI.CA``).
-            trade_date: ISO date string.
-            user_id: optional user identifier for the audit row. NULL until
-                auth lands (MEMORY.md §E); the analysis_sessions.user_id
-                column accepts NULL.
-        """
+        """Run the trading agents graph for a company on a specific date."""
         import uuid
-
         session_id = uuid.uuid4().hex
         self.session_id = session_id
 
@@ -293,32 +283,20 @@ class TradingAgentsGraph:
         # Log state
         self._log_state(trade_date, final_state)
 
-        # Audit write-through: persist this propagate() call into Postgres
-        # (analysis_sessions + agent_events). Never crashes the graph — the
-        # writer logs on failure and degrades silently when Postgres is
-        # unavailable. See MEMORY.md §G.
+        # Audit write-through: persist into Postgres if available (degrades silently)
         try:
             from tradingagents.db import audit_writer
-
             fingerprint = audit_writer.build_model_fingerprint(self.config)
             audit_writer.write_analysis_session(
-                session_id=session_id,
-                ticker=company_name,
-                trade_date=trade_date,
-                final_state=final_state,
-                model_fingerprint=fingerprint,
-                user_id=user_id,
+                session_id=session_id, ticker=company_name, trade_date=trade_date,
+                final_state=final_state, model_fingerprint=fingerprint, user_id=user_id,
             )
             audit_writer.write_agent_events(
-                session_id=session_id,
-                final_state=final_state,
-                model_fingerprint=fingerprint,
+                session_id=session_id, final_state=final_state, model_fingerprint=fingerprint,
             )
         except Exception as _e:
             import logging
-            logging.getLogger("tradingagents").warning(
-                "Audit write-through failed (graph keeps running): %s", _e
-            )
+            logging.getLogger("tradingagents").warning("Audit write-through failed: %s", _e)
 
         # Publish final decision to Redis so WebSocket clients get the result
         _publisher.final_decision(

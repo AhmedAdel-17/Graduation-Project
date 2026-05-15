@@ -38,9 +38,6 @@ eval_results/
 results/
 audit_logs/
 
-# ChromaDB persistent vector store (agent memory)
-chroma_db/
-
 # Dashboard
 node_modules/
 dashboard/dist/

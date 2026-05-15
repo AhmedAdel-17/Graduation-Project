@@ -29,6 +29,7 @@ from tradingagents.agents.utils.social_media_tools import (
     get_social_sentiment,
 )
 from tradingagents.dataflows.config import get_config
+from tradingagents.agents.utils.input_sanitizer import sanitize_external_text, wrap_external_content
 
 logger = logging.getLogger("tradingagents.social_media_analyst")
 
@@ -358,8 +359,10 @@ def create_social_media_analyst(llm):
         tools = [get_social_sentiment, get_social_media_posts]
 
         # ── Phase 2c / LLM explainer path ─────────────────────────────────────
-        prefetched_sentiment = state.get("prefetched_social_sentiment", "")
-        prefetched_posts = state.get("prefetched_social_posts", "")
+        _raw_sentiment = sanitize_external_text(state.get("prefetched_social_sentiment", ""))
+        prefetched_sentiment = wrap_external_content(_raw_sentiment, "social sentiment") if _raw_sentiment else ""
+        _raw_posts = sanitize_external_text(state.get("prefetched_social_posts", ""))
+        prefetched_posts = wrap_external_content(_raw_posts, "social posts") if _raw_posts else ""
         has_prefetched = bool(prefetched_sentiment or prefetched_posts)
 
         if has_prefetched:
@@ -385,7 +388,7 @@ def create_social_media_analyst(llm):
                 f"```\n\n"
                 f"Current date: {current_date} | Ticker: {ticker}"
             )
-            result = llm.invoke(prefetch_prompt)
+            result = llm.invoke(prefetch_prompt, temperature=0, seed=42)
         else:
             system_message = (
                 "You are a Social Media Analyst for the Egyptian Stock Exchange (EGX) "
@@ -420,7 +423,7 @@ def create_social_media_analyst(llm):
             prompt = prompt.partial(current_date=current_date)
             prompt = prompt.partial(ticker=ticker)
 
-            chain = prompt | llm.bind_tools(tools)
+            chain = prompt | llm.bind_tools(tools).bind(temperature=0, seed=42)
             result = chain.invoke(
                 state.get("social_messages") or [("human", ticker)]
             )

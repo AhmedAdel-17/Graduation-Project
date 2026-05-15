@@ -1,21 +1,19 @@
 import os
 
-# EGX ticker universe — from CLAUDE.md §10.
-# Format: uppercase with .CA suffix (Yahoo Finance / EGX convention).
-EGX_TICKERS: list[str] = [
-    # Banks
-    "COMI.CA", "ADIB.CA", "CIEB.CA", "EXPA.CA", "HDBK.CA", "QNBA.CA", "SAUD.CA",
-    # Real Estate
-    "TMGH.CA", "HELI.CA", "PHDC.CA", "OCDI.CA", "ORAS.CA", "EMFD.CA",
-    # Industry
-    "EAST.CA", "ESRS.CA", "SWDY.CA", "ABUK.CA", "MFPC.CA", "EGAL.CA", "EGCH.CA", "EFIC.CA",
-    # Telecom / Tech
-    "ETEL.CA", "FWRY.CA", "EFIH.CA", "RAYA.CA",
-    # Financial Services
-    "HRHO.CA", "BTFH.CA", "CICH.CA",
-    # Food & Beverage
-    "JUFO.CA", "EFID.CA", "DOMT.CA",
-]
+# Load .env before reading env vars. Safe no-op if python-dotenv is missing or
+# .env does not exist. Must run before setdefault() so .env values win.
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+# API keys — loaded from .env file. setdefault ensures empty-string fallback
+# when neither .env nor shell environment provides a value.
+os.environ.setdefault("GROQ_API_KEY", "")
+os.environ.setdefault("OPENAI_API_KEY", "")
+os.environ.setdefault("EODHD_API_KEY", "")
+os.environ.setdefault("GOOGLE_API_KEY", "")
 
 DEFAULT_CONFIG = {
     "project_dir": os.path.abspath(os.path.join(os.path.dirname(__file__), ".")),
@@ -76,38 +74,17 @@ DEFAULT_CONFIG = {
     #   psql egx_trading -f db_schema.sql
     "postgres_url": os.environ.get("POSTGRES_URL", ""),
 
-    # Vector memory backend. ChromaDB is the default stabilization path because
-    # it does not require a local Postgres + pgvector service.
-    # Set TRADINGAGENTS_MEMORY_BACKEND=postgres only when pgvector is installed
-    # and the Postgres schema has been prepared for vector(1536) columns.
+    # Vector memory backend (chroma default; postgres opt-in)
     "memory_backend": os.environ.get("TRADINGAGENTS_MEMORY_BACKEND", "chroma").strip().lower(),
-
-    # ChromaDB on-disk persistence path. When set, FinancialSituationMemory
-    # uses chromadb.PersistentClient so agent memories survive process
-    # restarts. Empty / unset → legacy in-memory client (data lost per run).
-    # Directory is gitignored (see .gitignore).
     "chroma_persist_dir": os.environ.get("CHROMA_PERSIST_DIR", "./chroma_db"),
-
-    # Minimum similarity score (cosine, 1 - distance) below which a memory
-    # match is dropped from get_memories() results. Range: [0.0, 1.0].
-    # 0.0 disables filtering. 0.30 is the conservative default — high enough
-    # to keep clearly relevant past lessons out of unrelated prompts, low
-    # enough not to wipe out a sparse early store. Override via env or per-call.
     "memory_min_similarity": float(os.environ.get("MEMORY_MIN_SIMILARITY", "0.30")),
 
     # Redis URL for real-time agent progress streaming to the dashboard WebSocket.
     # Falls back to silent no-op if Redis is not running.
     "redis_url": os.environ.get("REDIS_URL", "redis://localhost:6379"),
 
-    # ─── RL meta-policy (opt-in, Stage C) ────────────────────────────────────
-    # Offline-trained Conservative Q-Learning policy that adjusts position
-    # size *after* the LLM agents have decided BUY/SELL/HOLD. Default OFF so
-    # behavior is identical to main when the flag is unset. The policy can
-    # only SHRINK size (never amplify) and the deterministic risk veto still
-    # wins. See agent_docs/rl_meta_policy.md (Phase 4) for the architecture.
+    # RL meta-policy (opt-in, off by default)
     "rl_meta_policy_enabled": os.environ.get("RL_META_POLICY_ENABLED", "0").strip() in ("1", "true", "True", "yes"),
-    # Path to the trained checkpoint produced by scripts/train_rl_policy.py.
-    # Empty string ⇒ fail-closed to identity (size_multiplier=1.0).
     "rl_model_path": os.environ.get("RL_MODEL_PATH", ""),
 
     # ─── Pre-fetch optimisation ──────────────────────────────────────────────
@@ -142,6 +119,10 @@ DEFAULT_CONFIG = {
     # Securities hitting this limit trigger a trading halt (circuit breaker)
     "daily_price_limit_pct": 0.10,
     
+    # Investment horizon in months — used by prompts, risk checks, and researchers
+    # to frame analysis for the target holding period.
+    "trade_horizon_months": 6,
+
     # Maximum position size as percentage of Average Daily Volume (ADV)
     # Prevents market impact and ensures orderly execution
     # 10% of ADV is a conservative institutional constraint for EGX liquidity
@@ -155,3 +136,19 @@ DEFAULT_CONFIG = {
         "end": "14:30",    # Market close
     },
 }
+
+# EGX ticker universe (CLAUDE.md §10)
+EGX_TICKERS = [
+    # Banks
+    "COMI.CA", "ADIB.CA", "CIEB.CA", "EXPA.CA", "HDBK.CA", "QNBA.CA", "SAUD.CA",
+    # Real Estate
+    "TMGH.CA", "HELI.CA", "PHDC.CA", "OCDI.CA", "ORAS.CA", "EMFD.CA",
+    # Industry
+    "EAST.CA", "ESRS.CA", "SWDY.CA", "ABUK.CA", "MFPC.CA", "EGAL.CA", "EGCH.CA", "EFIC.CA",
+    # Telecom/Tech
+    "ETEL.CA", "FWRY.CA", "EFIH.CA", "RAYA.CA",
+    # Financial Services
+    "HRHO.CA", "BTFH.CA", "CIch.CA",
+    # Food & Beverage
+    "JUFO.CA", "EFID.CA", "DOMT.CA",
+]

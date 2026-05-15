@@ -283,10 +283,14 @@ def format_evidence_narrative(pack: Dict[str, Any]) -> str:
         f"  ROE: {_fmt(roe, pct=True)} {_direction_arrow(directions.get('roe', '?'))} | "
         f"ROA: {_fmt(roa, pct=True)} {_direction_arrow(directions.get('roa', '?'))}"
     )
+    gpa = ratios.get("gross_profit_to_assets")
     lines.append(
         f"  Gross Margin: {_fmt(gm, pct=True)} {_direction_arrow(directions.get('gross_margin', '?'))} | "
         f"Operating Margin: {_fmt(om, pct=True)} {_direction_arrow(directions.get('operating_margin', '?'))} | "
         f"Net Margin: {_fmt(nm, pct=True)} {_direction_arrow(directions.get('net_margin', '?'))}"
+    )
+    lines.append(
+        f"  GP/A (Gross Profit to Assets): {_fmt(gpa, pct=True)}"
     )
     lines.append("")
 

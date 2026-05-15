@@ -180,7 +180,7 @@ def run_concept_cot(
         response = llm.invoke([
             SystemMessage(content=_SYSTEM_PROMPT),
             HumanMessage(content=user_prompt),
-        ])
+        ], temperature=0, seed=42)
         raw_text = response.content if hasattr(response, "content") else str(response)
     except Exception as e:
         logger.warning("concept_cot: LLM call failed: %s", e)

@@ -5,8 +5,9 @@ Computes 14 core ratios + 3 experimental metrics from raw CSV values.
 Returns raw numbers only — no thresholds, no labels, no direction signals.
 All computation is null-safe: returns None on undefined cases.
 
-Core ratios (14):
+Core ratios (15):
   ROE, ROA, gross_margin, operating_margin, net_margin,
+  gross_profit_to_assets,
   debt_to_equity, current_ratio, asset_turnover, equity_multiplier,
   dupont_3factor, eps, pe_ratio, pb_ratio, earnings_yield
 
@@ -84,6 +85,20 @@ class FinancialCalculator:
         if net_income is None or revenue is None or revenue == 0:
             return None
         return net_income / revenue
+
+    @staticmethod
+    def gross_profit_to_assets(
+        gross_profit: Optional[float], total_assets: Optional[float]
+    ) -> Optional[float]:
+        """Gross Profit / Total Assets (GP/A).
+
+        Hanauer & Lauterbach (2019): GP/A outperforms operating profitability
+        ratios in emerging markets. Novy-Marx (2013): GP/A is a cleaner
+        measure of economic profitability than bottom-line metrics.
+        """
+        if gross_profit is None or total_assets is None or total_assets <= 0:
+            return None
+        return gross_profit / total_assets
 
     # ── Leverage & Liquidity ──────────────────────────────────────────────────
 
@@ -372,6 +387,9 @@ class FinancialCalculator:
         roa_computed = cls.roa(net_income, total_assets)
         result["roa"] = roa_computed if roa_computed is not None else roa_csv
         result["_roa_source"] = "computed" if roa_computed is not None else ("csv" if roa_csv is not None else "missing")
+
+        # GP/A — Hanauer & Lauterbach (2019): outperforms operating profitability in EM
+        result["gross_profit_to_assets"] = cls.gross_profit_to_assets(gross_profit, total_assets)
 
         # ── Leverage & Liquidity ─────────────────────────────────────────────
         de = cls.debt_to_equity(total_liabilities, total_equity)
