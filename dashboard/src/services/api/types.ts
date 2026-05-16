@@ -1,5 +1,12 @@
 // Mirrors server/api_server.py payload shapes.
 
+export interface ConfigResponse {
+  config: Record<string, unknown>;
+  available_vendors?: Record<string, string[]>;
+  tool_categories?: Record<string, string[]>;
+  risk_limits?: Record<string, unknown>;
+}
+
 export interface Ticker {
   ticker: string;
   name: string;
@@ -9,27 +16,41 @@ export interface TickersResponse {
   tickers: Ticker[];
 }
 
+export interface HealthMemoryBlock {
+  backend: string;
+  vector_store: string;
+  postgres_vector_required: boolean;
+  chroma_persist_dir?: string | null;
+  chroma_persistent?: boolean | null;
+  chroma_collection_counts?: Record<string, number> | null;
+  chroma_total_documents?: number | null;
+  seeded?: Record<string, boolean>;
+  min_similarity?: number;
+}
+
+export interface HealthPostgresBlock {
+  configured: boolean;
+  reachable: boolean | null;
+  purpose: string;
+  audit_write_lag_seconds?: number | null;
+  backtest_runs_count?: number | null;
+}
+
+export interface HealthRedisBlock {
+  configured: boolean;
+  package_available: boolean;
+  reachable: boolean | null;
+  purpose: string;
+}
+
 export interface HealthResponse {
   status: string;
   timestamp: string;
   egx_tools: boolean;
   diagnostics?: {
-    memory?: {
-      backend: string;
-      vector_store: string;
-      postgres_vector_required: boolean;
-    };
-    postgres?: {
-      configured: boolean;
-      reachable: boolean | null;
-      purpose: string;
-    };
-    redis?: {
-      configured: boolean;
-      package_available: boolean;
-      reachable: boolean | null;
-      purpose: string;
-    };
+    memory?: HealthMemoryBlock;
+    postgres?: HealthPostgresBlock;
+    redis?: HealthRedisBlock;
     degraded: boolean;
     degraded_reasons: string[];
   };
@@ -123,7 +144,22 @@ export interface BacktestTrade {
   action?: string;
   price?: number;
   quantity?: number;
+  shares?: number;
+  exec_price?: number;
+  close_price?: number;
+  value?: number;
+  commission?: number;
+  realized_pnl?: number;
   pnl?: number;
+  signal?: string;
+  confidence?: number;
+  reasoning?: string;
+  // PR C of MEMORY.md §4b — present only when rl_meta_policy_enabled.
+  rl_meta_policy_enabled?: boolean;
+  rl_size_multiplier?: number;
+  rl_action_index?: number;
+  rl_model_fingerprint?: Record<string, unknown> | string;
+  rl_feature_version?: string;
   [k: string]: unknown;
 }
 
@@ -183,4 +219,228 @@ export interface RunBtRequest {
 export interface RunBacktestResponse {
   status: string;
   message: string;
+}
+
+// ── /api/sessions/{id}/trace ───────────────────────────────────────────────
+
+export interface SessionTraceSummary {
+  session_id?: string | null;
+  ticker?: string | null;
+  trade_date?: string | null;
+  market?: string | null;
+  final_decision?: string | null;
+  risk_veto?: boolean | null;
+  confidence_overall?: number | null;
+  confidence_scores?: Record<string, unknown> | null;
+  execution_plan?: Record<string, unknown> | null;
+  risk_assessment?: Record<string, unknown> | null;
+  data_quality?: Record<string, unknown> | null;
+  full_state?: Record<string, unknown> | null;
+  model_fingerprint?: Record<string, unknown> | null;
+  user_id?: string | null;
+  created_at?: string | null;
+}
+
+export interface SessionTraceEvent {
+  event_type?: string | null;
+  agent_name?: string | null;
+  opinion_type?: string | null;
+  opinion_summary?: string | null;
+  confidence_score?: number | null;
+  structured_output?: Record<string, unknown> | null;
+  model_fingerprint?: Record<string, unknown> | null;
+  logged_at?: string | null;
+}
+
+export interface SessionTraceResponse {
+  source: "postgres" | "jsonl" | "none";
+  session: SessionTraceSummary | null;
+  events: SessionTraceEvent[];
+}
+
+// ── /api/results (legacy index of audit-log sessions) ──────────────────────
+
+export interface ResultSessionSummary {
+  ticker: string;
+  session_id: string;
+  trade_date: string;
+  market: string;
+  timestamp: string;
+}
+
+export interface ResultsListResponse {
+  sessions: ResultSessionSummary[];
+}
+
+// ── /api/backtests/{session_id} (PR7) ──────────────────────────────────────
+
+export interface BacktestDetail {
+  session_id: string;
+  ticker?: string;
+  start_date?: string;
+  end_date?: string;
+  engine?: string;
+  metrics: BacktestMetrics;
+  trades: BacktestTrade[];
+  daily_portfolio: EquityPoint[];
+  benchmark_history?: EquityPoint[];
+  audit_log?: unknown[];
+  cost_model?: Record<string, unknown>;
+  [k: string]: unknown;
+}
+
+// ── /api/rl/status and /api/rl/decisions (PR7) ─────────────────────────────
+
+export interface RlStatusResponse {
+  enabled: boolean;
+  model_path: string | null;
+  loaded: boolean;
+  feature_version: string | null;
+  model_fingerprint: Record<string, unknown> | null;
+}
+
+export interface RlDecision {
+  session_id: string;
+  event_type: string;
+  agent_name: string;
+  opinion_summary: string | null;
+  confidence_score: number | null;
+  structured_output: Record<string, unknown> | null;
+  model_fingerprint: Record<string, unknown> | null;
+  logged_at: string | null;
+  ticker: string | null;
+  trade_date: string | null;
+}
+
+export interface RlDecisionsResponse {
+  decisions: RlDecision[];
+  source: "postgres" | "none";
+  reason?: string;
+  ticker?: string | null;
+  session_id?: string | null;
+  total?: number;
+}
+
+// ── /api/memory/{agent}/search and /entries (PR5) ──────────────────────────
+
+export type MemoryAgent =
+  | "bull_memory"
+  | "bear_memory"
+  | "trader_memory"
+  | "invest_judge_memory"
+  | "risk_manager_memory";
+
+export interface MemoryMetadata {
+  ticker?: string;
+  trade_date?: string;
+  memory_type?: string;
+  agent_name?: string;
+  outcome?: unknown;
+  confidence?: number;
+}
+
+export interface MemoryMatch {
+  matched_situation: string;
+  recommendation: string;
+  similarity_score: number;
+  metadata: MemoryMetadata;
+}
+
+export interface MemorySearchResponse {
+  agent_name: MemoryAgent;
+  query: string;
+  ticker: string | null;
+  k: number;
+  min_similarity: number | null;
+  results: MemoryMatch[];
+}
+
+export interface MemoryEntry {
+  id: string | null;
+  situation: string;
+  recommendation: string;
+  metadata: MemoryMetadata;
+  seeded: boolean;
+}
+
+export interface MemoryEntriesResponse {
+  agent_name: MemoryAgent;
+  source: "chroma" | "bm25";
+  ticker: string | null;
+  total: number;
+  entries: MemoryEntry[];
+}
+
+// ── /api/reflections (PR5) ─────────────────────────────────────────────────
+
+export interface Reflection {
+  agent_name: MemoryAgent;
+  situation: string;
+  recommendation: string;
+  ticker: string | null;
+  trade_date: string | null;
+  outcome: unknown;
+  confidence: number | null;
+}
+
+export interface ReflectionsResponse {
+  ticker: string | null;
+  total: number;
+  reflections: Reflection[];
+}
+
+// ── /api/diagnostics/prompts and /api/diagnostics/fingerprints (PR9) ───────
+
+export interface PromptEntry {
+  id: string;
+  title: string;
+  line: number;
+}
+
+export interface PromptsResponse {
+  source: "prompts_md" | "none";
+  path: string;
+  total: number;
+  prompts: PromptEntry[];
+}
+
+export interface FingerprintRow {
+  fingerprint: Record<string, unknown> | null;
+  fingerprint_text: string;
+  first_seen: string | null;
+  last_seen: string | null;
+  event_count: number;
+}
+
+export interface FingerprintDailyCount {
+  day: string | null;
+  events: number;
+  distinct: number;
+}
+
+export interface FingerprintsResponse {
+  source: "postgres" | "none";
+  reason?: string;
+  days: number;
+  total_events: number;
+  distinct_fingerprints: number;
+  fingerprints: FingerprintRow[];
+  daily_counts: FingerprintDailyCount[];
+}
+
+// ── /api/config (PUT) ──────────────────────────────────────────────────────
+
+export interface ConfigUpdateRequest {
+  backend_url?: string;
+  backend_api_key?: string;
+  deep_think_model?: string;
+  quick_think_model?: string;
+  target_market?: string;
+  data_vendors?: Record<string, string>;
+  online_tools?: boolean;
+}
+
+export interface ConfigUpdateResponse {
+  status: string;
+  applied: string[];
 }

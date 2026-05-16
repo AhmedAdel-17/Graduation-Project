@@ -4,7 +4,11 @@ import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import App from "./App";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { initI18n } from "./lib/i18n";
 import "./index.css";
+
+initI18n();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,21 +22,25 @@ const queryClient = new QueryClient({
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-        <Toaster
-          theme="dark"
-          position="top-right"
-          toastOptions={{
-            style: {
-              background: "#151a22",
-              border: "1px solid #2a3345",
-              color: "#e6e9ef",
-            },
-          }}
-        />
-      </BrowserRouter>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <App />
+          <Toaster
+            theme="light"
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                color: "#0f172a",
+                boxShadow:
+                  "0 4px 16px -2px rgba(15,23,42,0.08), 0 2px 4px -1px rgba(15,23,42,0.04)",
+              },
+            }}
+          />
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 );

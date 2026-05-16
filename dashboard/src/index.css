@@ -1,48 +1,138 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;600&family=Cairo:wght@400;500;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    color-scheme: dark;
+    color-scheme: light;
+    --bg: #F6F5F1;
+    --paper: #FFFFFF;
+    --ink: #0A0A0B;
+    --ink-2: #44403C;
+    --ink-3: #78716C;
+    --hairline: #EAE7E1;
+    --hairline-2: #D6D3CE;
+    --accent: #1A1A1A;
   }
-  html, body, #root {
-    height: 100%;
-  }
+  html, body, #root { height: 100%; }
   body {
+    font-family: "Inter", system-ui, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
-    background:
-      radial-gradient(1200px 600px at 85% -10%, rgba(16, 185, 129, 0.06), transparent 60%),
-      radial-gradient(900px 500px at -10% 10%, rgba(124, 156, 255, 0.05), transparent 55%),
-      #0a0d12;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html[dir="rtl"] body {
+    font-family: "Cairo", "Inter", system-ui, sans-serif;
+  }
+
+  .num, [class*="num"] {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  :where(button, a, [role="button"], [role="tab"]):focus-visible {
+    outline: 2px solid rgba(15, 15, 15, 0.6);
+    outline-offset: 2px;
+    border-radius: 6px;
   }
 
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #1f2633; border-radius: 8px; }
-  ::-webkit-scrollbar-thumb:hover { background: #2a3345; }
+  ::-webkit-scrollbar-thumb { background: #D6D3CE; border-radius: 8px; border: 2px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover { background: #A8A29E; }
 }
 
 @layer components {
+  .display {
+    font-family: "Fraunces", "Inter", serif;
+    font-feature-settings: "ss01", "ss02";
+    letter-spacing: -0.02em;
+  }
+  .display-num {
+    font-family: "Fraunces", "JetBrains Mono", serif;
+    font-feature-settings: "tnum", "ss01";
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.025em;
+  }
+  .mono {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
   .surface {
-    @apply bg-ink-900/60 border border-line backdrop-blur-sm;
+    background: var(--paper);
+    border: 1px solid var(--hairline);
   }
-  .surface-strong {
-    @apply bg-ink-800/80 border border-line-strong;
+  .ltr-island { direction: ltr; }
+
+  /* Subtle paper grain — adds tactile warmth without being noisy */
+  .grain {
+    position: relative;
   }
-  .num {
-    @apply font-mono tabular-nums;
+  .grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.35;
+    mix-blend-mode: multiply;
+    background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,0.025) 1px, transparent 0);
+    background-size: 6px 6px;
+    border-radius: inherit;
+  }
+
+  /* Hairline divider */
+  .hairline { border-color: var(--hairline); }
+
+  /* Ticker label chip */
+  .eyebrow {
+    @apply text-[10.5px] font-semibold tracking-[0.18em] uppercase text-stone-500;
+  }
+
+  .card {
+    @apply bg-white border border-stone-200/80 rounded-2xl;
+    box-shadow:
+      0 1px 0 0 rgba(0, 0, 0, 0.02),
+      0 1px 2px 0 rgba(15, 15, 15, 0.04);
+  }
+  .card-elevated {
+    @apply bg-white border border-stone-200/80 rounded-2xl;
+    box-shadow:
+      0 1px 0 0 rgba(0, 0, 0, 0.02),
+      0 4px 12px -2px rgba(15, 15, 15, 0.06),
+      0 16px 40px -12px rgba(15, 15, 15, 0.08);
   }
 }
 
 @layer utilities {
+  .text-ink { color: var(--ink); }
+  .text-ink-2 { color: var(--ink-2); }
+  .text-ink-3 { color: var(--ink-3); }
+  .bg-paper { background: var(--paper); }
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .anim-fade-up { animation: fade-up 360ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.4; transform: scale(0.9); }
+  }
+  .anim-pulse-dot { animation: pulse-dot 1.8s ease-in-out infinite; }
+
+  @keyframes shimmer {
+    0%   { background-position: -800px 0; }
+    100% { background-position: 800px 0; }
+  }
   .skeleton {
-    background: linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.03) 0,
-      rgba(255, 255, 255, 0.06) 50%,
-      rgba(255, 255, 255, 0.03) 100%
-    );
-    background-size: 1000px 100%;
+    background: linear-gradient(90deg, #EAE7E1 0%, #F4F1EB 50%, #EAE7E1 100%);
+    background-size: 800px 100%;
+    animation: shimmer 1.6s linear infinite;
   }
 }

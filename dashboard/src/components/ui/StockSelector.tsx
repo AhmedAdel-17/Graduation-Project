@@ -10,6 +10,7 @@ export interface StockSelectorProps {
   className?: string;
   label?: string;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 export function StockSelector({
@@ -18,6 +19,7 @@ export function StockSelector({
   className,
   label,
   placeholder = "Search EGX tickers…",
+  disabled = false,
 }: StockSelectorProps) {
   const { data: tickers = [], isLoading } = useTickers();
   const [open, setOpen] = useState(false);
@@ -53,11 +55,13 @@ export function StockSelector({
       <div className="relative">
         <button
           type="button"
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => !disabled && setOpen((v) => !v)}
+          disabled={disabled}
           className={cn(
             "w-full flex items-center justify-between gap-2 rounded-lg bg-ink-800/80",
             "border border-line hover:border-line-strong transition-colors",
             "px-3 h-10 text-sm text-left",
+            "disabled:opacity-50 disabled:cursor-not-allowed",
             open && "border-brand-500/50"
           )}
         >

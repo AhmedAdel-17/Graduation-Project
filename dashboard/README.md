@@ -1,97 +1,125 @@
-# EGX Trading Intelligence — Dashboard
+# EGX Research Console — Dashboard
 
-Production-grade dashboard for the EGX Multi-Agent Stock Prediction System.
-Built with **Vite + React 19 + TypeScript**, **TailwindCSS**, **Zustand**,
-**TanStack Query**, **react-router-dom**, and **lightweight-charts**.
+Bilingual, evidence-first dashboard for the EGX Multi-Agent Stock Prediction
+System. Built with **React 19 + Vite + TypeScript + Tailwind**, with TanStack
+Query for server state, Zustand for app state, lightweight-charts for price
+and equity rendering, and a native WebSocket bridge to the LangGraph agent
+stream.
+
+This is an **AI-augmented research console**, not an order-execution system.
+Every recommendation must be reviewed by a human PM before any trade is
+placed. See the disclaimer ribbon and `agent_docs/dashboard.md` for the
+audit-deferred caveat list.
+
+---
 
 ## Features
 
-1. **Prediction** (`/`) — Pick any EGX ticker, run the multi-agent pipeline,
-   and view the signal, confidence, target/stop prices, indicators, and the
-   bull / bear / judge thesis alongside a candlestick history + projection chart.
-2. **Backtesting** (`/backtest`) — User-driven: choose stock, horizon, and
-   capital. Shows profit/loss, ROI, Sharpe, drawdown, win-rate, and equity curve.
-3. **Advanced Backtesting** (`/backtest/advanced`) — Script execution with
-   live runtime log, configurable date range/interval/analysts, and a dual
-   trigger for the LLM pipeline and the classical Backtrader benchmark.
+- **Workspace** (`/workspace`) — Tabbed ticker research: Overview · Reasoning
+  · Fundamentals · Sentiment · Memory · History. Last agent run rendered
+  evidence-first, with model fingerprints and prompt IDs exposed for audit.
+- **Live Run** (`/run`) — WebSocket-streamed multi-agent execution, 13-node
+  timeline + token-by-token reasoning canvas.
+- **Sessions** (`/sessions` · `/sessions/:id`) — Audit history of every past
+  graph run, frozen in time.
+- **Backtest Lab** (`/backtest` · `/backtest/new` · `/backtest/:runId` ·
+  `/backtest/compare`) — LLM strategy vs classical Backtrader benchmark, with
+  RL meta-policy drill-down when enabled.
+- **Universe** (`/universe`) — EGX-30 browser with sector + liquidity-tier
+  filters and bulk quick-predict.
+- **Diagnostics** (`/diagnostics`) — `/api/health` payload in full + prompt
+  registry + model-fingerprint drift sparkline.
+- **Settings** (`/settings`) — `GET`/`PUT /api/config`, locale, EGX risk
+  limits, build identity.
+
+Bilingual (EN / AR with full RTL flip). Disclaimer modal + persistent
+ribbon. Model + git-SHA footer on every page.
 
 ## Prerequisites
 
-- Node.js 18+
-- Python 3.10+ with the project's existing environment (FastAPI backend)
+- Node 18+
+- The project's Python environment (FastAPI backend)
 
 ## Run locally
 
 ```bash
-# 1. Start the backend (from project root — see project README)
-uvicorn server.api_server:app --reload
-# Backend listens on http://localhost:8000
+# From repo root
+uvicorn server.api_server:app --reload --port 8000
 
-# 2. Start the dashboard (from this directory)
-npm install    # first time only
+# From this directory
+npm install
 npm run dev
-# Dashboard listens on http://localhost:5173
+# http://localhost:5173
 ```
 
-The Vite dev server proxies `/api/**` to `http://localhost:8000`, so CORS
-is a non-issue in development.
+Vite proxies `/api/**` to `http://localhost:8000` and forwards
+`/api/analyze` as a WebSocket. CORS is not an issue in development.
 
 ## Environment
 
-To point at a different backend:
-
 ```bash
 # .env.local
-VITE_API_BASE=https://my-api.example.com/api
+VITE_API_BASE=/api              # or https://your-api/api in production
+VITE_GIT_SHA=$(git rev-parse --short HEAD)
 ```
 
-## Architecture
-
-```
-src/
-├── components/
-│   ├── ui/         Button, Card, Input, Select, Badge, Skeleton, Spinner,
-│   │               StockSelector, MetricsCard, EmptyState
-│   ├── layout/     AppShell, Sidebar, TopBar, MobileNav
-│   └── charts/     PriceChart (candlestick+volume), EquityCurve
-├── features/
-│   ├── prediction/ PredictionPage, PredictionCard, SignalBadge, ThesisPanel
-│   ├── backtest/   BacktestPage, BacktestForm, MetricsGrid, BacktestResult
-│   └── advanced/   AdvancedBacktestPage, LogConsole
-├── services/api/   client (fetch wrapper), endpoints, types
-├── hooks/          useTickers, usePrediction, useStockData, useBacktest
-├── store/          appStore (Zustand + persist)
-└── lib/            utils (cn, currency / percent / number formatters)
-```
-
-## Backend endpoints consumed
-
-| Endpoint | Method | Used in |
-|---|---|---|
-| `/api/health` | GET | TopBar (status pill) |
-| `/api/test/egx-tickers` | GET | Stock selector |
-| `/api/test/random-egx` | POST | Prediction page |
-| `/api/stock/{ticker}` | GET | Prediction chart |
-| `/api/backtests` | GET | Backtest list, polling |
-| `/api/backtests/compare/{ticker}` | GET | Backtest results |
-| `/api/backtests/run` | POST | Run multi-agent backtest |
-| `/api/backtests/run-bt` | POST | Run classical benchmark |
+`VITE_GIT_SHA` shows up in the footer of every page so the build that
+produced a screenshot can be reproduced.
 
 ## Scripts
 
 ```bash
 npm run dev      # Vite dev server + HMR
-npm run build    # Type-check + production build → dist/
+npm run build    # tsc -b && vite build → dist/
 npm run preview  # Preview production build
 npm run lint     # ESLint
 ```
 
-## Notes on the stack
+## Documentation
 
-The project brief mentioned Next.js. This repo was already scaffolded with
-Vite + React 19 + TypeScript (with Zustand, TanStack Query, lightweight-charts,
-and react-router-dom already installed) — we built on that rather than
-rewriting the scaffolding. For a pure-SPA dashboard with no server-rendered
-pages, Vite is a leaner choice and delivers the same developer experience.
-Migrating to Next.js is straightforward if SSR/ISR is needed later: the
-feature folders, services/api layer, and hooks are framework-agnostic.
+- [`docs/architecture.md`](docs/architecture.md) — stack, state management,
+  WS protocol on the client
+- [`docs/design-system.md`](docs/design-system.md) — tokens, primitives,
+  theming, RTL rules
+- [`docs/api-integration.md`](docs/api-integration.md) — endpoint catalog,
+  query keys, mutation invalidations
+- [`docs/extending.md`](docs/extending.md) — how to add a page, chart,
+  hook, locale
+- [`docs/onboarding.md`](docs/onboarding.md) — analyst walkthrough +
+  manual smoke gauntlet
+
+Backend perspective on the new endpoints + the auth-deferred caveat lives
+in [`agent_docs/dashboard.md`](../agent_docs/dashboard.md).
+
+## Backend endpoints consumed
+
+| Endpoint | Method | Hook | Page |
+|---|---|---|---|
+| `/health` | GET | `useHealth` | TopBar, Diagnostics |
+| `/config` | GET / PUT | `useConfig` / `useUpdateConfig` | Settings, Footer |
+| `/test/egx-tickers` | GET | `useTickers` | StockSelector |
+| `/test/random-egx` | POST | `useRunPrediction` | Universe bulk-run |
+| `/stock/{ticker}` | GET | inline | Workspace Overview |
+| `/results` | GET | `useResultsIndex` | Sessions, Universe |
+| `/sessions/{id}/trace` | GET | `useSessionTrace` | Workspace, Sessions detail |
+| `/memory/{agent}/search` · `/entries` · `/reflections` | GET | `useAgentMemoryFanout`, `useReflections` | Workspace > Memory |
+| `/backtests` · `/backtests/{id}` · `/backtests/compare/{ticker}` | GET | `useBacktests`, `useBacktestDetail`, `useBacktestCompare` | Backtest Lab |
+| `/backtests/run` · `/backtests/run-bt` | POST | `useRunBacktest`, `useRunBtBenchmark` | New Backtest |
+| `/rl/status` · `/rl/decisions` | GET | `useRlStatus`, `useRlDecisions` | Diagnostics, Backtest Detail |
+| `/diagnostics/prompts` · `/diagnostics/fingerprints` | GET | `usePrompts`, `useFingerprints` | Diagnostics |
+| `/analyze` | WS | `useAgentStream` | Live Run |
+
+## Architecture (one paragraph)
+
+Pages compose `<AppShell>` (Sidebar + TopBar + MobileNav + Footer + disclaimer
+ribbon) around feature components. Server state is TanStack Query keyed by
+the natural axis (`["sessionTrace", id]`, `["backtest-detail", id]`, etc.) —
+see [`docs/api-integration.md`](docs/api-integration.md) §3. App state lives
+in a tiny Zustand store (`selectedTicker`, `initialCapital`). Locale lives in
+a hand-rolled external store consumed via `useSyncExternalStore`. WebSocket
+state lives in the `useAgentStream` hook only.
+
+## Status
+
+Built incrementally across PRs 1–10. See `MEMORY.md` and the project plan
+file for the audit log of decisions and known limitations.

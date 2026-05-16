@@ -2,6 +2,8 @@ import React from "react";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { MobileNav } from "./MobileNav";
+import { SiteFooter } from "./SiteFooter";
+import { DisclaimerRibbon } from "./Disclaimer";
 
 export function AppShell({
   title,
@@ -17,10 +19,12 @@ export function AppShell({
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar title={title} subtitle={subtitle} />
+        <DisclaimerRibbon />
         <MobileNav />
         <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-7xl w-full mx-auto animate-fade-in">
           {children}
         </main>
+        <SiteFooter />
       </div>
     </div>
   );

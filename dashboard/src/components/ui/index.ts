@@ -8,3 +8,13 @@ export * from "./Spinner";
 export * from "./EmptyState";
 export * from "./StockSelector";
 export * from "./MetricsCard";
+// PR1 additions
+export * from "./Tabs";
+export * from "./Tooltip";
+export * from "./Dialog";
+export * from "./Drawer";
+export * from "./JSONViewer";
+export * from "./Markdown";
+export * from "./Gauge";
+export * from "./StatusPill";
+export * from "./LocaleToggle";

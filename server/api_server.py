@@ -14,7 +14,9 @@ import json
 import asyncio
 import logging
 import importlib.util
+import re
 import socket
+import time
 
 # Load .env before any tradingagents import so keys are available at module init
 try:
@@ -388,6 +390,8 @@ def _normalize_llm_report(report: Dict[str, Any], *, session_id: str) -> Dict[st
                 "price": _parse_float(price),
                 "quantity": int(qty) if isinstance(qty, (int, float)) and qty is not None else qty,
                 "pnl": _parse_float(pnl),
+                "confidence": _parse_float(t.get("confidence")),
+                "reasoning": t.get("reasoning"),
             }
         )
 
@@ -783,6 +787,182 @@ async def list_results():
     return {"sessions": sorted(sessions, key=lambda s: s["timestamp"], reverse=True)}
 
 
+@app.get("/api/sessions/{session_id}/trace")
+async def get_session_trace(session_id: str):
+    """
+    Return the full reasoning trace for one analysis session.
+
+    Primary source: Postgres (analysis_sessions + agent_events, written by
+    tradingagents.db.audit_writer when POSTGRES_URL is configured — see
+    MEMORY.md PR 5).
+    Fallback source: audit_logs/<ticker>/audit_log.jsonl files (legacy on-disk
+    audit trail).
+
+    Response shape:
+        {
+            "source": "postgres" | "jsonl" | "none",
+            "session": { session_id, ticker, trade_date, final_decision, ... }
+                       | null,
+            "events":  [ { agent_name, event_type, structured_output, ... } ]
+        }
+    """
+    # ── Postgres path ─────────────────────────────────────────────────────
+    try:
+        from tradingagents.db import is_postgres_available
+        from tradingagents.db.connection import cursor as db_cursor
+        pg_ok = is_postgres_available()
+    except Exception:
+        pg_ok = False
+
+    if pg_ok:
+        try:
+            session: Optional[Dict[str, Any]] = None
+            events: List[Dict[str, Any]] = []
+            with db_cursor(dict_cursor=True) as cur:
+                cur.execute(
+                    """
+                    SELECT session_id, ticker, trade_date, market,
+                           final_decision, risk_veto, confidence_overall,
+                           confidence_scores, execution_plan, risk_assessment,
+                           data_quality, full_state, model_fingerprint, user_id,
+                           created_at
+                      FROM analysis_sessions
+                     WHERE session_id = %s
+                     LIMIT 1
+                    """,
+                    (session_id,),
+                )
+                row = cur.fetchone()
+                if row is not None:
+                    session = _trace_row_to_dict(row)
+
+                cur.execute(
+                    """
+                    SELECT event_type, agent_name, opinion_type, opinion_summary,
+                           confidence_score, structured_output, model_fingerprint,
+                           logged_at
+                      FROM agent_events
+                     WHERE session_id = %s
+                     ORDER BY logged_at ASC, id ASC
+                    """,
+                    (session_id,),
+                )
+                for ev in cur.fetchall():
+                    events.append(_trace_row_to_dict(ev))
+
+            if session is not None:
+                return {"source": "postgres", "session": session, "events": events}
+        except Exception as exc:
+            logger.warning("Postgres trace lookup failed for %s: %s", session_id, exc)
+
+    # ── JSONL fallback ────────────────────────────────────────────────────
+    audit_dir = PROJECT_ROOT / "audit_logs"
+    if audit_dir.exists():
+        session_entry: Optional[Dict[str, Any]] = None
+        entries: List[Dict[str, Any]] = []
+        ticker_found: Optional[str] = None
+        for ticker_dir in audit_dir.iterdir():
+            if not ticker_dir.is_dir():
+                continue
+            jsonl_path = ticker_dir / "audit_log.jsonl"
+            if not jsonl_path.exists():
+                continue
+            try:
+                with open(jsonl_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        try:
+                            entry = json.loads(line.strip())
+                        except json.JSONDecodeError:
+                            continue
+                        if entry.get("_session_id") != session_id:
+                            continue
+                        ticker_found = ticker_dir.name
+                        if entry.get("event") == "SESSION_START":
+                            session_entry = entry
+                        entries.append(entry)
+            except OSError:
+                continue
+            if entries:
+                break
+
+        if entries:
+            return {
+                "source": "jsonl",
+                "session": _jsonl_to_session(session_entry, ticker_found, entries),
+                "events": [_jsonl_entry_to_event(e) for e in entries],
+            }
+
+    raise HTTPException(404, f"Session {session_id} not found")
+
+
+def _trace_row_to_dict(row: Any) -> Dict[str, Any]:
+    """Convert a psycopg2 DictRow into a JSON-safe dict.
+
+    Decimal -> float (audit numbers fit comfortably in float64);
+    date / datetime -> ISO 8601 string;
+    everything else passes through.
+    """
+    from decimal import Decimal
+    out: Dict[str, Any] = {}
+    for key in row.keys():
+        value = row[key]
+        if isinstance(value, Decimal):
+            out[key] = float(value)
+        elif isinstance(value, (datetime,)):
+            out[key] = value.isoformat()
+        elif hasattr(value, "isoformat"):  # date
+            out[key] = value.isoformat()
+        else:
+            out[key] = value
+    return out
+
+
+def _jsonl_to_session(
+    session_entry: Optional[Dict[str, Any]],
+    ticker: Optional[str],
+    all_entries: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Build a session-row-shaped dict from JSONL audit entries."""
+    # Pull final decision + confidence from the last entry that carries them.
+    final_decision: Optional[str] = None
+    confidence_overall: Optional[float] = None
+    full_state: Optional[Dict[str, Any]] = None
+    for entry in all_entries:
+        if entry.get("final_trade_decision"):
+            final_decision = str(entry["final_trade_decision"])
+        if "confidence_scores" in entry and isinstance(entry["confidence_scores"], dict):
+            confidence_overall = entry["confidence_scores"].get("overall")
+        if entry.get("event") == "FINAL_STATE" and isinstance(entry.get("state"), dict):
+            full_state = entry["state"]
+
+    start = session_entry or (all_entries[0] if all_entries else {})
+    return {
+        "session_id": start.get("_session_id"),
+        "ticker": ticker or start.get("ticker"),
+        "trade_date": start.get("trade_date"),
+        "market": start.get("market") or "EGX",
+        "final_decision": final_decision,
+        "confidence_overall": confidence_overall,
+        "full_state": full_state,
+        "model_fingerprint": start.get("model_fingerprint"),
+        "created_at": start.get("_logged_at"),
+    }
+
+
+def _jsonl_entry_to_event(entry: Dict[str, Any]) -> Dict[str, Any]:
+    """Project a JSONL line into the agent_events response shape."""
+    return {
+        "event_type": entry.get("event") or "unknown",
+        "agent_name": entry.get("_agent") or entry.get("agent"),
+        "opinion_type": entry.get("opinion_type"),
+        "opinion_summary": entry.get("opinion_summary") or entry.get("summary"),
+        "confidence_score": entry.get("confidence_score"),
+        "structured_output": entry,
+        "model_fingerprint": entry.get("model_fingerprint"),
+        "logged_at": entry.get("_logged_at"),
+    }
+
+
 @app.get("/api/results/{ticker}/{session_id}")
 async def get_result_detail(ticker: str, session_id: str):
     """Get detailed results for a specific analysis session."""
@@ -819,6 +999,585 @@ async def get_result_detail(ticker: str, session_id: str):
         "session_id": session_id,
         "entries": entries,
         "markdown_summary": markdown_summary,
+    }
+
+
+# =============================================================================
+# Agent Memory + Reflection Endpoints (PR5)
+# =============================================================================
+#
+# Read-only surfaces over tradingagents.agents.utils.memory.FinancialSituationMemory.
+# Five canonical collections, matching trading_graph.py:
+#   bull_memory, bear_memory, trader_memory, invest_judge_memory, risk_manager_memory
+#
+# We lazily instantiate each collection on first request and cache for the
+# process lifetime so we don't pay the Chroma/BM25 init cost on every call.
+
+# Lazy module-level cache. Keyed by agent_name; populated on demand.
+_MEMORY_INSTANCES: Dict[str, Any] = {}
+
+# Allowlist of agent_name path-parameters. Anything outside this set is rejected
+# at the boundary so a typo can't accidentally spawn a new Chroma collection.
+_MEMORY_AGENT_ALLOWLIST = frozenset({
+    "bull_memory",
+    "bear_memory",
+    "trader_memory",
+    "invest_judge_memory",
+    "risk_manager_memory",
+})
+
+
+def _get_memory(agent_name: str):
+    """Return a cached FinancialSituationMemory for the named collection.
+
+    Lazy-instantiates on first call. The same `config` used by the graph
+    drives Chroma path / embedding backend / seed-corpus behaviour.
+    """
+    if agent_name in _MEMORY_INSTANCES:
+        return _MEMORY_INSTANCES[agent_name]
+    # Import inside the function so test suites that don't exercise memory
+    # don't pay the chromadb import cost at module load.
+    from tradingagents.agents.utils.memory import FinancialSituationMemory
+    memory = FinancialSituationMemory(agent_name, get_config())
+    _MEMORY_INSTANCES[agent_name] = memory
+    return memory
+
+
+@app.get("/api/memory/{agent_name}/search")
+async def memory_search(
+    agent_name: str,
+    ticker: Optional[str] = Query(default=None),
+    q: Optional[str] = Query(default=None, description="Free-text query; defaults to a ticker-shaped probe"),
+    k: int = Query(default=5, ge=1, le=50),
+    min_similarity: Optional[float] = Query(default=None, ge=0.0, le=1.0),
+):
+    """Top-K vector + BM25 similarity search over one agent's memory.
+
+    Mirrors `FinancialSituationMemory.get_memories(...)`. When `ticker` is
+    supplied we add a Chroma metadata filter so seeded/reflection rows for
+    other tickers are excluded. Both `q` and `ticker` are optional; if both
+    are omitted we use a generic probe to surface the agent's own seed
+    corpus (cold-start UX).
+    """
+    if agent_name not in _MEMORY_AGENT_ALLOWLIST:
+        raise HTTPException(
+            400,
+            f"Unknown memory collection '{agent_name}'. Allowed: "
+            + ", ".join(sorted(_MEMORY_AGENT_ALLOWLIST)),
+        )
+
+    memory = _get_memory(agent_name)
+    effective_q = q or (f"Recent context for {ticker}" if ticker else "EGX context")
+    where = {"ticker": ticker} if ticker else None
+    threshold = float(min_similarity) if min_similarity is not None else None
+
+    try:
+        raw = memory.get_memories(
+            effective_q,
+            n_matches=k,
+            where=where,
+            min_similarity=threshold,
+        )
+    except Exception as exc:
+        logger.warning("memory search failed (%s): %s", agent_name, exc)
+        raise HTTPException(500, f"memory search failed: {exc}")
+
+    return {
+        "agent_name": agent_name,
+        "query": effective_q,
+        "ticker": ticker,
+        "k": k,
+        "min_similarity": threshold,
+        "results": raw,
+    }
+
+
+@app.get("/api/memory/{agent_name}/entries")
+async def memory_entries(
+    agent_name: str,
+    ticker: Optional[str] = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=500),
+):
+    """List recent entries from one agent's collection (Chroma + BM25 seeds).
+
+    No similarity query — this is a raw dump for the Memory tab's "seeded
+    vs learned" split. Seeds are surfaced from the in-memory BM25 corpus
+    (PR8 of the DB-infra pass); learned rows come from Chroma when
+    embeddings are enabled, or from the same BM25 corpus when not.
+
+    Each entry's `memory_type` ∈ {thesis, execution, risk_decision,
+    reflection} lets the UI separate operator-curated seeds from runtime
+    writes.
+    """
+    if agent_name not in _MEMORY_AGENT_ALLOWLIST:
+        raise HTTPException(
+            400,
+            f"Unknown memory collection '{agent_name}'",
+        )
+
+    memory = _get_memory(agent_name)
+    entries: List[Dict[str, Any]] = []
+    source = "chroma" if memory.embeddings_enabled else "bm25"
+
+    if memory.embeddings_enabled:
+        try:
+            # collection.get() returns {ids, documents, metadatas} for matching
+            # rows. We cap with `limit` defensively.
+            get_kwargs: Dict[str, Any] = {
+                "limit": limit,
+                "include": ["metadatas", "documents"],
+            }
+            if ticker:
+                get_kwargs["where"] = {"ticker": ticker}
+            result = memory.situation_collection.get(**get_kwargs)
+            ids = result.get("ids") or []
+            docs = result.get("documents") or []
+            metas = result.get("metadatas") or []
+            for i, doc in enumerate(docs):
+                row_id = ids[i] if i < len(ids) else None
+                meta = metas[i] if i < len(metas) else {}
+                entries.append({
+                    "id": row_id,
+                    "situation": doc,
+                    "recommendation": meta.get("recommendation", ""),
+                    "metadata": {
+                        k: meta.get(k)
+                        for k in memory.METADATA_KEYS
+                        if meta.get(k) is not None
+                    },
+                    "seeded": isinstance(row_id, str) and row_id.startswith("seed_"),
+                })
+        except Exception as exc:
+            logger.warning("chroma scan failed (%s): %s", agent_name, exc)
+    else:
+        # BM25-only path (embedding-disabled backends like DeepSeek/Groq).
+        for idx, (doc, meta) in enumerate(memory._bm25_corpus):
+            if ticker and meta.get("ticker") != ticker:
+                continue
+            if len(entries) >= limit:
+                break
+            entries.append({
+                "id": f"bm25_{idx}",
+                "situation": doc,
+                "recommendation": meta.get("recommendation", ""),
+                "metadata": {
+                    k: meta.get(k)
+                    for k in memory.METADATA_KEYS
+                    if meta.get(k) is not None
+                },
+                "seeded": meta.get("memory_type") not in {"reflection", "thesis", "execution", "risk_decision"},
+            })
+
+    return {
+        "agent_name": agent_name,
+        "source": source,
+        "ticker": ticker,
+        "total": len(entries),
+        "entries": entries,
+    }
+
+
+@app.get("/api/reflections")
+async def list_reflections(
+    ticker: Optional[str] = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=200),
+):
+    """List recent reflection rows across every agent's memory collection.
+
+    Reflections are written post-trade by `tradingagents.graph.reflection`
+    with `memory_type='reflection'`. We walk all five collections, filter
+    on the reflection memory_type, and return the union sorted by
+    trade_date desc.
+    """
+    rows: List[Dict[str, Any]] = []
+    for agent_name in sorted(_MEMORY_AGENT_ALLOWLIST):
+        try:
+            memory = _get_memory(agent_name)
+        except Exception as exc:
+            logger.warning("memory init failed (%s): %s", agent_name, exc)
+            continue
+
+        try:
+            if memory.embeddings_enabled:
+                where: Dict[str, Any] = {"memory_type": "reflection"}
+                if ticker:
+                    where = {
+                        "$and": [
+                            {"memory_type": "reflection"},
+                            {"ticker": ticker},
+                        ]
+                    }
+                result = memory.situation_collection.get(
+                    where=where,
+                    limit=limit,
+                    include=["metadatas", "documents"],
+                )
+                docs = result.get("documents") or []
+                metas = result.get("metadatas") or []
+                for i, doc in enumerate(docs):
+                    meta = metas[i] if i < len(metas) else {}
+                    rows.append(_reflection_row(agent_name, doc, meta))
+            else:
+                # BM25 corpus walk — mostly seeds + any learned reflections.
+                for doc, meta in memory._bm25_corpus:
+                    if meta.get("memory_type") != "reflection":
+                        continue
+                    if ticker and meta.get("ticker") != ticker:
+                        continue
+                    rows.append(_reflection_row(agent_name, doc, meta))
+        except Exception as exc:
+            logger.warning("reflection scan failed (%s): %s", agent_name, exc)
+            continue
+
+    # Sort by trade_date desc when present, then by agent_name for determinism.
+    def _sort_key(r: Dict[str, Any]) -> tuple:
+        td = r.get("trade_date") or ""
+        return (td, r.get("agent_name") or "")
+    rows.sort(key=_sort_key, reverse=True)
+    return {
+        "ticker": ticker,
+        "total": len(rows),
+        "reflections": rows[:limit],
+    }
+
+
+def _reflection_row(agent_name: str, situation: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+    """Project an agent memory row into the reflection response shape."""
+    return {
+        "agent_name": agent_name,
+        "situation": situation,
+        "recommendation": metadata.get("recommendation", ""),
+        "ticker": metadata.get("ticker"),
+        "trade_date": metadata.get("trade_date"),
+        "outcome": metadata.get("outcome"),
+        "confidence": metadata.get("confidence"),
+    }
+
+
+# =============================================================================
+# RL Meta-Policy Endpoints (PR7)
+# =============================================================================
+#
+# Two read-only endpoints over the offline-RL meta-policy artefacts that
+# already exist in this repo:
+#
+#   - tradingagents.default_config carries the env-backed flag + model path
+#   - agent_events rows with event_type='rl_meta_size_adjustment' carry the
+#     per-decision size multiplier + Q-values + model fingerprint
+#     (MEMORY.md §4b PR C, tradingagents.db.audit_writer.write_rl_meta_event)
+#   - scripts/backtester.py optionally records the same fields on trades.
+#
+# Both endpoints degrade gracefully when Postgres is unreachable: status
+# always returns the env flag; decisions returns an empty list rather than
+# 500.
+
+
+@app.get("/api/rl/status")
+async def get_rl_status():
+    """Surface the RL meta-policy flag, model path, and (when loaded) the
+    current policy's fingerprint.
+
+    The dashboard footer and Diagnostics page use this to render an
+    "RL ON / OFF" pill and the model's `weights_sha256_16` so operators can
+    correlate trades against a specific checkpoint.
+    """
+    config = get_config()
+    enabled = bool(config.get("rl_meta_policy_enabled"))
+    model_path = config.get("rl_model_path") or os.environ.get("RL_MODEL_PATH", "")
+
+    fingerprint: Optional[Dict[str, Any]] = None
+    feature_version: Optional[str] = None
+    if enabled and model_path:
+        # Best-effort load. We don't want a missing checkpoint to crash the
+        # health surface — if the file is gone or torch isn't available we
+        # report `loaded=False` and let the UI render a warning.
+        try:
+            from tradingagents.rl.policy import RLSizingPolicy
+
+            policy = RLSizingPolicy.load(model_path)
+            fingerprint = dict(getattr(policy, "model_fingerprint", {}) or {})
+            feature_version = str(getattr(policy, "feature_version", "") or "")
+        except Exception as exc:
+            logger.info("rl_status: policy load failed (%s)", exc)
+
+    # When we couldn't load the file, surface the path so the operator can
+    # check existence themselves.
+    return {
+        "enabled": enabled,
+        "model_path": model_path or None,
+        "loaded": fingerprint is not None,
+        "feature_version": feature_version,
+        "model_fingerprint": fingerprint,
+    }
+
+
+@app.get("/api/rl/decisions")
+async def list_rl_decisions(
+    ticker: Optional[str] = Query(default=None),
+    session_id: Optional[str] = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=500),
+):
+    """List recent RL meta-policy decisions from agent_events.
+
+    Each row was written by ``tradingagents.db.audit_writer.write_rl_meta_event``
+    with ``event_type='rl_meta_size_adjustment'``. Optional filters:
+
+    - ``ticker``   — joins via ``analysis_sessions`` so the table's ticker
+                     column does the filtering even though agent_events
+                     doesn't carry the ticker directly.
+    - ``session_id`` — exact match on the originating graph session.
+
+    Returns ``[]`` (200, not 500) when Postgres is unreachable, so the
+    backtest-detail RL panel can render a graceful empty state without
+    bringing down the rest of the page.
+    """
+    try:
+        from tradingagents.db import is_postgres_available
+        from tradingagents.db.connection import cursor as db_cursor
+        pg_ok = is_postgres_available()
+    except Exception:
+        pg_ok = False
+
+    if not pg_ok:
+        return {
+            "decisions": [],
+            "source": "none",
+            "reason": "postgres_unavailable",
+        }
+
+    # The session join is only needed when filtering by ticker; otherwise we
+    # skip it for a cheaper scan.
+    sql = (
+        "SELECT ae.session_id, ae.event_type, ae.agent_name, "
+        "       ae.opinion_summary, ae.confidence_score, ae.structured_output, "
+        "       ae.model_fingerprint, ae.logged_at"
+    )
+    params: List[Any] = []
+    if ticker:
+        sql += (
+            ", s.ticker, s.trade_date "
+            " FROM agent_events ae "
+            " LEFT JOIN analysis_sessions s ON s.session_id = ae.session_id "
+            " WHERE ae.event_type = %s AND s.ticker = %s"
+        )
+        params.extend(["rl_meta_size_adjustment", ticker])
+    else:
+        sql += (
+            ", NULL::text AS ticker, NULL::date AS trade_date "
+            " FROM agent_events ae "
+            " WHERE ae.event_type = %s"
+        )
+        params.append("rl_meta_size_adjustment")
+
+    if session_id:
+        sql += " AND ae.session_id = %s"
+        params.append(session_id)
+    sql += " ORDER BY ae.logged_at DESC, ae.id DESC LIMIT %s"
+    params.append(limit)
+
+    decisions: List[Dict[str, Any]] = []
+    try:
+        with db_cursor(dict_cursor=True) as cur:
+            cur.execute(sql, tuple(params))
+            for row in cur.fetchall():
+                decisions.append(_trace_row_to_dict(row))
+    except Exception as exc:
+        logger.warning("rl_decisions query failed: %s", exc)
+        return {
+            "decisions": [],
+            "source": "none",
+            "reason": "query_failed",
+        }
+
+    return {
+        "decisions": decisions,
+        "source": "postgres",
+        "ticker": ticker,
+        "session_id": session_id,
+        "total": len(decisions),
+    }
+
+
+# =============================================================================
+# Diagnostics — Prompt registry + fingerprint drift (PR9)
+# =============================================================================
+
+# In-process TTL cache for the PROMPTS.md parse. The file is small (≈70 KB)
+# and the parse is regex-only, but we cache anyway so the Diagnostics page
+# doesn't re-read the file on every status-poll cycle. Refresh every 60 s.
+_PROMPTS_CACHE: Dict[str, Any] = {"ts": 0.0, "data": None}
+_PROMPTS_TTL_SECONDS = 60.0
+
+
+def _parse_prompts_md(path: Path) -> Dict[str, Any]:
+    """Extract the prompt catalog from PROMPTS.md.
+
+    The convention is: each prompt block starts with a level-3 heading
+    ``### P-<ID> — <title>`` (em-dash separator). We scan once, returning
+    one record per ID with the line number for deep-linking from the UI.
+    """
+    if not path.exists():
+        return {"source": "none", "path": str(path), "total": 0, "prompts": []}
+
+    prompts: List[Dict[str, Any]] = []
+    try:
+        text = path.read_text(encoding="utf-8")
+    except Exception as exc:
+        logger.warning("PROMPTS.md read failed: %s", exc)
+        return {"source": "none", "path": str(path), "total": 0, "prompts": []}
+
+    lines = text.splitlines()
+    # The em-dash (—) is the canonical separator. The ID group is lazy and
+    # allows slashes/spaces so sibling IDs (``P-TRADER-SYS / P-TRADER-USR``)
+    # are captured together, then split downstream. A plain hyphen could
+    # collide with the hyphens *inside* IDs like ``P-FUND-COT-2``, so we
+    # don't accept it as a fallback.
+    pattern = re.compile(r"^###\s+(P-[A-Z0-9\-/\s]+?)\s+—\s+(.+?)\s*$")
+    for i, raw in enumerate(lines, start=1):
+        m = pattern.match(raw)
+        if not m:
+            continue
+        ids_part = m.group(1).strip()
+        title = m.group(2).strip()
+        # Some headings use slashes to list sibling IDs that share a body
+        # (e.g. ``P-TRADER-SYS / P-TRADER-USR``) — split them out so each
+        # ID becomes its own row in the UI.
+        for pid in [s.strip() for s in ids_part.split("/") if s.strip()]:
+            prompts.append({"id": pid, "title": title, "line": i})
+
+    return {
+        "source": "prompts_md",
+        "path": str(path),
+        "total": len(prompts),
+        "prompts": prompts,
+    }
+
+
+@app.get("/api/diagnostics/prompts")
+async def get_diagnostics_prompts():
+    """Return the parsed PROMPTS.md catalog with id, title, and line number.
+
+    Cached for 60 seconds so the Diagnostics page can poll cheaply.
+    Returns ``{source: "none", prompts: []}`` when the file is missing
+    (e.g. trimmed container deploy) rather than 500.
+    """
+    now = time.time()
+    if (
+        _PROMPTS_CACHE["data"] is not None
+        and now - _PROMPTS_CACHE["ts"] < _PROMPTS_TTL_SECONDS
+    ):
+        return _PROMPTS_CACHE["data"]
+
+    data = _parse_prompts_md(PROJECT_ROOT / "PROMPTS.md")
+    _PROMPTS_CACHE["data"] = data
+    _PROMPTS_CACHE["ts"] = now
+    return data
+
+
+@app.get("/api/diagnostics/fingerprints")
+async def get_diagnostics_fingerprints(
+    days: int = Query(default=30, ge=1, le=365),
+):
+    """Distinct ``model_fingerprint`` values seen in the last ``days`` days.
+
+    Used by the Diagnostics page to render a drift sparkline and a "models
+    in use" table. Reads from ``agent_events.model_fingerprint`` (JSONB,
+    added by ``scripts/db/apply_schema_v2.sql``). Returns an empty payload
+    when Postgres is unavailable so the panel can render an explanation.
+    """
+    try:
+        from tradingagents.db import is_postgres_available
+        from tradingagents.db.connection import cursor as db_cursor
+        pg_ok = is_postgres_available()
+    except Exception:
+        pg_ok = False
+
+    if not pg_ok:
+        return {
+            "source": "none",
+            "reason": "postgres_unavailable",
+            "days": days,
+            "total_events": 0,
+            "distinct_fingerprints": 0,
+            "fingerprints": [],
+            "daily_counts": [],
+        }
+
+    # Cast JSONB to text for the GROUP BY so equality treats the JSON
+    # documents as opaque blobs. The dashboard parses each blob back into
+    # a dict before rendering.
+    fp_sql = (
+        "SELECT model_fingerprint::text AS fp_text, "
+        "       MIN(logged_at) AS first_seen, "
+        "       MAX(logged_at) AS last_seen, "
+        "       COUNT(*) AS event_count "
+        "  FROM agent_events "
+        " WHERE logged_at >= NOW() - (%s || ' days')::interval "
+        "   AND model_fingerprint IS NOT NULL "
+        " GROUP BY model_fingerprint::text "
+        " ORDER BY last_seen DESC "
+        " LIMIT 50"
+    )
+
+    daily_sql = (
+        "SELECT DATE(logged_at) AS day, "
+        "       COUNT(*) AS events, "
+        "       COUNT(DISTINCT model_fingerprint::text) AS distinct_fps "
+        "  FROM agent_events "
+        " WHERE logged_at >= NOW() - (%s || ' days')::interval "
+        " GROUP BY DATE(logged_at) "
+        " ORDER BY day ASC"
+    )
+
+    fingerprints: List[Dict[str, Any]] = []
+    daily: List[Dict[str, Any]] = []
+    total_events = 0
+    try:
+        with db_cursor(dict_cursor=True) as cur:
+            cur.execute(fp_sql, (str(days),))
+            for row in cur.fetchall():
+                d = _trace_row_to_dict(row)
+                fp_text = d.get("fp_text") or ""
+                try:
+                    fp_obj = json.loads(fp_text) if fp_text else None
+                except (TypeError, ValueError):
+                    fp_obj = None
+                fingerprints.append({
+                    "fingerprint": fp_obj,
+                    "fingerprint_text": fp_text,
+                    "first_seen": d.get("first_seen"),
+                    "last_seen": d.get("last_seen"),
+                    "event_count": int(d.get("event_count") or 0),
+                })
+                total_events += int(d.get("event_count") or 0)
+
+            cur.execute(daily_sql, (str(days),))
+            for row in cur.fetchall():
+                d = _trace_row_to_dict(row)
+                daily.append({
+                    "day": d.get("day"),
+                    "events": int(d.get("events") or 0),
+                    "distinct": int(d.get("distinct_fps") or 0),
+                })
+    except Exception as exc:
+        logger.warning("fingerprints query failed: %s", exc)
+        return {
+            "source": "none",
+            "reason": "query_failed",
+            "days": days,
+            "total_events": 0,
+            "distinct_fingerprints": 0,
+            "fingerprints": [],
+            "daily_counts": [],
+        }
+
+    return {
+        "source": "postgres",
+        "days": days,
+        "total_events": total_events,
+        "distinct_fingerprints": len(fingerprints),
+        "fingerprints": fingerprints,
+        "daily_counts": daily,
     }
 
 
@@ -951,22 +1710,59 @@ async def compare_backtests(ticker: str):
 
 @app.get("/api/backtests/{session_id}")
 async def get_backtest_detail(session_id: str):
-    """Retrieve detailed execution trace for a single backtest run."""
+    """Retrieve detailed execution trace for a single backtest run.
+
+    Returns the dashboard-contract shape (numeric metrics, normalized
+    trades + equity series). Both the LLM multi-agent reports and the
+    Backtrader benchmark reports are handled.
+    """
     audit_dir = PROJECT_ROOT / "backtest_results"
 
-    # Try LLM report first (report_{session_id}.json),
-    # then BT report (session_id already contains the full stem bt_report_...)
     target_file = audit_dir / f"report_{session_id}.json"
+    is_llm = True
     if not target_file.exists():
         target_file = audit_dir / f"{session_id}.json"
+        is_llm = False
     if not target_file.exists():
         raise HTTPException(404, "Backtest not found")
-        
+
     try:
         with open(target_file, "r", encoding="utf-8") as f:
-            return json.load(f)
+            raw = json.load(f)
     except Exception as e:
-        raise HTTPException(500, f"Error processing file: {e}")
+        raise HTTPException(500, f"Error reading report: {e}")
+
+    try:
+        if is_llm:
+            normalized = _normalize_llm_report(raw, session_id=session_id)
+            block = normalized.get("llm") or {}
+            engine = "llm_multi_agent"
+        else:
+            normalized = _normalize_bt_report(raw, session_id=session_id)
+            block = normalized.get("bt") or {}
+            engine = "classical_technical"
+
+        # Pull through fields the dashboard surfaces directly.
+        daily = block.get("daily_portfolio") or []
+        start_date = daily[0]["date"] if daily else None
+        end_date = daily[-1]["date"] if daily else None
+
+        return {
+            "session_id": session_id,
+            "ticker": normalized.get("ticker"),
+            "engine": engine,
+            "start_date": start_date,
+            "end_date": end_date,
+            "metrics": block.get("metrics") or {},
+            "trades": block.get("trades") or [],
+            "daily_portfolio": daily,
+            "benchmark_history": block.get("benchmark_history") or [],
+            "audit_log": raw.get("audit_log") or [],
+            "cost_model": raw.get("cost_model") or {},
+            "error": block.get("error"),
+        }
+    except Exception as e:
+        raise HTTPException(500, f"Error normalizing report: {e}")
 
 class RunBtRequest(BaseModel):
     ticker: str
