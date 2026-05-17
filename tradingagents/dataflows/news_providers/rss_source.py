@@ -86,6 +86,64 @@ RSS_FEEDS = {
         "focus": "Invest Gate — Egyptian investment and real estate news",
         "priority": 3,
     },
+
+    # =========================================================================
+    # Tier 1 — Egyptian institutional sources (via Google News site-search)
+    # Routing through Google News RSS guarantees stable endpoints and
+    # bypasses anti-bot measures on the source sites themselves.
+    # =========================================================================
+    "mubasher_ar": {
+        "url": "https://news.google.com/rss/search?q=site%3Amubasher.info+%D8%A7%D9%84%D8%A8%D9%88%D8%B1%D8%B5%D8%A9+%D8%A7%D9%84%D9%85%D8%B5%D8%B1%D9%8A%D8%A9&hl=ar&gl=EG&ceid=EG:ar",
+        "language": "ar",
+        "focus": "Mubasher.info Arabic — Egyptian stock market authority",
+        "priority": 1,
+    },
+    "mubasher_en": {
+        "url": "https://news.google.com/rss/search?q=site%3Amubasher.info+EGX&hl=en&gl=EG&ceid=EG:en",
+        "language": "en",
+        "focus": "Mubasher.info English — EGX coverage",
+        "priority": 1,
+    },
+    "al_borsa_ar": {
+        "url": "https://news.google.com/rss/search?q=site%3Aalborsaanews.com+%D8%A8%D9%88%D8%B1%D8%B5%D8%A9&hl=ar&gl=EG&ceid=EG:ar",
+        "language": "ar",
+        "focus": "Al Borsa News — official Egyptian market newspaper",
+        "priority": 1,
+    },
+    "enterprise_press": {
+        "url": "https://news.google.com/rss/search?q=site%3Aenterprise.press+EGX+OR+Egypt&hl=en&gl=EG&ceid=EG:en",
+        "language": "en",
+        "focus": "Enterprise Press — Egypt business daily (institutional)",
+        "priority": 1,
+    },
+
+    # =========================================================================
+    # Tier 2 — Regional & global wire services (MENA + EGX coverage)
+    # =========================================================================
+    "reuters_egypt": {
+        "url": "https://news.google.com/rss/search?q=site%3Areuters.com+Egypt+stock+OR+EGX+OR+economy&hl=en&gl=EG&ceid=EG:en",
+        "language": "en",
+        "focus": "Reuters Egypt — global wire service quality",
+        "priority": 2,
+    },
+    "zawya_egypt_en": {
+        "url": "https://news.google.com/rss/search?q=site%3Azawya.com+Egypt+OR+EGX&hl=en&gl=EG&ceid=EG:en",
+        "language": "en",
+        "focus": "Zawya — Refinitiv MENA business news",
+        "priority": 2,
+    },
+    "argaam_ar": {
+        "url": "https://news.google.com/rss/search?q=site%3Aargaam.com+%D8%A7%D9%84%D8%A8%D9%88%D8%B1%D8%B5%D8%A9+%D8%A7%D9%84%D9%85%D8%B5%D8%B1%D9%8A%D8%A9&hl=ar&gl=EG&ceid=EG:ar",
+        "language": "ar",
+        "focus": "Argaam Arabic — pan-Arab financial coverage of EGX",
+        "priority": 2,
+    },
+    "argaam_en": {
+        "url": "https://news.google.com/rss/search?q=site%3Aargaam.com+Egypt+OR+EGX&hl=en&gl=EG&ceid=EG:en",
+        "language": "en",
+        "focus": "Argaam English — pan-Arab EGX coverage",
+        "priority": 3,
+    },
 }
 
 # =============================================================================

@@ -11,7 +11,11 @@ Savings: 2 LLM calls, ~10,000-14,000 tokens, ~60-90s per trade date.
 """
 
 import json
+import logging
 from tradingagents.dataflows.config import get_config
+from tradingagents.agents.utils.llm_failover import safe_invoke
+
+logger = logging.getLogger("tradingagents.merged_debator")
 
 
 def create_merged_risk_debator(llm):
@@ -129,7 +133,23 @@ In 2-3 sentences, summarize the key risk tensions and what the Risk Manager shou
 
 Be specific with prices, percentages, and timeframes. Output conversationally, no special formatting needed within each section."""
 
-        response = llm.invoke(prompt)
+        _fallback_debate = type("_FallbackMsg", (), {
+            "content": (
+                "### 🔴 RISKY ANALYST (Aggressive Perspective)\n"
+                "LLM unavailable — cannot argue risk case.\n\n"
+                "### 🟢 SAFE ANALYST (Conservative Perspective)\n"
+                "Default to capital preservation — HOLD until LLM is available.\n\n"
+                "### 🟡 NEUTRAL ANALYST (Balanced Perspective)\n"
+                "Inconclusive. Recommend HOLD.\n\n"
+                "### 📋 SYNTHESIS\n"
+                "Risk debate unavailable due to LLM failure. Risk Manager should default to HOLD."
+            )
+        })()
+        response = safe_invoke(
+            llm, prompt,
+            fallback=_fallback_debate,
+            agent_name="Merged Risk Debate",
+        )
         debate_text = response.content
 
         # Parse out individual perspective sections for state compatibility

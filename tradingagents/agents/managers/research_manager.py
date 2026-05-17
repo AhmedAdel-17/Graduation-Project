@@ -72,7 +72,16 @@ def create_research_manager(llm, memory):
         else:
             bear_section = f"### Bear Argument (last exchange)\n{recent_history}"
 
+        # Macro overlay (EGX): inject deterministic macro context into prompt.
+        try:
+            from tradingagents.dataflows.macro_provider import format_macro_context_for_prompt
+            macro_section = format_macro_context_for_prompt(state.get("macro_context"))
+        except Exception:
+            macro_section = ""
+
         prompt = f"""You are the Chief Investment Officer making the FINAL investment decision for {state.get('company_of_interest', 'this stock')}.
+
+{macro_section}
 
 ## Decision Framework
 You MUST commit to one of these decisions:

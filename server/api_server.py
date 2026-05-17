@@ -590,6 +590,26 @@ async def health():
 
 
 # =============================================================================
+# Macro Endpoint
+# =============================================================================
+
+@app.get("/api/macro")
+async def get_macro(as_of: Optional[str] = Query(None, description="YYYY-MM-DD; defaults to today")):
+    """
+    Return the EGX macro snapshot (CBE rate, USD/EGP, EGX30 trend, CPI, Brent, IMF).
+
+    Deterministic, no LLM. Falls back to config defaults if yfinance is unavailable.
+    """
+    from tradingagents.dataflows.macro_provider import get_egx_macro_context
+    target_date = as_of or datetime.now().strftime("%Y-%m-%d")
+    try:
+        ctx = get_egx_macro_context(as_of_date=target_date, config=get_config())
+        return {"status": "ok", "macro_context": ctx}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Macro fetch failed: {exc}")
+
+
+# =============================================================================
 # Configuration Endpoints
 # =============================================================================
 
@@ -2035,46 +2055,35 @@ async def _run_streaming_analysis(
 
     config = get_config()
 
-    # Determine the active node from chunk keys (mirrors cli/main.py logic)
+    # In `stream_mode="updates"` each chunk has the shape
+    #   { "<Node Name>": <state delta dict>, ... }
+    # so the node name is literally the key. We still fall back to the old
+    # "values"-mode key sniffing in case some node emits a state-shaped chunk.
     def get_node_from_chunk(chunk: dict) -> tuple[str, str, list[str]]:
         """Returns (node_name, status, changed_keys)."""
-        changed = [k for k in chunk.keys() if k != "messages"]
+        node_keys = [k for k in chunk.keys() if k != "messages"]
 
+        # Updates mode: one outer key = the node that just finished.
+        if len(node_keys) == 1:
+            node = node_keys[0]
+            delta = chunk[node] if isinstance(chunk[node], dict) else {}
+            inner_keys = list(delta.keys()) if isinstance(delta, dict) else []
+            return node, "completed", inner_keys
+
+        # Fallback: values-mode shape (full state). Reuse the original heuristics.
         if "market_report" in chunk:
-            return "Market Analyst", "completed", changed
+            return "Market Analyst", "completed", node_keys
         if "sentiment_report" in chunk:
-            return "Social Analyst", "completed", changed
+            return "Social Analyst", "completed", node_keys
         if "news_report" in chunk:
-            return "News Analyst", "completed", changed
+            return "News Analyst", "completed", node_keys
         if "fundamentals_report" in chunk:
-            return "Fundamentals Analyst", "completed", changed
-
-        if "investment_debate_state" in chunk:
-            debate = chunk["investment_debate_state"]
-            if debate.get("judge_decision"):
-                return "Research Manager", "completed", changed
-            if debate.get("current_response", "").startswith("Bull"):
-                return "Bull Researcher", "in_progress", changed
-            return "Bear Researcher", "in_progress", changed
-
+            return "Fundamentals Analyst", "completed", node_keys
         if "trader_investment_plan" in chunk:
-            return "Trader", "completed", changed
-
-        if "risk_debate_state" in chunk:
-            risk = chunk["risk_debate_state"]
-            if risk.get("judge_decision"):
-                return "Risk Judge", "completed", changed
-            speaker = risk.get("latest_speaker", "")
-            if speaker.startswith("Risky"):
-                return "Risky Analyst", "in_progress", changed
-            if speaker.startswith("Safe"):
-                return "Safe Analyst", "in_progress", changed
-            return "Neutral Analyst", "in_progress", changed
-
+            return "Trader", "completed", node_keys
         if "final_trade_decision" in chunk:
-            return "Risk Judge", "completed", changed
-
-        return "System", "in_progress", changed
+            return "Risk Judge", "completed", node_keys
+        return "System", "in_progress", node_keys
 
     def serialize_chunk_data(chunk: dict) -> dict:
         """Serialize chunk data to JSON-safe format."""
@@ -2128,6 +2137,10 @@ async def _run_streaming_analysis(
 
         init_state = graph.propagator.create_initial_state(ticker, trade_date)
         args = graph.propagator.get_graph_args()
+        # Override stream_mode for the websocket path so each node emits its
+        # own chunk (otherwise the parallel analyst fan-out would block all
+        # progress events until every analyst finished — 60-120s of silence).
+        args["stream_mode"] = "updates"
 
         try:
             for chunk in graph.graph.stream(init_state, **args):
@@ -2140,17 +2153,48 @@ async def _run_streaming_analysis(
     # Launch graph in background thread
     executor_future = loop.run_in_executor(None, run_graph_streaming)
 
+    # Stream-mode "updates" emits only state deltas, so accumulate into a
+    # running final_state for the completion frame.
     final_state: dict = {}
+    HEARTBEAT_SEC = 5
+    started_at = datetime.now()
+    last_node_seen = "System"
+
     try:
         while True:
-            item = await queue.get()
+            # Wait for the next chunk, but emit a heartbeat every HEARTBEAT_SEC
+            # so the UI knows the graph is alive during long LLM calls.
+            try:
+                item = await asyncio.wait_for(queue.get(), timeout=HEARTBEAT_SEC)
+            except asyncio.TimeoutError:
+                elapsed = int((datetime.now() - started_at).total_seconds())
+                await websocket.send_json({
+                    "type": "agent_update",
+                    "node": last_node_seen,
+                    "status": "in_progress",
+                    "state_keys": [],
+                    "data": {
+                        "_heartbeat": True,
+                        "elapsed_sec": elapsed,
+                        "message": f"Still running… ({elapsed}s elapsed)",
+                    },
+                    "timestamp": datetime.now().isoformat(),
+                })
+                continue
+
             if item is _SENTINEL:
                 break
             if isinstance(item, Exception):
                 raise item
 
             chunk = item
-            final_state = chunk  # keep updating; last one is the final state
+
+            # Merge into final_state (updates-mode chunk is {node: delta}).
+            for _node_key, delta in chunk.items():
+                if isinstance(delta, dict):
+                    final_state.update(delta)
+                else:
+                    final_state[_node_key] = delta
 
             has_non_msg = any(k != "messages" for k in chunk.keys())
             msgs = chunk.get("messages") or []
@@ -2159,6 +2203,7 @@ async def _run_streaming_analysis(
                 continue
 
             node, status, keys = get_node_from_chunk(chunk)
+            last_node_seen = node
             data = serialize_chunk_data(chunk)
             await websocket.send_json({
                 "type": "agent_update",

@@ -123,6 +123,8 @@ class Propagator:
                     "current_price": 0,
                     # Phase 3 (PR 7): sentiment blend result written by social_media_analyst
                     "sentiment_blend_result": None,
+                    # Macro environment (populated by DataPrefetcher.fetch_all → "macro_context")
+                    "macro_context": None,
                 }
             )
 

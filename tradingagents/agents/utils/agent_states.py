@@ -144,3 +144,7 @@ class AgentState(MessagesState):
     # EGX-specific market context
     target_market: Annotated[Optional[str], "Target market identifier (e.g. 'EGX')"]
     trading_currency: Annotated[Optional[str], "Trading currency (e.g. 'EGP')"]
+
+    # Macro environment context (populated by DataPrefetcher / get_egx_macro_context)
+    # Injected before graph runs; consumed by Research Manager, Risk Manager, Trader prompts.
+    macro_context: Annotated[Optional[Dict], _keep_last]

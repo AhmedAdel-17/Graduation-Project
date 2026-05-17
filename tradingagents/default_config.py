@@ -30,6 +30,11 @@ DEFAULT_CONFIG = {
     "deep_think_llm": "deepseek-chat",
     "quick_think_llm": "deepseek-chat",
     "backend_url": "https://api.deepseek.com",
+    # Separate backend for embeddings (DeepSeek has no embeddings API).
+    # Default: local Ollama with `nomic-embed-text` (free, persistent vectors).
+    # Override with EMBEDDINGS_BACKEND_URL env var (e.g. https://api.openai.com/v1).
+    "embeddings_backend_url": os.environ.get("EMBEDDINGS_BACKEND_URL", "http://localhost:11434/v1"),
+    "embeddings_model": os.environ.get("EMBEDDINGS_MODEL", "nomic-embed-text"),
     # Debate and discussion settings
     "max_debate_rounds": 1,
     "max_risk_discuss_rounds": 1,

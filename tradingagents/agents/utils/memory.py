@@ -23,19 +23,31 @@ logger = logging.getLogger("tradingagents.memory")
 class FinancialSituationMemory:
     def __init__(self, name, config):
         self.name = name
-        backend_url = config.get("backend_url", "")
-        if "localhost:11434" in backend_url:
-            self.embedding = "nomic-embed-text"
+        # Embeddings live on their own backend so DeepSeek/Groq LLMs (which have
+        # no embeddings API) can still benefit from vector memory via a sidecar
+        # provider (local Ollama by default, optionally OpenAI).
+        embeddings_url = (
+            config.get("embeddings_backend_url")
+            or config.get("backend_url", "")
+        )
+        if "localhost:11434" in embeddings_url or "127.0.0.1:11434" in embeddings_url:
+            self.embedding = config.get("embeddings_model") or "nomic-embed-text"
             self.embeddings_enabled = True
-        elif "openai.com" in backend_url:
-            self.embedding = "text-embedding-3-small"
+            api_key = "ollama"  # Ollama's OpenAI shim accepts any non-empty key
+        elif "openai.com" in embeddings_url:
+            self.embedding = config.get("embeddings_model") or "text-embedding-3-small"
             self.embeddings_enabled = True
+            api_key = os.environ.get("OPENAI_API_KEY")
         else:
-            # Groq and other providers don't support embeddings — disable memory
+            # Unknown provider — disable embeddings, fall back to BM25 only.
             self.embedding = None
             self.embeddings_enabled = False
+            api_key = None
 
-        self.client = OpenAI(base_url=backend_url) if self.embeddings_enabled else None
+        self.client = (
+            OpenAI(base_url=embeddings_url, api_key=api_key)
+            if self.embeddings_enabled else None
+        )
 
         # Chroma persistence: when chroma_persist_dir is set we use PersistentClient
         # so agent memories survive process restarts. Empty / None path keeps the

@@ -181,7 +181,16 @@ def create_trader(llm, memory):
 """
 
 
+        # Macro overlay: deterministic EGX macro context.
+        try:
+            from tradingagents.dataflows.macro_provider import format_macro_context_for_prompt
+            macro_section = format_macro_context_for_prompt(state.get("macro_context"))
+        except Exception:
+            macro_section = ""
+
         prompt_context = f"""You are an Institutional Trader generating a detailed EXECUTION PLAN for {company_name}.
+
+{macro_section}
 
 {egx_constraints}
 {position_info}

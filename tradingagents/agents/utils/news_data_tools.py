@@ -97,6 +97,49 @@ from tradingagents.dataflows.local import (
 import json
 
 
+def _fetch_live_news(ticker_clean: str, look_back_days: int) -> dict:
+    """
+    Pull news from the 12-source live aggregator (Mubasher, Al Borsa,
+    Google News AR/EN, NewsAPI, EGX disclosures, RSS feeds, etc.).
+
+    Returns a dict shaped like the local-CSV response so callers can use
+    either source interchangeably. Returns None on failure.
+    """
+    try:
+        from tradingagents.dataflows.news_providers.aggregator import (
+            fetch_aggregated_news,
+        )
+        agg = fetch_aggregated_news(ticker_clean, days=look_back_days)
+        if not isinstance(agg, dict):
+            return None
+        articles = agg.get("articles", []) or []
+        if not articles:
+            return None
+
+        sources = sorted({a.get("source", "?") for a in articles if a.get("source")})
+        languages = sorted({a.get("language", "?") for a in articles if a.get("language")})
+
+        return {
+            "ticker": ticker_clean,
+            "market": "EGX",
+            "articles": articles,
+            "total_articles": len(articles),
+            "sources_found": sources,
+            "languages_found": languages,
+            "data_sources": {
+                "live_aggregator": True,
+                "providers_queried": agg.get("sources_queried", []),
+                "providers_failed": agg.get("sources_failed", []),
+            },
+        }
+    except Exception as e:
+        import logging
+        logging.getLogger("tradingagents.news_data_tools").warning(
+            "Live news aggregator failed for %s: %s", ticker_clean, e
+        )
+        return None
+
+
 @tool
 def get_egx_company_news(
     ticker: Annotated[str, "EGX ticker symbol (e.g., COMI, EAST)"],
@@ -104,22 +147,30 @@ def get_egx_company_news(
     look_back_days: Annotated[int, "Number of days to look back"] = 7,
 ) -> str:
     """
-    Retrieve EGX company news from local CSV and text files.
-    Supports Arabic and English content.
+    Retrieve EGX company news.
 
-    Args:
-        ticker: EGX ticker symbol
-        curr_date: Current date
-        look_back_days: How many days of news to retrieve
+    Source priority chain:
+      1. Live aggregator — Mubasher, Al Borsa, Google News (AR/EN), NewsAPI,
+         EGX disclosure portal, RSS feeds. Returns 10-30 articles when working.
+      2. Local CSV / text files — last-resort fallback for offline runs.
 
-    Returns:
-        str: JSON-formatted news with language and source metadata
+    Returns JSON with language and source metadata.
     """
     # Clamp curr_date to trade_date to prevent future news leakage
     from tradingagents.dataflows.config import get_config
     _trade_date = get_config().get("trade_date")
     if _trade_date and curr_date > _trade_date:
         curr_date = _trade_date
+
+    # Normalise ticker for the aggregator (it expects bare symbol, no .CA)
+    ticker_clean = ticker.upper().replace(".CA", "")
+
+    # ── 1. Try live aggregator first (12 sources) ──────────────────────────
+    live = _fetch_live_news(ticker_clean, look_back_days)
+    if live and live.get("total_articles", 0) > 0:
+        return json.dumps(live, indent=2, ensure_ascii=False, default=str)
+
+    # ── 2. Fall back to local CSV / text files ─────────────────────────────
     result = get_egx_news_combined(ticker, curr_date, look_back_days)
     return json.dumps(result, indent=2, ensure_ascii=False, default=str)
 
@@ -131,20 +182,23 @@ def get_egx_market_news(
 ) -> str:
     """
     Retrieve EGX market-wide news (not company-specific).
-    Supports Arabic and English content.
 
-    Args:
-        curr_date: Current date
-        look_back_days: How many days of news to retrieve
-
-    Returns:
-        str: JSON-formatted market news with language and source metadata
+    Source priority chain:
+      1. Live aggregator with EGX-wide query (Mubasher, Al Borsa, Google News
+         macro searches, NewsAPI EGX queries).
+      2. Local CSV / text files — last-resort fallback.
     """
-    # Clamp curr_date to trade_date to prevent future news leakage
     from tradingagents.dataflows.config import get_config
     _trade_date = get_config().get("trade_date")
     if _trade_date and curr_date > _trade_date:
         curr_date = _trade_date
+
+    # ── 1. Live aggregator with broad EGX query ───────────────────────────
+    live = _fetch_live_news("EGX", look_back_days)
+    if live and live.get("total_articles", 0) > 0:
+        return json.dumps(live, indent=2, ensure_ascii=False, default=str)
+
+    # ── 2. Fall back to local CSV ─────────────────────────────────────────
     result = get_egx_news_from_csv("ALL", curr_date, look_back_days)
     return json.dumps(result, indent=2, ensure_ascii=False, default=str)
 

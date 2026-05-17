@@ -13,7 +13,7 @@ Savings: ~2 LLM calls, ~6,000 tokens, ~30-60s per trade date.
 
 import logging
 import concurrent.futures
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger("tradingagents.prefetch")
 
@@ -80,19 +80,37 @@ class DataPrefetcher:
             logger.warning("Prefetch social posts failed for %s: %s", ticker, e)
             return ""
 
-    def fetch_all(self, ticker: str, trade_date: str) -> Dict[str, str]:
+    def _fetch_macro_context(self, ticker: str, trade_date: str) -> Any:
+        """
+        Fetch EGX macro indicators (CBE rate, USD/EGP, EGX30 trend, CPI, etc.).
+
+        Returns a dict on success, or None on total failure.
+        The dict is stored in state as `macro_context` (not a string like the
+        other prefetch keys — it's a structured dict consumed by prompt builders).
+        """
+        if self.target_market != "EGX":
+            return None
+        try:
+            from tradingagents.dataflows.macro_provider import get_egx_macro_context
+            return get_egx_macro_context(as_of_date=str(trade_date), config=self.config)
+        except Exception as e:
+            logger.warning("Prefetch macro context failed: %s", e)
+            return None
+
+    def fetch_all(self, ticker: str, trade_date: str) -> Dict[str, Any]:
         """
         Fetch all data sources in parallel.
 
         Returns a dict with keys:
-          - prefetched_company_news
-          - prefetched_market_news
-          - prefetched_social_sentiment
-          - prefetched_social_posts
+          - prefetched_company_news     (str)
+          - prefetched_market_news      (str)
+          - prefetched_social_sentiment (str)
+          - prefetched_social_posts     (str)
+          - macro_context               (dict | None)  — EGX only
         """
         logger.info("Prefetching data for %s on %s ...", ticker, trade_date)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             futures = {
                 "prefetched_company_news": executor.submit(
                     self._fetch_company_news, ticker, str(trade_date)
@@ -106,6 +124,9 @@ class DataPrefetcher:
                 "prefetched_social_posts": executor.submit(
                     self._fetch_social_posts, ticker, str(trade_date)
                 ),
+                "macro_context": executor.submit(
+                    self._fetch_macro_context, ticker, str(trade_date)
+                ),
             }
 
             results = {}
@@ -114,13 +135,15 @@ class DataPrefetcher:
                     results[key] = future.result(timeout=30)
                 except concurrent.futures.TimeoutError:
                     logger.warning("Prefetch timeout for %s", key)
-                    results[key] = ""
+                    results[key] = "" if key != "macro_context" else None
                 except Exception as e:
                     logger.warning("Prefetch error for %s: %s", key, e)
-                    results[key] = ""
+                    results[key] = "" if key != "macro_context" else None
 
-        non_empty = sum(1 for v in results.values() if v)
+        non_empty_str = sum(1 for k, v in results.items() if k != "macro_context" and v)
+        macro_ok = results.get("macro_context") is not None
         logger.info(
-            "Prefetch complete for %s: %d/4 sources populated", ticker, non_empty
+            "Prefetch complete for %s: %d/4 news/social sources populated, macro=%s",
+            ticker, non_empty_str, "OK" if macro_ok else "unavailable",
         )
         return results

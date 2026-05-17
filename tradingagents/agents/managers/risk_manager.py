@@ -248,8 +248,17 @@ Risk Action: **{risk_action}**
             if is_egx else ""
         )
 
+        # Macro overlay: deterministic EGX macro context for veto reasoning.
+        try:
+            from tradingagents.dataflows.macro_provider import format_macro_context_for_prompt
+            macro_section = format_macro_context_for_prompt(state.get("macro_context"))
+        except Exception:
+            macro_section = ""
+
         # ── Full prompt ───────────────────────────────────────────────────────
         prompt = f"""You are the Constitutional Risk Manager for {company_name} on {"EGX" if is_egx else "the market"}.
+
+{macro_section}
 
 {constitution_section}
 

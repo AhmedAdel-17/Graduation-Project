@@ -486,6 +486,68 @@ def create_deterministic_market_analyst():
     from tradingagents.dataflows.eodhd import get_eodhd_stock_data, get_eodhd_indicators
     from datetime import datetime
     from dateutil.relativedelta import relativedelta
+    import logging as _ma_logging
+    _ma_logger = _ma_logging.getLogger("tradingagents.market_analyst")
+
+    # ── yfinance fallback helpers (used when EODHD is unavailable for .CA tickers) ──
+    def _yf_fetch_closes_volumes(ticker: str, start: str, end: str):
+        """Return (closes_list, avg_volume, low_liq_flag) via yfinance, or ([], None, False)."""
+        try:
+            import yfinance as yf
+            df = yf.download(
+                ticker, start=start, end=end,
+                progress=False, auto_adjust=True,
+            )
+            if df is None or df.empty or "Close" not in df.columns:
+                return [], None, False
+            closes_series = df["Close"].dropna()
+            vols_series = df["Volume"].dropna() if "Volume" in df.columns else None
+            # Handle yfinance returning single-col DataFrames sometimes
+            closes = [float(v.iloc[0]) if hasattr(v, "iloc") else float(v) for v in closes_series.values]
+            avg_vol = float(vols_series.mean().iloc[0]) if vols_series is not None and len(vols_series) and hasattr(vols_series.mean(), "iloc") else (float(vols_series.mean()) if vols_series is not None and len(vols_series) else None)
+            # EGX low-liquidity threshold (default 50k shares/day)
+            low_liq = bool(avg_vol is not None and avg_vol < 50_000)
+            return closes, avg_vol, low_liq
+        except Exception as e:
+            _ma_logger.warning("yfinance fallback failed for %s: %s", ticker, e)
+            return [], None, False
+
+    def _local_rsi(closes, period: int = 14):
+        """Compute RSI(14) from a list of closes. Returns latest value or None."""
+        if len(closes) < period + 1:
+            return None
+        try:
+            import pandas as pd
+            s = pd.Series(closes)
+            delta = s.diff()
+            gain = delta.clip(lower=0).rolling(window=period).mean()
+            loss = (-delta.clip(upper=0)).rolling(window=period).mean()
+            rs = gain / loss.replace(0, 1e-10)
+            rsi = 100 - (100 / (1 + rs))
+            v = rsi.iloc[-1]
+            return float(v) if pd.notna(v) else None
+        except Exception:
+            return None
+
+    def _local_macd(closes, fast: int = 12, slow: int = 26, signal: int = 9):
+        """Compute MACD/signal/histogram from closes. Returns dict of latest values."""
+        if len(closes) < slow + signal:
+            return {"macd": None, "macds": None, "macdh": None}
+        try:
+            import pandas as pd
+            s = pd.Series(closes)
+            ema_fast = s.ewm(span=fast, adjust=False).mean()
+            ema_slow = s.ewm(span=slow, adjust=False).mean()
+            macd_line = ema_fast - ema_slow
+            signal_line = macd_line.ewm(span=signal, adjust=False).mean()
+            hist = macd_line - signal_line
+            return {
+                "macd":  float(macd_line.iloc[-1]) if pd.notna(macd_line.iloc[-1]) else None,
+                "macds": float(signal_line.iloc[-1]) if pd.notna(signal_line.iloc[-1]) else None,
+                "macdh": float(hist.iloc[-1]) if pd.notna(hist.iloc[-1]) else None,
+            }
+        except Exception:
+            return {"macd": None, "macds": None, "macdh": None}
 
     def deterministic_market_analyst_node(state):
         trade_date = state["trade_date"]
@@ -493,27 +555,47 @@ def create_deterministic_market_analyst():
         low_liquidity = state.get("low_liquidity", False)
         volume_missing = state.get("volume_missing", False)
 
-        # ── 1. Fetch price data (90 days lookback for indicators) ──────────────
+        # ── 1. Fetch price data (120 days lookback for indicators) ─────────────
         start_date = (
             datetime.strptime(trade_date, "%Y-%m-%d") - relativedelta(days=120)
         ).strftime("%Y-%m-%d")
 
+        # Try EODHD first (paid tier supports .CA), fall back to yfinance.
         price_result = get_eodhd_stock_data(ticker, start_date, trade_date)
 
         closes = []
+        data_source = "none"
         if price_result and price_result.get("data"):
             closes = [bar["close"] for bar in price_result["data"]]
-            # Propagate liquidity flags from fresh data if not already set
+            data_source = "eodhd"
             if not low_liquidity:
                 low_liquidity = price_result.get("low_liquidity", False)
             if not volume_missing:
                 volume_missing = price_result.get("volume_missing", False)
 
-        # ── 2. Fetch RSI ───────────────────────────────────────────────────────
+        # Fallback to yfinance when EODHD returned nothing (e.g. free tier on .CA)
+        if not closes:
+            yf_closes, yf_avg_vol, yf_low_liq = _yf_fetch_closes_volumes(
+                ticker, start_date, trade_date
+            )
+            if yf_closes:
+                closes = yf_closes
+                data_source = "yfinance(fallback)"
+                if not low_liquidity:
+                    low_liquidity = yf_low_liq
+                _ma_logger.info(
+                    "Market analyst %s: EODHD empty, used yfinance fallback (%d bars, avg_vol=%s)",
+                    ticker, len(closes), f"{yf_avg_vol:.0f}" if yf_avg_vol else "N/A",
+                )
+
+        # ── 2. Fetch RSI (EODHD), then fall back to local pandas calc ──────────
         rsi_result = get_eodhd_indicators(ticker, "RSI", trade_date, look_back_days=90)
         rsi_values = rsi_result.get("values", []) if not rsi_result.get("error") else []
+        rsi_latest = _extract_latest(rsi_values)
+        if rsi_latest is None and closes:
+            rsi_latest = _local_rsi(closes)
 
-        # ── 3. Fetch MACD ──────────────────────────────────────────────────────
+        # ── 3. Fetch MACD (EODHD), then fall back to local pandas calc ─────────
         macd_result = get_eodhd_indicators(ticker, "MACD", trade_date, look_back_days=90)
         macd_values = {}
         if not macd_result.get("error"):
@@ -521,12 +603,23 @@ def create_deterministic_market_analyst():
             if isinstance(mv, dict):
                 macd_values = mv
 
+        macd_latest  = _extract_latest(macd_values.get("macd_line", []))
+        macds_latest = _extract_latest(macd_values.get("signal_line", []))
+        macdh_latest = _extract_latest(macd_values.get("histogram", []))
+
+        if macd_latest is None and closes:
+            local = _local_macd(closes)
+            macd_latest  = local["macd"]
+            macds_latest = local["macds"]
+            macdh_latest = local["macdh"]
+
         # ── 4. Build indicator_results dict (scalar values) ────────────────────
         indicator_results = {
-            "rsi":   _extract_latest(rsi_values),
-            "macd":  _extract_latest(macd_values.get("macd_line", [])),
-            "macds": _extract_latest(macd_values.get("signal_line", [])),
-            "macdh": _extract_latest(macd_values.get("histogram", [])),
+            "rsi":   rsi_latest,
+            "macd":  macd_latest,
+            "macds": macds_latest,
+            "macdh": macdh_latest,
+            "_source": data_source,
         }
 
         # ── 5. Run existing deterministic pipeline ─────────────────────────────

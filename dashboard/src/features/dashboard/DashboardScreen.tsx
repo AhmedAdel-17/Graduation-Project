@@ -17,6 +17,10 @@ import { useRunPrediction } from "../../hooks/usePrediction";
 import { AgentCard, AgentCardSkeleton } from "../shared/AgentCard";
 import { TickerPicker } from "../shared/TickerPicker";
 import { cn, formatNumber, formatPercent } from "../../lib/utils";
+import { MacroIndicators } from "./MacroIndicators";
+import { FullPipelinePanel } from "./FullPipelinePanel";
+import { getTickerMeta } from "../../data/egxTickerMeta";
+import { TickerLogo } from "../../components/ui/TickerLogo";
 
 export function DashboardScreen() {
   const [ticker, setTicker] = useState("COMI.CA");
@@ -75,6 +79,9 @@ export function DashboardScreen() {
         </div>
       </header>
 
+      {/* ─── Macro snapshot ──────────────────────────────────────── */}
+      <MacroIndicators />
+
       {/* ─── Run bar ─────────────────────────────────────────────── */}
       <div className="card-elevated p-2 flex items-center gap-2">
         <div className="flex-1 min-w-0">
@@ -97,12 +104,15 @@ export function DashboardScreen() {
             </>
           ) : (
             <>
-              Run analysis
+              Quick analysis
               <ArrowRight className="h-4 w-4" />
             </>
           )}
         </button>
       </div>
+
+      {/* ─── Full multi-agent pipeline (separate from quick analysis) ── */}
+      <FullPipelinePanel ticker={ticker} />
 
       {/* ─── Empty ───────────────────────────────────────────────── */}
       {!isLoading && !hasResult && <EmptyHero />}
@@ -300,39 +310,53 @@ function CommandCenter({
       <div className="relative grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-0">
         {/* Left half — identity + verdict */}
         <div className="p-8 lg:p-10 border-b lg:border-b-0 lg:border-r border-stone-200/80">
-          <div className="flex items-center gap-2 text-[10.5px] tracking-[0.18em] uppercase text-stone-500">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 anim-pulse-dot" />
-            Live run · just now
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-[10.5px] tracking-[0.18em] uppercase text-stone-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 anim-pulse-dot" />
+              Live run · just now
+            </div>
+            {/* Signal chip — promoted to header, sits "above and behind" the ticker. */}
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-semibold uppercase tracking-wider border",
+                signalChip
+              )}
+            >
+              <Arrow className="h-3.5 w-3.5" />
+              {signal || "—"}
+            </span>
           </div>
 
           <div className="mt-5 flex items-start gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-stone-100 border border-stone-200 flex items-center justify-center">
-              <span className="display text-[16px] font-semibold text-ink">
-                {ticker.replace(".CA", "").slice(0, 4)}
-              </span>
-            </div>
-            <div>
-              <div className="text-[13px] text-ink-3">{name}</div>
-              <div className="display text-[34px] font-semibold leading-none mt-1.5 tracking-tight text-ink">
-                {ticker}
-              </div>
-              <div className="mt-3 inline-flex items-center gap-2 flex-wrap">
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11.5px] font-semibold uppercase tracking-wider border",
-                    signalChip
-                  )}
-                >
-                  <Arrow className="h-3.5 w-3.5" />
-                  {signal || "—"}
-                </span>
-                {confidence && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11.5px] font-medium text-ink-2 border border-stone-200 bg-white">
-                    <GaugeIcon className="h-3.5 w-3.5 text-stone-500" />
-                    {confidence} confidence
-                  </span>
-                )}
-              </div>
+            <TickerLogo ticker={ticker} size="lg" />
+            <div className="min-w-0 flex-1">
+              {(() => {
+                const meta = getTickerMeta(ticker);
+                return (
+                  <>
+                    <div className="display text-[34px] font-semibold leading-none tracking-tight text-ink">
+                      {meta.symbol}
+                    </div>
+                    <div className="text-[13px] text-ink-2 mt-2 leading-snug truncate">
+                      {meta.nameEn || name}
+                    </div>
+                    {meta.nameAr && meta.nameAr !== meta.symbol && (
+                      <div
+                        className="text-[12.5px] text-ink-3 leading-snug truncate mt-0.5"
+                        dir="rtl"
+                      >
+                        {meta.nameAr}
+                      </div>
+                    )}
+                    {confidence && (
+                      <span className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11.5px] font-medium text-ink-2 border border-stone-200 bg-white">
+                        <GaugeIcon className="h-3.5 w-3.5 text-stone-500" />
+                        {confidence} confidence
+                      </span>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
 
@@ -551,8 +575,9 @@ function EmptyHero() {
   return (
     <div className="card overflow-hidden grain">
       <div className="px-10 py-14 text-center">
-        <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-900 text-white mb-5">
-          <Sparkles className="h-6 w-6" />
+        <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-700 mb-5
+          dark:border-[var(--hairline)] dark:bg-[var(--bg)] dark:text-[var(--ink-2)]">
+          <Sparkles className="h-[18px] w-[18px]" />
         </div>
         <h3 className="display text-[22px] font-semibold text-ink">
           Ready when you are.

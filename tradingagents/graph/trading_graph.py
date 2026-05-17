@@ -108,8 +108,22 @@ class TradingAgentsGraph:
 
         # Initialize LLMs
         if self.config["llm_provider"].lower() == "openai" or self.config["llm_provider"] == "ollama" or self.config["llm_provider"] == "openrouter":
-            self.deep_thinking_llm = ChatOpenAI(model=self.config["deep_think_llm"], base_url=self.config["backend_url"], temperature=0)
-            self.quick_thinking_llm = ChatOpenAI(model=self.config["quick_think_llm"], base_url=self.config["backend_url"], temperature=0)
+            # When backend_url points at a non-OpenAI provider (DeepSeek, OpenRouter, Ollama),
+            # the matching key lives under a provider-specific env var. ChatOpenAI only checks
+            # OPENAI_API_KEY by default, so resolve explicitly here.
+            backend = (self.config.get("backend_url") or "").lower()
+            if "deepseek" in backend:
+                api_key = os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENAI_API_KEY")
+            elif "openrouter" in backend:
+                api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
+            else:
+                api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                # Ollama and other local servers genuinely don't need a key; pass a placeholder
+                # so the OpenAI SDK stops refusing to construct.
+                api_key = "not-needed"
+            self.deep_thinking_llm = ChatOpenAI(model=self.config["deep_think_llm"], base_url=self.config["backend_url"], temperature=0, api_key=api_key)
+            self.quick_thinking_llm = ChatOpenAI(model=self.config["quick_think_llm"], base_url=self.config["backend_url"], temperature=0, api_key=api_key)
         elif self.config["llm_provider"].lower() == "anthropic":
             self.deep_thinking_llm = ChatAnthropic(model=self.config["deep_think_llm"], base_url=self.config["backend_url"], temperature=0)
             self.quick_thinking_llm = ChatAnthropic(model=self.config["quick_think_llm"], base_url=self.config["backend_url"], temperature=0)

@@ -16,6 +16,17 @@
     --hairline-2: #D6D3CE;
     --accent: #1A1A1A;
   }
+  html.dark {
+    color-scheme: dark;
+    --bg: #0B0B0F;
+    --paper: #16161B;
+    --ink: #F5F4EF;
+    --ink-2: #C9C7C0;
+    --ink-3: #8C8A82;
+    --hairline: #2A2A30;
+    --hairline-2: #3A3A42;
+    --accent: #F5F4EF;
+  }
   html, body, #root { height: 100%; }
   body {
     font-family: "Inter", system-ui, sans-serif;
@@ -43,8 +54,8 @@
 
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #D6D3CE; border-radius: 8px; border: 2px solid var(--bg); }
-  ::-webkit-scrollbar-thumb:hover { background: #A8A29E; }
+  ::-webkit-scrollbar-thumb { background: var(--hairline-2); border-radius: 8px; border: 2px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ink-3); }
 }
 
 @layer components {
@@ -94,13 +105,13 @@
   }
 
   .card {
-    @apply bg-white border border-stone-200/80 rounded-2xl;
+    @apply bg-white border border-stone-200/80 rounded-2xl dark:bg-[var(--paper)] dark:border-[var(--hairline)];
     box-shadow:
       0 1px 0 0 rgba(0, 0, 0, 0.02),
       0 1px 2px 0 rgba(15, 15, 15, 0.04);
   }
   .card-elevated {
-    @apply bg-white border border-stone-200/80 rounded-2xl;
+    @apply bg-white border border-stone-200/80 rounded-2xl dark:bg-[var(--paper)] dark:border-[var(--hairline)];
     box-shadow:
       0 1px 0 0 rgba(0, 0, 0, 0.02),
       0 4px 12px -2px rgba(15, 15, 15, 0.06),

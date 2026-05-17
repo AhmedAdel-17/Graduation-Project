@@ -2,6 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useTickers } from "../../hooks/useTickers";
+import {
+  EGX_SECTOR_ORDER,
+  getTickerMeta,
+  type EgxSector,
+  type EgxTickerMeta,
+} from "../../data/egxTickerMeta";
+import { TickerLogo } from "../../components/ui/TickerLogo";
 
 interface Props {
   value: string;
@@ -17,15 +24,40 @@ export function TickerPicker({ value, onChange, disabled, className, label }: Pr
   const [query, setQuery] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
 
+  // Enrich the backend ticker list with English/Arabic names + sector.
+  const enriched: EgxTickerMeta[] = useMemo(
+    () => tickers.map((t) => getTickerMeta(t.ticker)),
+    [tickers]
+  );
+
+  // Filter against symbol, English name, AND Arabic name.
   const filtered = useMemo(() => {
-    const q = query.trim().toUpperCase();
-    if (!q) return tickers;
-    return tickers.filter(
+    const q = query.trim();
+    if (!q) return enriched;
+    const qLower = q.toLowerCase();
+    return enriched.filter(
       (t) =>
-        t.ticker.toUpperCase().includes(q) ||
-        (t.name || "").toUpperCase().includes(q)
+        t.symbol.toLowerCase().includes(qLower) ||
+        t.nameEn.toLowerCase().includes(qLower) ||
+        t.nameAr.includes(q) // Arabic — case-insensitive doesn't apply
     );
-  }, [tickers, query]);
+  }, [enriched, query]);
+
+  // Group filtered results by sector, preserving the canonical sector order.
+  const grouped = useMemo(() => {
+    const map = new Map<EgxSector, EgxTickerMeta[]>();
+    for (const t of filtered) {
+      const arr = map.get(t.sector) ?? [];
+      arr.push(t);
+      map.set(t.sector, arr);
+    }
+    return EGX_SECTOR_ORDER.map((sector) => ({
+      sector,
+      items: (map.get(sector) ?? []).sort((a, b) =>
+        a.symbol.localeCompare(b.symbol)
+      ),
+    })).filter((g) => g.items.length > 0);
+  }, [filtered]);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -37,7 +69,8 @@ export function TickerPicker({ value, onChange, disabled, className, label }: Pr
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  const selected = tickers.find((t) => t.ticker === value);
+  const selected = enriched.find((t) => t.apiTicker === value);
+  const selectedDisplay = selected ?? getTickerMeta(value);
 
   return (
     <div className={cn("relative", className)} ref={rootRef}>
@@ -49,78 +82,96 @@ export function TickerPicker({ value, onChange, disabled, className, label }: Pr
         className={cn(
           "w-full flex items-center justify-between gap-3 h-12 px-4 rounded-xl",
           "bg-white border border-stone-200 hover:border-stone-300 transition-colors",
+          "dark:bg-[var(--paper)] dark:border-[var(--hairline)] dark:hover:border-[var(--hairline-2)]",
           "text-left disabled:opacity-50 disabled:cursor-not-allowed",
-          open && "border-stone-900 ring-4 ring-stone-900/5"
+          open && "border-stone-900 ring-4 ring-stone-900/5 dark:border-[var(--ink-2)] dark:ring-white/5"
         )}
       >
         <div className="flex items-center gap-3 min-w-0">
-          <div className="h-8 w-8 rounded-lg bg-stone-100 flex items-center justify-center shrink-0">
-            <span className="display text-[12px] font-semibold text-stone-700">
-              {(selected?.ticker || value || "—").slice(0, 2)}
-            </span>
-          </div>
+          <TickerLogo ticker={selectedDisplay.apiTicker} size="sm" />
           <div className="min-w-0">
             <div className="mono text-[14px] font-semibold text-ink leading-tight">
-              {value || "Select"}
+              {selectedDisplay.symbol || "Select"}
             </div>
-            {selected?.name && (
-              <div className="text-[11px] text-stone-500 truncate leading-tight mt-0.5">
-                {selected.name}
+            {selectedDisplay.nameEn && (
+              <div className="text-[11px] text-stone-500 dark:text-[var(--ink-3)] truncate leading-tight mt-0.5">
+                {selectedDisplay.nameEn}
+                {selectedDisplay.nameAr && selectedDisplay.nameAr !== selectedDisplay.symbol && (
+                  <span className="ml-2" dir="rtl">· {selectedDisplay.nameAr}</span>
+                )}
               </div>
             )}
           </div>
         </div>
         <ChevronDown
           className={cn(
-            "h-4 w-4 text-stone-400 shrink-0 transition-transform",
+            "h-4 w-4 text-stone-400 dark:text-[var(--ink-3)] shrink-0 transition-transform",
             open && "rotate-180"
           )}
         />
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-2 w-full rounded-xl border border-stone-200 bg-white shadow-[0_12px_32px_-8px_rgba(15,15,15,0.18)] overflow-hidden anim-fade-up">
-          <div className="flex items-center gap-2 px-3 h-11 border-b border-stone-100">
-            <Search className="h-4 w-4 text-stone-400" />
+        <div className="absolute z-50 mt-2 w-full rounded-xl border border-stone-200 bg-white shadow-[0_12px_32px_-8px_rgba(15,15,15,0.18)] overflow-hidden anim-fade-up
+          dark:bg-[var(--paper)] dark:border-[var(--hairline)] dark:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.6)]">
+          <div className="flex items-center gap-2 px-3 h-11 border-b border-stone-100 dark:border-[var(--hairline)]">
+            <Search className="h-4 w-4 text-stone-400 dark:text-[var(--ink-3)]" />
             <input
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search EGX-30…"
-              className="flex-1 bg-transparent focus:outline-none text-sm text-ink placeholder:text-stone-400"
+              placeholder="Search by symbol, English or Arabic name…"
+              className="flex-1 bg-transparent focus:outline-none text-sm text-ink placeholder:text-stone-400 dark:placeholder:text-[var(--ink-3)]"
             />
           </div>
-          <div className="max-h-72 overflow-y-auto py-1">
-            {filtered.length === 0 ? (
-              <div className="px-4 py-8 text-center text-xs text-stone-500">
+          <div className="max-h-96 overflow-y-auto py-1">
+            {grouped.length === 0 ? (
+              <div className="px-4 py-8 text-center text-xs text-stone-500 dark:text-[var(--ink-3)]">
                 No matches for "{query}"
               </div>
             ) : (
-              filtered.map((t) => {
-                const active = t.ticker === value;
-                return (
-                  <button
-                    key={t.ticker}
-                    type="button"
-                    onClick={() => {
-                      onChange(t.ticker);
-                      setOpen(false);
-                      setQuery("");
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left transition-colors",
-                      active ? "bg-stone-50" : "hover:bg-stone-50/60"
-                    )}
-                  >
-                    <span className="mono text-[13px] font-semibold text-ink">
-                      {t.ticker}
-                    </span>
-                    <span className="text-[11px] text-stone-500 truncate ml-3">
-                      {t.name}
-                    </span>
-                  </button>
-                );
-              })
+              grouped.map((group) => (
+                <div key={group.sector}>
+                  <div className="px-4 pt-3 pb-1 text-[10px] uppercase tracking-wide text-stone-400 font-semibold sticky top-0
+                    bg-white dark:bg-[var(--paper)] dark:text-[var(--ink-3)]">
+                    {group.sector}
+                  </div>
+                  {group.items.map((t) => {
+                    const active = t.apiTicker === value;
+                    return (
+                      <button
+                        key={t.apiTicker}
+                        type="button"
+                        onClick={() => {
+                          onChange(t.apiTicker);
+                          setOpen(false);
+                          setQuery("");
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-4 py-2 text-left transition-colors",
+                          active
+                            ? "bg-stone-50 dark:bg-white/5"
+                            : "hover:bg-stone-50/60 dark:hover:bg-white/5"
+                        )}
+                      >
+                        <TickerLogo ticker={t.apiTicker} size="sm" />
+                        <span className="mono text-[13px] font-semibold text-ink w-14 shrink-0">
+                          {t.symbol}
+                        </span>
+                        <span className="text-[12px] text-stone-600 dark:text-[var(--ink-2)] truncate flex-1">
+                          {t.nameEn}
+                        </span>
+                        <span
+                          className="text-[12px] text-stone-500 dark:text-[var(--ink-3)] truncate text-right shrink-0 max-w-[40%]"
+                          dir="rtl"
+                        >
+                          {t.nameAr}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ))
             )}
           </div>
         </div>
