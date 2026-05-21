@@ -35,6 +35,21 @@ from tradingagents.default_config import DEFAULT_CONFIG
 from tradingagents.dataflows.y_finance import get_YFin_data_online
 from datetime import datetime, timedelta
 
+
+def _resolve_llm_api_key(backend_url: str) -> str:
+    """Return DEEPSEEK_API_KEY. DeepSeek is the sole supported LLM backend.
+
+    Do not fall back to OPENAI_API_KEY — historically it was set to a Groq
+    key in .env and got shipped to DeepSeek, returning 401.
+    """
+    key = os.getenv("DEEPSEEK_API_KEY")
+    if not key:
+        raise RuntimeError(
+            "DEEPSEEK_API_KEY is not set. DeepSeek is the only configured LLM "
+            "backend for this project — see .env."
+        )
+    return key
+
 def run_prediction(target_tickers=None):
     global log_file
     log_file = open("final_result.log", "w", encoding="utf-8")
@@ -180,17 +195,18 @@ def run_prediction(target_tickers=None):
         llm = ChatOpenAI(
             model=DEFAULT_CONFIG["quick_think_llm"],
             base_url=DEFAULT_CONFIG["backend_url"],
+            api_key=_resolve_llm_api_key(DEFAULT_CONFIG["backend_url"]),
             temperature=0
         )
-        
+
         price_table = "\n".join([
             f"  {d['date']}: O={d['open']:.2f} H={d['high']:.2f} L={d['low']:.2f} C={d['close']:.2f}"
             for d in price_data["data"][-7:]
         ])
-        
+
         sma5_str = f"{sma_5:.2f}" if sma_5 else "N/A"
         sma10_str = f"{sma_10:.2f}" if sma_10 else "N/A"
-        
+
         prompt = f"""You are a senior equity analyst for the Egyptian Stock Exchange (EGX).
 
 STOCK: {selected_ticker} - {selected_name}
@@ -323,14 +339,15 @@ def analyze_ticker_for_api(ticker):
         llm = ChatOpenAI(
             model=DEFAULT_CONFIG["quick_think_llm"],
             base_url=DEFAULT_CONFIG["backend_url"],
+            api_key=_resolve_llm_api_key(DEFAULT_CONFIG["backend_url"]),
             temperature=0
         )
-        
+
         price_table = "\n".join([
             f"  {d['date']}: O={d['open']:.2f} H={d['high']:.2f} L={d['low']:.2f} C={d['close']:.2f}"
             for d in price_data["data"][-7:]
         ])
-        
+
         sma5_str = f"{sma_5:.2f}" if sma_5 else "N/A"
         sma10_str = f"{sma_10:.2f}" if sma_10 else "N/A"
         

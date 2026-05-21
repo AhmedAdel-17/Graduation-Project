@@ -350,32 +350,53 @@ class FinancialSituationMemory:
         # Vector path (embeddings enabled). When Chroma is empty, fall back to
         # BM25 over the seed corpus so we never silently return [] just because
         # no reflection has run yet.
-        if self.situation_collection.count() == 0:
-            results = self._bm25_search(
+        #
+        # The entire vector path is wrapped: ChromaDB can raise InternalError
+        # (e.g. "Error creating hnsw segment reader: Nothing found on disk"
+        # when the persisted collection's HNSW index segment is missing or
+        # corrupt) and the embeddings backend can raise network errors. A
+        # retrieval failure must NEVER crash the calling agent node — losing
+        # past-memory context is acceptable, aborting the whole graph is not.
+        # On any failure we degrade to BM25 over the seed corpus.
+        try:
+            if self.situation_collection.count() == 0:
+                results = self._bm25_search(
+                    current_situation,
+                    n_matches=n_matches,
+                    where=where,
+                    min_similarity=min_similarity,
+                )
+                if not results:
+                    logger.info(
+                        "memory.empty_return (collection=%s, backend=bm25_fallback, "
+                        "where=%s, threshold=%s)",
+                        self.name, where, min_similarity,
+                    )
+                return results
+
+            query_embedding = self.get_embedding(current_situation)
+
+            query_kwargs = {
+                "query_embeddings": [query_embedding],
+                "n_results": n_matches,
+                "include": ["metadatas", "documents", "distances"],
+            }
+            if where:
+                query_kwargs["where"] = where
+
+            results = self.situation_collection.query(**query_kwargs)
+        except Exception as exc:
+            logger.warning(
+                "memory.vector_query_failed (collection=%s): %s — "
+                "falling back to BM25 seed-corpus retrieval",
+                self.name, exc,
+            )
+            return self._bm25_search(
                 current_situation,
                 n_matches=n_matches,
                 where=where,
                 min_similarity=min_similarity,
             )
-            if not results:
-                logger.info(
-                    "memory.empty_return (collection=%s, backend=bm25_fallback, "
-                    "where=%s, threshold=%s)",
-                    self.name, where, min_similarity,
-                )
-            return results
-
-        query_embedding = self.get_embedding(current_situation)
-
-        query_kwargs = {
-            "query_embeddings": [query_embedding],
-            "n_results": n_matches,
-            "include": ["metadatas", "documents", "distances"],
-        }
-        if where:
-            query_kwargs["where"] = where
-
-        results = self.situation_collection.query(**query_kwargs)
 
         # When Chroma returns nothing matching the filter, "documents" can be
         # [[]]; defend against that.

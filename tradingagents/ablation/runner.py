@@ -200,8 +200,13 @@ def _rebuild_graph(tag, exp_config: dict, call_log: List[LLMCallLog]):
 
             analysts_needing_sync.append(f"Msg Clear {atype.capitalize()}")
 
-    # Sync barrier
-    workflow.add_node("Analysts Sync", lambda state: {})
+    # Sync barrier. defer=True makes it a TRUE barrier — it executes once,
+    # only after every analyst branch has settled. Without defer it fires
+    # once per super-step in which any analyst's edge delivers a trigger,
+    # and analysts finish in different super-steps (variable tool-call
+    # rounds) — each firing re-triggers the debate. See the debate-wiring
+    # comment below and MEMORY §AA.
+    workflow.add_node("Analysts Sync", lambda state: {}, defer=True)
     for node_name in analysts_needing_sync:
         workflow.add_edge(node_name, "Analysts Sync")
 
@@ -222,15 +227,17 @@ def _rebuild_graph(tag, exp_config: dict, call_log: List[LLMCallLog]):
         workflow.add_node("Research Manager",
                           create_research_manager(deep_llm, tag.invest_judge_memory))
 
+        # STRICT LINEAR debate chain: Bull → Bear → Research Manager.
+        # The former Bull↔Bear cycle (via should_continue_debate conditional
+        # edges) re-triggered a second concurrent Bull task; both Bull and
+        # Bear write investment_debate_state and the _keep_last reducer
+        # dropped one — Bear's structured thesis was the casualty, so
+        # bear_history came back empty on every run (MEMORY §AA). A linear
+        # chain is functionally equivalent: ConditionalLogic is always built
+        # with max_debate_rounds=1, so the debate was always a single round.
         workflow.add_edge("Analysts Sync", "Bull Researcher")
-        workflow.add_conditional_edges(
-            "Bull Researcher", cond.should_continue_debate,
-            {"Bear Researcher": "Bear Researcher", "Research Manager": "Research Manager"},
-        )
-        workflow.add_conditional_edges(
-            "Bear Researcher", cond.should_continue_debate,
-            {"Bull Researcher": "Bull Researcher", "Research Manager": "Research Manager"},
-        )
+        workflow.add_edge("Bull Researcher", "Bear Researcher")
+        workflow.add_edge("Bear Researcher", "Research Manager")
         post_debate_node = "Research Manager"
 
     # --- Trader ---

@@ -132,10 +132,87 @@ export interface BacktestMetrics {
   win_rate?: number;
   profit_factor?: number;
   total_trades?: number;
+  // Number of closed (SELL) trades — used by the dashboard to decide
+  // whether realised-PnL / win-rate metrics are meaningful in the summary.
+  closed_trades?: number;
+  // Buy-and-hold of the same ticker for the same window (always available).
+  buyhold_return_pct?: number;
+  // EGX30 buy-and-hold return for the same window (when CSV available).
+  benchmark_return_pct?: number;
+  // Strategy return − benchmark return (always derived from the two above).
+  alpha_pct?: number;
   avg_trade_return?: number;
   final_equity?: number;
   initial_capital?: number;
   [k: string]: number | undefined;
+}
+
+// Structured EGX30 alignment block emitted by
+// BacktestingEngine._align_benchmark_to_strategy(). Present on
+// BacktestDetail.benchmark when the JSON report carries it.
+export interface BenchmarkBlock {
+  name?: string;
+  source?: string;
+  first_aligned_date?: string;
+  last_aligned_date?: string;
+  n_aligned_days?: number;
+  coverage_pct?: number;
+  total_return_pct?: number;
+  annualized_return_pct?: number | null;
+  alpha_pct?: number;
+  tracking_error_pct?: number | null;
+  note?: string;
+  error?: string;
+  [k: string]: unknown;
+}
+
+// Trader's structured exit plan attached to each BUY (and passed through
+// on SELL). Shape mirrors execution_plan.exit_logic from the agent graph.
+export interface ExitPlan {
+  take_profit?: Record<string, { price?: number; pct_of_position?: number }>;
+  stop_loss?: { price?: number; type?: string; note?: string };
+  time_stop?: string;
+  invalidation_triggers?: string[];
+  conviction?: string;
+}
+
+// Compact bull/bear thesis structure surfaced in audit_log entries. Built
+// by scripts/backtester._summarize_thesis().
+export interface ThesisSummary {
+  conviction_level?: string;
+  time_horizon?: string;
+  alignment_score?: string;
+  catalysts?: string[];
+  invalidation?: string[];
+  base_case_upside_pct?: number;
+  downside_risk_pct?: number;
+}
+
+// One audit_log entry per evaluation date. Carries the per-date agent
+// text the dashboard renders in the Bull / Bear / Risk cards.
+export interface BacktestAuditEntry {
+  date?: string;
+  price?: number;
+  parsed_decision?: string;
+  decision_path?: string;
+  confidence?: number;
+  risk_action?: string;
+  risk_approved?: boolean | null;
+  risk_violations?: number;
+  critical_violations?: number;
+  execution_plan_decision?: string;
+  reasoning_score?: number;
+  llm_calls?: number;
+  trade_time_s?: number;
+  risk_judge_text?: string | null;
+  bull_thesis_summary?: ThesisSummary | null;
+  bear_thesis_summary?: ThesisSummary | null;
+  bear_thesis_present?: boolean;
+  /** Per-date "why" — present for every evaluation, including HOLD dates. */
+  reasoning?: string | null;
+  /** One-line rationale extracted from the debate judge's verdict JSON. */
+  judge_rationale?: string | null;
+  [k: string]: unknown;
 }
 
 export interface BacktestTrade {
@@ -152,6 +229,8 @@ export interface BacktestTrade {
   realized_pnl?: number;
   pnl?: number;
   signal?: string;
+  // Structured exit plan from the trader's execution_plan.
+  exit_plan?: ExitPlan | null;
   confidence?: number;
   reasoning?: string;
   // PR C of MEMORY.md §4b — present only when rl_meta_policy_enabled.
@@ -284,6 +363,11 @@ export interface BacktestDetail {
   trades: BacktestTrade[];
   daily_portfolio: EquityPoint[];
   benchmark_history?: EquityPoint[];
+  // Same-ticker buy-and-hold equity curve (initial_capital * price/price_0).
+  // Used by the Scenario Comparison section.
+  buyhold_history?: EquityPoint[];
+  // Structured EGX30 alignment block (see BenchmarkBlock).
+  benchmark?: BenchmarkBlock;
   audit_log?: unknown[];
   cost_model?: Record<string, unknown>;
   [k: string]: unknown;

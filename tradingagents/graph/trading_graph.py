@@ -111,17 +111,14 @@ class TradingAgentsGraph:
             # When backend_url points at a non-OpenAI provider (DeepSeek, OpenRouter, Ollama),
             # the matching key lives under a provider-specific env var. ChatOpenAI only checks
             # OPENAI_API_KEY by default, so resolve explicitly here.
-            backend = (self.config.get("backend_url") or "").lower()
-            if "deepseek" in backend:
-                api_key = os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENAI_API_KEY")
-            elif "openrouter" in backend:
-                api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
-            else:
-                api_key = os.getenv("OPENAI_API_KEY")
+            # DeepSeek is the only supported LLM backend. OPENAI_API_KEY is
+            # intentionally never read — see feedback_chatopenai_api_key.md.
+            api_key = os.getenv("DEEPSEEK_API_KEY")
             if not api_key:
-                # Ollama and other local servers genuinely don't need a key; pass a placeholder
-                # so the OpenAI SDK stops refusing to construct.
-                api_key = "not-needed"
+                raise RuntimeError(
+                    "DEEPSEEK_API_KEY is not set. DeepSeek is the only configured "
+                    "LLM backend for this project — see .env."
+                )
             self.deep_thinking_llm = ChatOpenAI(model=self.config["deep_think_llm"], base_url=self.config["backend_url"], temperature=0, api_key=api_key)
             self.quick_thinking_llm = ChatOpenAI(model=self.config["quick_think_llm"], base_url=self.config["backend_url"], temperature=0, api_key=api_key)
         elif self.config["llm_provider"].lower() == "anthropic":

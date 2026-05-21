@@ -29,6 +29,7 @@ Layer 2 — `ReliableChatModel`
 from __future__ import annotations
 
 import logging
+import os
 import time
 import threading
 from typing import Any, Dict, List, Optional
@@ -272,7 +273,7 @@ def build_resilient_llm(
                 providers.append(ChatOpenAI(
                     model=model_name,
                     base_url=config.get("backend_url", "https://api.deepseek.com"),
-                    api_key=config.get("DEEPSEEK_API_KEY") or config.get("OPENAI_API_KEY"),
+                    api_key=config.get("DEEPSEEK_API_KEY") or os.getenv("DEEPSEEK_API_KEY"),
                     temperature=0,
                     seed=seed,
                     max_retries=max_retries_per_provider,

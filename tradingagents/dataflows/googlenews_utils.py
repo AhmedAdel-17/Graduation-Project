@@ -13,6 +13,13 @@ from tenacity import (
 )
 
 
+# Bounded HTTP timeout for the Google News RSS scrape. Without this, a single
+# slow/hanging socket inside the news-prefetch ThreadPoolExecutor would block
+# the entire pipeline indefinitely (the executor's `__exit__` waits on all
+# threads, so even a per-future result timeout doesn't save us).
+GOOGLENEWS_HTTP_TIMEOUT = 10  # seconds
+
+
 def is_rate_limited(response):
     """Check if the response indicates rate limiting (status code 429)"""
     return response.status_code == 429
@@ -21,13 +28,14 @@ def is_rate_limited(response):
 @retry(
     retry=(retry_if_result(is_rate_limited)),
     wait=wait_exponential(multiplier=1, min=4, max=60),
-    stop=stop_after_attempt(5),
+    stop=stop_after_attempt(3),
 )
 def make_request(url, headers):
-    """Make a request with retry logic for rate limiting"""
-    # Random delay before each request to avoid detection
-    time.sleep(random.uniform(2, 6))
-    response = requests.get(url, headers=headers)
+    """Make a request with retry logic for rate limiting."""
+    # Short randomized delay to soften bot detection — keep below 2s so the
+    # 3-attempt retry envelope stays inside the prefetcher's 30s budget.
+    time.sleep(random.uniform(0.5, 1.5))
+    response = requests.get(url, headers=headers, timeout=GOOGLENEWS_HTTP_TIMEOUT)
     return response
 
 

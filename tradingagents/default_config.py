@@ -27,9 +27,9 @@ DEFAULT_CONFIG = {
     ),
     # LLM settings - DeepSeek (OpenAI-compatible)
     "llm_provider": "openai",
-    "deep_think_llm": "deepseek-chat",
-    "quick_think_llm": "deepseek-chat",
-    "backend_url": "https://api.deepseek.com",
+    "deep_think_llm": os.getenv("DEEP_THINK_LLM", "deepseek-chat"),
+    "quick_think_llm": os.getenv("QUICK_THINK_LLM", "deepseek-chat"),
+    "backend_url": os.getenv("LLM_BACKEND_URL", "https://api.deepseek.com"),
     # Separate backend for embeddings (DeepSeek has no embeddings API).
     # Default: local Ollama with `nomic-embed-text` (free, persistent vectors).
     # Override with EMBEDDINGS_BACKEND_URL env var (e.g. https://api.openai.com/v1).

@@ -38,9 +38,13 @@ export const endpoints = {
   // EGX ticker catalogue
   tickers: () => api.get<TickersResponse>("/test/egx-tickers"),
 
-  // Quick prediction (fast multi-agent summary)
+  // Quick prediction (fast single-LLM summary, ~10-30s)
   runPrediction: (ticker?: string) =>
     api.post<PredictionResult>("/test/random-egx", ticker ? { ticker } : {}),
+
+  // Full multi-agent pipeline (TradingAgentsGraph end-to-end, 3-8 min)
+  runFullPipeline: (ticker: string) =>
+    api.post<PredictionResult>("/analyze-full", { ticker }),
 
   // Historical OHLCV
   stockData: (

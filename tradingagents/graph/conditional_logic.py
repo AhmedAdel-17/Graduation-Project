@@ -55,8 +55,13 @@ class ConditionalLogic:
         return "Msg Clear Fundamentals"
 
     def should_continue_debate(self, state: AgentState) -> str:
-        """Determine if debate should continue."""
-        
+        """Determine if debate should continue.
+
+        NOTE: as of the MEMORY §AA fix the debate is wired as a strict linear
+        chain (Bull → Bear → Research Manager) in both ``graph/setup.py`` and
+        ``ablation/runner.py``, so this method is no longer used for routing.
+        It is retained for reference and any external caller.
+        """
         if (
             state["investment_debate_state"]["count"] >= 2 * self.max_debate_rounds
         ):  # rounds of back-and-forth between 2 agents

@@ -110,12 +110,17 @@ class AgentState(MessagesState):
     volume_missing: Annotated[Optional[bool], "True if volume data is unavailable"]
     current_position: Annotated[Optional[Dict], "Current holding: {shares, avg_cost, market_value} or empty dict if no position"]
 
-    # Execution plan from Trader agent
-    execution_plan: Annotated[Optional[Dict], "Execution plan from Trader"]
+    # Execution plan: written by Trader, then re-written by Risk Scorer
+    # (which mutates position_sizing / exit_logic in place). Both writers
+    # are sequential by graph topology, but LangGraph still treats writes
+    # to the same key in the same super-step as INVALID_CONCURRENT_GRAPH_UPDATE
+    # unless a reducer is declared. `_keep_last` makes the resolution explicit.
+    execution_plan: Annotated[Optional[Dict], _keep_last]
 
-    # Risk assessment from Risk Manager
-    risk_assessment: Annotated[Optional[Dict], "Risk assessment from Risk Manager"]
-    risk_veto: Annotated[Optional[bool], "True if Risk Manager vetoes the trade"]
+    # Risk assessment: written by Risk Scorer (deterministic checks) and then
+    # again by Risk Judge (LLM-augmented). Same reasoning — declare a reducer.
+    risk_assessment: Annotated[Optional[Dict], _keep_last]
+    risk_veto: Annotated[Optional[bool], _keep_last]
 
     # Risk Scorer outputs (populated by Deterministic Risk Scorer node, before LLM debate)
     risk_action: Annotated[Optional[str], "Risk action: ALLOW | WARN | THROTTLE | VETO"]

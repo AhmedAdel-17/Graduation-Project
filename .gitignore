@@ -33,6 +33,7 @@ __MACOSX/
 
 # Data caches
 tradingagents/dataflows/data_cache/
+tradingagents/dataflows/social_v2/_cache/
 backtest_results/
 eval_results/
 results/

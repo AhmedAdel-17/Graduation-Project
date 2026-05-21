@@ -143,9 +143,17 @@ class InvestorProfilingAgent:
         backend_url = self.config.get("backend_url", "https://api.deepseek.com")
 
         if provider in {"openai", "ollama", "openrouter"}:
+            import os as _os
+            _key = _os.getenv("DEEPSEEK_API_KEY")
+            if not _key:
+                raise RuntimeError(
+                    "DEEPSEEK_API_KEY is not set. DeepSeek is the only configured "
+                    "LLM backend for this project — see .env."
+                )
             return ChatOpenAI(
                 model=quick_model,
                 base_url=backend_url,
+                api_key=_key,
                 temperature=0,
                 seed=42,
             )

@@ -39,6 +39,7 @@ dependencies = [
     "tqdm>=4.67.1",
     "typing-extensions>=4.14.0",
     "uvicorn>=0.30.0",
+    "vaderSentiment>=3.3.2",
     "yfinance>=0.2.63",
 ]
 

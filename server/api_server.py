@@ -102,6 +102,11 @@ def _parse_percent(v: Any) -> Optional[float]:
         if not s:
             return None
         s = s.replace("%", "").replace(",", "")
+        # Tolerate appended context like "60.00% [95% CI 30.0%–80.0%]".
+        # We only care about the leading percentage number.
+        parts = s.split()
+        if parts:
+            s = parts[0]
         try:
             return float(s)
         except ValueError:
@@ -344,6 +349,8 @@ def _normalize_llm_report(report: Dict[str, Any], *, session_id: str) -> Dict[st
     trades_raw = report.get("trades") if isinstance(report.get("trades"), list) else []
     daily_raw = report.get("daily_portfolio") if isinstance(report.get("daily_portfolio"), list) else []
     bm_raw = report.get("benchmark_history") if isinstance(report.get("benchmark_history"), list) else []
+    buyhold_raw = report.get("buyhold_history") if isinstance(report.get("buyhold_history"), list) else []
+    benchmark_block = report.get("benchmark") if isinstance(report.get("benchmark"), dict) else {}
 
     # Metrics (legacy shape from backtester.py)
     legacy = report.get("metrics") if isinstance(report.get("metrics"), dict) else {}
@@ -351,6 +358,14 @@ def _normalize_llm_report(report: Dict[str, Any], *, session_id: str) -> Dict[st
     sharpe_ratio = _parse_float(legacy.get("Sharpe Ratio"))
     max_drawdown_pct = _parse_percent(legacy.get("Max Drawdown"))
     win_rate_pct = _parse_percent(legacy.get("Win Rate"))
+    benchmark_return_pct = _parse_percent(legacy.get("Benchmark Return"))
+    buyhold_return_pct = _parse_percent(legacy.get("Buy&Hold Return"))
+    alpha_pct = _parse_percent(legacy.get("Alpha"))
+    closed_trades = legacy.get("Closed Trades")
+    if isinstance(closed_trades, (int, float)):
+        closed_trades = int(closed_trades)
+    else:
+        closed_trades = None
 
     # Equity series normalization
     equity = []
@@ -392,6 +407,10 @@ def _normalize_llm_report(report: Dict[str, Any], *, session_id: str) -> Dict[st
                 "pnl": _parse_float(pnl),
                 "confidence": _parse_float(t.get("confidence")),
                 "reasoning": t.get("reasoning"),
+                # Trader's structured exit plan (take_profit / stop_loss /
+                # time_stop / invalidation_triggers). Passed through verbatim
+                # so the dashboard can render an inline expandable row.
+                "exit_plan": t.get("exit_plan") if isinstance(t.get("exit_plan"), dict) else None,
             }
         )
 
@@ -412,16 +431,40 @@ def _normalize_llm_report(report: Dict[str, Any], *, session_id: str) -> Dict[st
             except Exception:
                 continue
 
+    # Buy-and-hold (same-ticker) equity series normalization. The dashboard
+    # uses this for the Scenario Comparison section (Strategy vs same-ticker
+    # buy-and-hold). The backtester writes {date, price, value} entries.
+    buyhold = []
+    for r in buyhold_raw:
+        if not isinstance(r, dict):
+            continue
+        d = r.get("date")
+        val = r.get("value", r.get("equity"))
+        if d and val is not None:
+            try:
+                buyhold.append({"date": str(d), "equity": float(val)})
+            except Exception:
+                continue
+
     metrics: Dict[str, Any] = {
         "total_return_pct": total_return_pct,
         "sharpe_ratio": sharpe_ratio,
         "max_drawdown_pct": abs(max_drawdown_pct) if max_drawdown_pct is not None else None,
         "win_rate": win_rate_pct,
         "total_trades": len(trades_raw),
+        "closed_trades": closed_trades,
+        "benchmark_return_pct": benchmark_return_pct,
+        "buyhold_return_pct": buyhold_return_pct,
+        "alpha_pct": alpha_pct,
         "final_equity": final_equity,
         "initial_capital": initial_capital,
     }
     metrics = {k: v for k, v in metrics.items() if v is not None}
+
+    # Pass audit_log through (already in JSON report). Dashboard reads the
+    # last non-empty risk_judge_text / bull_thesis_summary / bear_thesis_summary
+    # to populate the agent cards with real text instead of templated copy.
+    audit_log_raw = report.get("audit_log") if isinstance(report.get("audit_log"), list) else []
 
     return {
         "ticker": ticker_norm or ticker,
@@ -432,6 +475,9 @@ def _normalize_llm_report(report: Dict[str, Any], *, session_id: str) -> Dict[st
             "trades": trades,
             "daily_portfolio": equity,
             "benchmark_history": bm,
+            "buyhold_history": buyhold,
+            "benchmark": benchmark_block,
+            "audit_log": audit_log_raw,
         },
     }
 
@@ -607,6 +653,23 @@ async def get_macro(as_of: Optional[str] = Query(None, description="YYYY-MM-DD; 
         return {"status": "ok", "macro_context": ctx}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Macro fetch failed: {exc}")
+
+
+@app.get("/api/market/indices")
+async def get_market_indices_endpoint(
+    as_of: Optional[str] = Query(None, description="YYYY-MM-DD; defaults to today")
+):
+    """
+    Headline market indices for the dashboard strip — spot level + 1-day change.
+
+    Covers EGX30, Gold and USD/EGP (instruments with a dependable free feed).
+    Deterministic, no LLM. Each instrument degrades independently.
+    """
+    from tradingagents.dataflows.macro_provider import get_market_indices
+    try:
+        return {"status": "ok", **get_market_indices(as_of_date=as_of)}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Indices fetch failed: {exc}")
 
 
 # =============================================================================
@@ -1777,6 +1840,10 @@ async def get_backtest_detail(session_id: str):
             "trades": block.get("trades") or [],
             "daily_portfolio": daily,
             "benchmark_history": block.get("benchmark_history") or [],
+            # Pass these through so the dashboard's Scenario Comparison +
+            # rich agent-text cards have everything they need.
+            "buyhold_history": block.get("buyhold_history") or [],
+            "benchmark": block.get("benchmark") or {},
             "audit_log": raw.get("audit_log") or [],
             "cost_model": raw.get("cost_model") or {},
             "error": block.get("error"),
@@ -2380,6 +2447,171 @@ async def test_random_egx(req: TestEgxRequest = TestEgxRequest()):
         return result
     except Exception as e:
         return {"error": f"Analysis failed for {selected_ticker}: {str(e)}"}
+
+
+class FullAnalyzeRequest(BaseModel):
+    ticker: str
+    selected_analysts: Optional[List[str]] = None
+    max_debate_rounds: int = 1
+    max_risk_rounds: int = 1
+
+
+@app.post("/api/analyze-full")
+async def analyze_full(req: FullAnalyzeRequest):
+    """
+    Run the FULL multi-agent TradingAgentsGraph (market + fundamentals + news +
+    social analysts -> bull/bear debate -> research manager -> trader -> risk
+    manager) and return a PredictionResult-shaped payload that the dashboard's
+    existing UI can render.
+
+    This is the synchronous counterpart to the /api/analyze WebSocket endpoint
+    — same engine, no streaming. Expect a 3-8 minute wall time.
+    """
+    # Lazy import (matches test_random_egx pattern)
+    try:
+        from run_egx_prediction import analyze_ticker_for_api
+        from tradingagents.default_config import EGX_TICKERS
+        from tradingagents.graph.trading_graph import TradingAgentsGraph
+        from tradingagents.graph.signal_processing import SignalProcessor
+        from langchain_openai import ChatOpenAI
+    except ImportError:
+        sys.path.append(str(PROJECT_ROOT))
+        from run_egx_prediction import analyze_ticker_for_api
+        from tradingagents.default_config import EGX_TICKERS
+        from tradingagents.graph.trading_graph import TradingAgentsGraph
+        from tradingagents.graph.signal_processing import SignalProcessor
+        from langchain_openai import ChatOpenAI
+
+    ticker = req.ticker if req.ticker.endswith(".CA") else f"{req.ticker}.CA"
+    selected_analysts = req.selected_analysts or ["market", "social", "news", "fundamentals"]
+    trade_date = datetime.now().strftime("%Y-%m-%d")
+
+    # Step 1: pull price/indicators/price_history (cheap; reuses existing helper).
+    # The quick-LLM recommendation it returns is discarded — we overwrite it
+    # below with the full multi-agent graph output.
+    try:
+        base = await asyncio.to_thread(analyze_ticker_for_api, ticker)
+    except Exception as exc:
+        return {"error": f"Price fetch failed for {ticker}: {exc}"}
+
+    if base.get("error"):
+        return base
+
+    # Step 2: run the full TradingAgentsGraph synchronously in a thread.
+    def _run_graph():
+        from copy import deepcopy
+        run_config = deepcopy(get_config())
+        run_config["max_debate_rounds"] = req.max_debate_rounds
+        run_config["max_risk_discuss_rounds"] = req.max_risk_rounds
+        graph = TradingAgentsGraph(
+            config=run_config,
+            selected_analysts=selected_analysts,
+            debug=False,
+        )
+        graph.ticker = ticker
+        init_state = graph.propagator.create_initial_state(ticker, trade_date)
+        args = graph.propagator.get_graph_args()
+        final_state: dict = {}
+        for chunk in graph.graph.stream(init_state, **args):
+            if isinstance(chunk, dict):
+                for _node, delta in chunk.items():
+                    if isinstance(delta, dict):
+                        final_state.update(delta)
+        return final_state
+
+    try:
+        final_state = await asyncio.to_thread(_run_graph)
+    except Exception as exc:
+        # Surface the full traceback to the server log so we can diagnose.
+        # Without this the failure is invisible (the JSON response carries
+        # `llm_error` but the terminal stays silent).
+        import traceback as _tb
+        print(f"\n[/api/analyze-full] FULL PIPELINE FAILED for {ticker}:", flush=True)
+        print(_tb.format_exc(), flush=True)
+        return {
+            **base,
+            "llm_error": f"Full pipeline failed: {exc}",
+            "status": "degraded",
+        }
+
+    # Step 3: map final_state -> Recommendation shape the UI already consumes.
+    debate = final_state.get("investment_debate_state") or {}
+    bull_thesis = debate.get("bull_thesis") or {}
+    bear_thesis = debate.get("bear_thesis") or {}
+    judge_decision = debate.get("judge_decision") or final_state.get("investment_plan") or ""
+    final_decision_text = final_state.get("final_trade_decision") or ""
+
+    # Extract BUY/SELL/HOLD via the same regex processor the graph uses
+    try:
+        signal = SignalProcessor(None).process_signal(final_decision_text) or "HOLD"
+    except Exception:
+        signal = "HOLD"
+    signal = (signal or "HOLD").upper()
+
+    # Build bull/bear strings. The full LLM argument lives in `*_history` as
+    # prose followed by a ```json ...``` block, and the prose is where the
+    # researcher actually discusses news headlines, social sentiment, and
+    # signal alignment. The structured `thesis` JSON only carries a one-word
+    # signal_summary.sentiment field — useless on its own. Prefer the prose;
+    # use the JSON only when no prose was captured.
+    def _thesis_to_text(thesis: dict, history: str) -> str:
+        prose = (history or "").strip()
+        if prose:
+            return prose
+        if isinstance(thesis, dict) and thesis:
+            try:
+                return json.dumps(thesis, indent=2, ensure_ascii=False)
+            except Exception:
+                pass
+        return ""
+
+    bull_case = _thesis_to_text(bull_thesis, debate.get("bull_history", ""))
+    bear_case = _thesis_to_text(bear_thesis, debate.get("bear_history", ""))
+
+    current_price = (base.get("price") or {}).get("current") or 0
+    target_price = None
+    stop_loss = None
+    if isinstance(bull_thesis, dict):
+        upside = bull_thesis.get("upside_scenario", {}) or {}
+        base_pct = upside.get("base_case_upside_pct")
+        if isinstance(base_pct, (int, float)) and current_price:
+            target_price = round(current_price * (1 + base_pct / 100.0), 2)
+    if isinstance(bear_thesis, dict):
+        downside = bear_thesis.get("downside_range", {}) or {}
+        sl = downside.get("support_level_1")
+        if isinstance(sl, (int, float)):
+            stop_loss = float(sl)
+    if stop_loss is None and current_price:
+        stop_loss = round(current_price * 0.9, 2)
+
+    confidence = "MEDIUM"
+    if isinstance(bull_thesis, dict):
+        cv = (bull_thesis.get("conviction_level") or "").upper()
+        if cv in ("HIGH", "MEDIUM", "LOW"):
+            confidence = cv
+
+    recommendation = {
+        "signal": signal,
+        "confidence": confidence,
+        "target_price": target_price,
+        "stop_loss": stop_loss,
+        "risk": "MEDIUM",
+        "bull_case": bull_case or "No bullish thesis was returned for this run.",
+        "bear_case": bear_case or "No bearish thesis was returned for this run.",
+        "neutral_case": judge_decision or "",
+        "rationale": judge_decision or "",
+        "recommendation": final_decision_text or judge_decision or "",
+        "full_text": final_decision_text,
+    }
+
+    return {
+        **base,
+        "recommendation": recommendation,
+        "llm_error": None,
+        "status": "ok",
+        "pipeline": "full",
+        "_final_state_keys": list(final_state.keys()),
+    }
 
 
 @app.get("/api/test/egx-tickers")

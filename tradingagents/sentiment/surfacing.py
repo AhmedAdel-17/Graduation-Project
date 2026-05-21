@@ -64,7 +64,17 @@ def extract_sentiment_audit_record(final_state: Dict[str, Any]) -> Dict[str, Any
     _raw_blend = final_state.get("sentiment_blend_result")
     blend: Dict[str, Any] = _raw_blend if isinstance(_raw_blend, dict) else {}
     conf_scores: Dict[str, Any] = final_state.get("confidence_scores") or {}
-    social: Dict[str, Any] = final_state.get("social_sentiment_analysis") or {}
+    # social_sentiment_analysis is written by the social analyst as a JSON
+    # STRING (see analysts/social_media_analyst.py:455). Decode if needed
+    # so .get() lookups below don't blow up with "'str' has no attribute 'get'".
+    _raw_social = final_state.get("social_sentiment_analysis")
+    if isinstance(_raw_social, str) and _raw_social.strip():
+        try:
+            import json as _json
+            _raw_social = _json.loads(_raw_social)
+        except (ValueError, TypeError):
+            _raw_social = {}
+    social: Dict[str, Any] = _raw_social if isinstance(_raw_social, dict) else {}
     sentiment_report: str = final_state.get("sentiment_report") or ""
 
     layer_c_status: Optional[str] = social.get("layer_c_status")

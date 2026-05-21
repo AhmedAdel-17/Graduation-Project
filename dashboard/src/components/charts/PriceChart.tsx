@@ -4,14 +4,16 @@ import {
   CandlestickSeries,
   HistogramSeries,
   LineSeries,
+  LineStyle,
   type IChartApi,
+  type IPriceLine,
   type ISeriesApi,
   type UTCTimestamp,
   type CandlestickData,
   type HistogramData,
   type LineData,
 } from "lightweight-charts";
-import { chartTheme, colors } from "./chartTheme";
+import { chartTheme, lightChartTheme, colors } from "./chartTheme";
 import type { StockBar } from "../../services/api/types";
 import { cn } from "../../lib/utils";
 
@@ -26,19 +28,31 @@ export interface PricePrediction {
   value: number;
 }
 
+// Horizontal reference line drawn on the candlestick series — used for the
+// analyst target and stop-loss overlays (a standard trading-website pattern).
+export interface PriceLineSpec {
+  price: number;
+  color: string;
+  title: string;
+}
+
 export interface PriceChartProps {
   bars: StockBar[];
   predictions?: PricePrediction[];
+  priceLines?: PriceLineSpec[];
   showVolume?: boolean;
   height?: number;
+  light?: boolean;
   className?: string;
 }
 
 export function PriceChart({
   bars,
   predictions,
+  priceLines,
   showVolume = true,
   height = 360,
+  light = false,
   className,
 }: PriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -46,12 +60,13 @@ export function PriceChart({
   const candleRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const volRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const predRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const priceLineRefs = useRef<IPriceLine[]>([]);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     const chart = createChart(containerRef.current, {
-      ...chartTheme,
+      ...(light ? lightChartTheme : chartTheme),
       autoSize: true,
       height,
     });
@@ -99,8 +114,30 @@ export function PriceChart({
       candleRef.current = null;
       volRef.current = null;
       predRef.current = null;
+      priceLineRefs.current = [];
     };
-  }, [height, showVolume]);
+  }, [height, showVolume, light]);
+
+  // Analyst target / stop-loss horizontal overlays.
+  useEffect(() => {
+    const candle = candleRef.current;
+    if (!candle) return;
+    for (const line of priceLineRefs.current) candle.removePriceLine(line);
+    priceLineRefs.current = [];
+    for (const spec of priceLines ?? []) {
+      if (!Number.isFinite(spec.price)) continue;
+      priceLineRefs.current.push(
+        candle.createPriceLine({
+          price: spec.price,
+          color: spec.color,
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: spec.title,
+        })
+      );
+    }
+  }, [priceLines, bars]);
 
   useEffect(() => {
     if (!candleRef.current) return;

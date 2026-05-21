@@ -20,7 +20,7 @@ import json
 import re
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 import numpy as np
 
@@ -56,6 +56,34 @@ EGX_SLIPPAGE_LOW_LIQ = 0.005    # 0.5%  — low-liquidity stocks (wider spreads)
 
 EGX_CIRCUIT_BREAKER  = 0.10     # ±10% daily price move halts trading on EGX
 EGX_SETTLEMENT_DAYS  = 2        # T+2: cash from a SELL settles after 2 business days
+
+
+def _summarize_thesis(thesis: dict) -> Optional[dict]:
+    """Compact a bull/bear thesis dict to the fields the dashboard renders.
+
+    The raw thesis is multi-KB JSON with full prose. We keep only the
+    operational summary so each audit row stays under a few hundred bytes.
+    Returns None when the thesis is empty / not a dict.
+    """
+    if not isinstance(thesis, dict) or not thesis:
+        return None
+    out: Dict[str, Any] = {
+        "conviction_level": thesis.get("conviction_level"),
+        "time_horizon": (thesis.get("time_horizon") or {}).get("primary"),
+        "alignment_score": (thesis.get("signal_summary") or {}).get("alignment_score"),
+    }
+    catalysts = thesis.get("key_catalysts") or thesis.get("key_risks") or []
+    if isinstance(catalysts, list):
+        out["catalysts"] = [str(c)[:160] for c in catalysts[:5]]
+    invalidation = thesis.get("invalidation_conditions") or []
+    if isinstance(invalidation, list):
+        out["invalidation"] = [str(c)[:160] for c in invalidation[:5]]
+    upside = thesis.get("upside_scenario") or {}
+    if isinstance(upside, dict):
+        out["base_case_upside_pct"] = upside.get("base_case_upside_pct")
+        out["downside_risk_pct"] = upside.get("downside_risk_pct")
+    # Drop None values so the JSON stays tight.
+    return {k: v for k, v in out.items() if v not in (None, [], {})} or None
 
 
 def _compute_reasoning_score(final_state: dict) -> int:
@@ -128,7 +156,19 @@ class BacktestingEngine:
             "backtest_mode": True,
         })
         config = get_config()
+        self.config = config
         self.gateway = DataGateway(config)
+
+        # MEMORY.md §C3 — risk-free rate is config-driven, not hardcoded 0.05.
+        # default_config["egx_risk_free_rate"] = 0.275 (CBE policy proxy).
+        # Falls back to walkforward.default_risk_free_rate() (0.24) if config
+        # is somehow missing the key, so Sharpe is never computed against 0.05.
+        try:
+            from tradingagents.rl.walkforward import default_risk_free_rate as _default_rfr
+            _fallback_rfr = _default_rfr()
+        except Exception:
+            _fallback_rfr = 0.24
+        self.risk_free_rate: float = float(config.get("egx_risk_free_rate", _fallback_rfr))
 
         # ── Stage C: RL meta-policy (opt-in, fail-closed) ──────────────────
         # Default is the identity policy (size_multiplier = 1.0), which gives
@@ -332,6 +372,214 @@ class BacktestingEngine:
             return False
 
     # =========================================================================
+    # Data Fetch (retry-wrapped) + Resume Checkpointing
+    # =========================================================================
+
+    def _fetch_stock_data_with_retry(
+        self,
+        ticker: str,
+        start_date: str,
+        end_date: str,
+        max_attempts: int = 3,
+        base_wait_s: float = 1.0,
+        max_wait_s: float = 8.0,
+    ) -> Dict:
+        """Wrap gateway.fetch_stock_data with retry+backoff.
+
+        Returns the dict on success (possibly with empty ``data``), or ``{}``
+        on irrecoverable failure. The caller treats both as a date skip so a
+        transient network error never aborts a multi-hour run.
+        """
+        last_exc: Optional[Exception] = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                return self.gateway.fetch_stock_data(
+                    ticker, start_date=start_date, end_date=end_date
+                )
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except Exception as exc:
+                last_exc = exc
+                if attempt < max_attempts:
+                    wait_s = min(base_wait_s * (2 ** (attempt - 1)), max_wait_s)
+                    logger.warning(
+                        "fetch_stock_data attempt %d/%d for %s failed: %s "
+                        "(retry in %.1fs)",
+                        attempt, max_attempts, ticker, exc, wait_s,
+                    )
+                    import time as _t
+                    _t.sleep(wait_s)
+        logger.error(
+            "fetch_stock_data exhausted %d attempts for %s [%s → %s]: %s",
+            max_attempts, ticker, start_date, end_date, last_exc,
+        )
+        return {}
+
+    def _partial_path(self, ticker: str) -> str:
+        """Disk path for the per-ticker resumable checkpoint."""
+        d = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "backtest_results")
+        )
+        os.makedirs(d, exist_ok=True)
+        safe = ticker.replace("/", "_").replace("\\", "_")
+        return os.path.join(d, f"partial_{safe}.json")
+
+    def _maybe_write_partial(self, ticker: str) -> None:
+        """Atomically persist per-date progress so --resume can pick up.
+
+        Best-effort: never raises into the loop. The .partial.json holds
+        daily_history, trade_history, audit_log, positions, cash, and
+        cumulative settlement queue so the next run can recover state.
+        """
+        try:
+            payload = {
+                "ticker": ticker,
+                "initial_capital": self.initial_capital,
+                "cash": self.cash,
+                "portfolio_value": self.portfolio_value,
+                "positions": self.positions,
+                "pending_cash_settlements": [
+                    list(t) for t in self.pending_cash_settlements
+                ],
+                "prev_prices": self.prev_prices,
+                "trade_history": self.trade_history,
+                "daily_history": self.daily_history,
+                "buyhold_history": self.buyhold_history,
+                "benchmark_history": self.benchmark_history,
+                "audit_log": self.audit_log,
+                "completed_dates": [r.get("date") for r in self.daily_history],
+            }
+            path = self._partial_path(ticker)
+            tmp = path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(payload, f, default=str)
+            os.replace(tmp, path)
+        except Exception as exc:
+            logger.debug("partial write skipped (%s): %s", ticker, exc)
+
+    def _load_partial_if_resume(
+        self, ticker: str, resume: bool
+    ) -> set:
+        """Restore engine state from a previous partial. Returns the set of
+        already-completed dates so the main loop can skip them.
+
+        When ``resume=False`` (default), no-op — returns an empty set.
+        """
+        if not resume:
+            return set()
+        path = self._partial_path(ticker)
+        if not os.path.exists(path):
+            logger.info("No partial checkpoint for %s — starting fresh.", ticker)
+            return set()
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                p = json.load(f)
+            self.cash = float(p.get("cash", self.cash))
+            self.portfolio_value = float(p.get("portfolio_value", self.portfolio_value))
+            self.positions = p.get("positions", {}) or {}
+            self.pending_cash_settlements = [
+                tuple(x) for x in p.get("pending_cash_settlements", [])
+            ]
+            self.prev_prices = p.get("prev_prices", {}) or {}
+            self.trade_history = p.get("trade_history", []) or []
+            self.daily_history = p.get("daily_history", []) or []
+            self.buyhold_history = p.get("buyhold_history", []) or []
+            self.benchmark_history = p.get("benchmark_history", []) or []
+            self.audit_log = p.get("audit_log", []) or []
+            seen = set(p.get("completed_dates", []))
+            logger.info(
+                "Resumed %s from partial: %d completed dates, cash=%.2f, "
+                "positions=%d",
+                ticker, len(seen), self.cash, len(self.positions),
+            )
+            return seen
+        except Exception as exc:
+            logger.warning("Partial load failed for %s: %s — starting fresh.", ticker, exc)
+            return set()
+
+    # =========================================================================
+    # Benchmark window alignment (MEMORY §C4)
+    # =========================================================================
+
+    def _align_benchmark_to_strategy(self) -> Dict:
+        """Compute a structured EGX30 benchmark block on the exact date
+        intersection between the strategy's daily_history and the
+        benchmark price map.
+
+        Returns a dict suitable for the report's ``benchmark`` key. Empty
+        dict when no benchmark data is available.
+        """
+        if not (self.benchmark_ticker and self._bm_data_map and self.daily_history):
+            return {}
+
+        strat_dates = [r["date"] for r in self.daily_history if r.get("date")]
+        if not strat_dates:
+            return {}
+
+        intersected = [d for d in strat_dates if d in self._bm_data_map]
+        coverage = len(intersected) / max(len(strat_dates), 1)
+        if coverage < 0.80:
+            logger.warning(
+                "Benchmark coverage %.0f%% < 80%% (%d / %d strategy dates "
+                "have a matching EGX30 close). Reporting alpha but flagging "
+                "low coverage.",
+                coverage * 100.0, len(intersected), len(strat_dates),
+            )
+        if not intersected:
+            return {
+                "name": "EGX30",
+                "n_aligned_days": 0,
+                "note": "no_overlap_with_benchmark_series",
+            }
+
+        first_date = intersected[0]
+        last_date = intersected[-1]
+        bm_first = self._bm_data_map.get(first_date) or 0.0
+        bm_last = self._bm_data_map.get(last_date) or 0.0
+        if bm_first <= 0:
+            return {"name": "EGX30", "n_aligned_days": len(intersected),
+                    "note": "benchmark_first_price_invalid"}
+
+        bm_total_return = (bm_last - bm_first) / bm_first
+
+        # Daily returns on the aligned intersection
+        bm_series = [self._bm_data_map[d] for d in intersected if self._bm_data_map[d] > 0]
+        strat_by_date = {r["date"]: r["portfolio_value"] for r in self.daily_history}
+        strat_series = [strat_by_date[d] for d in intersected if d in strat_by_date]
+
+        tracking_error_pct: Optional[float] = None
+        if len(bm_series) > 2 and len(strat_series) == len(bm_series):
+            bm_rets = np.array(bm_series[1:]) / np.array(bm_series[:-1]) - 1.0
+            st_rets = np.array(strat_series[1:]) / np.array(strat_series[:-1]) - 1.0
+            diff = st_rets - bm_rets
+            if diff.std(ddof=1) > 0:
+                tracking_error_pct = float(diff.std(ddof=1) * np.sqrt(252) * 100.0)
+
+        n_days = len(intersected)
+        ann_return_pct: Optional[float] = None
+        if n_days > 1:
+            ann_return_pct = float(((1.0 + bm_total_return) ** (252 / n_days) - 1.0) * 100.0)
+
+        strat_total_return = (
+            (self.portfolio_value - self.initial_capital) / self.initial_capital
+            if self.initial_capital > 0 else 0.0
+        )
+        alpha_pct = float((strat_total_return - bm_total_return) * 100.0)
+
+        return {
+            "name": "EGX30",
+            "source": "local_csv",
+            "first_aligned_date": first_date,
+            "last_aligned_date": last_date,
+            "n_aligned_days": n_days,
+            "coverage_pct": round(coverage * 100.0, 2),
+            "total_return_pct": round(bm_total_return * 100.0, 4),
+            "annualized_return_pct": round(ann_return_pct, 4) if ann_return_pct is not None else None,
+            "alpha_pct": round(alpha_pct, 4),
+            "tracking_error_pct": round(tracking_error_pct, 4) if tracking_error_pct is not None else None,
+        }
+
+    # =========================================================================
     # Metrics
     # =========================================================================
 
@@ -363,20 +611,13 @@ class BacktestingEngine:
 
         mean_ret = df["returns"].mean()
         std_ret  = df["returns"].std()
-        sharpe = (mean_ret * 252 - 0.05) / (std_ret * np.sqrt(252)) if std_ret > 0 else 0.0
+        sharpe = (mean_ret * 252 - self.risk_free_rate) / (std_ret * np.sqrt(252)) if std_ret > 0 else 0.0
 
         n_days = len(df)
         ann_return = (1 + total_return) ** (252 / max(n_days, 1)) - 1
         calmar = ann_return / abs(max_drawdown) if max_drawdown != 0 else 0.0
 
         total_commissions = sum(t.get("commission", 0.0) for t in trades)
-
-        outcome_wins    = sum(1 for t in trades if t.get("trade_result") == "WIN")
-        outcome_losses  = sum(1 for t in trades if t.get("trade_result") == "LOSS")
-        outcome_neutral = sum(1 for t in trades if t.get("trade_result") == "NEUTRAL")
-        outcome_pending = sum(1 for t in trades if t.get("trade_result") == "PENDING")
-        evaluated = outcome_wins + outcome_losses + outcome_neutral
-        hit_rate  = f"{outcome_wins / evaluated:.2%}" if evaluated else "N/A"
 
         return {
             "Period":             f"{daily[0]['date']} → {daily[-1]['date']}",
@@ -387,11 +628,7 @@ class BacktestingEngine:
             "Calmar Ratio":       f"{calmar:.2f}",
             "Total Trades":       len(trades),
             "Total Commissions":  f"{total_commissions:,.2f} EGP",
-            "Outcome WIN":        outcome_wins,
-            "Outcome LOSS":       outcome_losses,
-            "Outcome NEUTRAL":    outcome_neutral,
-            "Outcome PENDING":    outcome_pending,
-            "Hit Rate (fwd)":     hit_rate,
+            "Risk-Free Rate Used": f"{self.risk_free_rate:.4f}",
             "End Portfolio":      f"{end_value:,.2f} EGP",
         }
 
@@ -405,60 +642,192 @@ class BacktestingEngine:
 
         total_return = (self.portfolio_value - self.initial_capital) / self.initial_capital
 
-        # Win rate
-        winning_trades = len([t for t in self.trade_history if t.get("realized_pnl", 0) > 0])
-        total_closed = len([t for t in self.trade_history if t["action"] == "SELL"])
-        win_rate = winning_trades / total_closed if total_closed > 0 else 0.0
+        # MEMORY §C1 — closed-trade win rate uses ONLY realized PnL on SELL
+        # trades (no look-ahead). Wilson 95% CI is reported alongside so the
+        # number is interpretable on small samples. Helpers are reused from
+        # tradingagents.rl.walkforward (consumer of the same backtest JSONs).
+        from tradingagents.rl.walkforward import _closed_trade_winrate, _wilson_ci
+        wr_pair = _closed_trade_winrate(self.trade_history)
+        wr_val, wins, total_closed = wr_pair
+        win_rate = wr_val if wr_val is not None else 0.0
+        if total_closed > 0:
+            wr_ci_lo, wr_ci_hi = _wilson_ci(wins, total_closed)
+        else:
+            wr_ci_lo, wr_ci_hi = None, None
 
         # Max Drawdown
         df["cummax"] = df["portfolio_value"].cummax()
         df["drawdown"] = (df["portfolio_value"] - df["cummax"]) / df["cummax"]
         max_drawdown = df["drawdown"].min() if not df.empty else 0.0
 
-        # Sharpe Ratio (annualized, 5% EGP risk-free rate proxy)
+        # Sharpe Ratio (annualized, config-driven EGP risk-free rate — MEMORY §C3)
         mean_ret = df["returns"].mean()
         std_ret = df["returns"].std()
-        sharpe = (mean_ret * 252 - 0.05) / (std_ret * np.sqrt(252)) if std_ret > 0 else 0.0
+        sharpe = (mean_ret * 252 - self.risk_free_rate) / (std_ret * np.sqrt(252)) if std_ret > 0 else 0.0
 
         # Calmar Ratio (annualized return / max drawdown magnitude)
         n_days = len(df)
         ann_return = (1 + total_return) ** (252 / max(n_days, 1)) - 1
         calmar = ann_return / abs(max_drawdown) if max_drawdown != 0 else 0.0
 
-        # Benchmark comparison — Alpha
-        benchmark_return = 0.0
-        if self.benchmark_history and self.benchmark_start_price:
+        # Benchmark comparison — Alpha.
+        # Only report Benchmark Return / Alpha when we actually have benchmark
+        # prices. The old behaviour wrote 0.00% even when the EGX30 CSV was
+        # missing, which made the dashboard show "EGX30 flat 0%" instead of
+        # "data unavailable" and gave a misleading apples-to-apples comparison.
+        has_benchmark_data = bool(
+            self.benchmark_history
+            and self.benchmark_start_price
+            and self.benchmark_start_price > 0
+        )
+        benchmark_return: Optional[float] = None
+        alpha: Optional[float] = None
+        if has_benchmark_data:
             last_bm_price = self.benchmark_history[-1]["price"]
             benchmark_return = (
                 (last_bm_price - self.benchmark_start_price) / self.benchmark_start_price
             )
-        alpha = total_return - benchmark_return
+            alpha = total_return - benchmark_return
 
-        # Buy-and-hold benchmark (same ticker)
-        buyhold_return = 0.0
-        if self.buyhold_start_price and self.buyhold_history:
+        # Buy-and-hold benchmark (same ticker). Available almost always
+        # because it only needs the agent's own price series.
+        has_buyhold_data = bool(
+            self.buyhold_start_price
+            and self.buyhold_start_price > 0
+            and self.buyhold_history
+        )
+        buyhold_return: Optional[float] = None
+        strategy_alpha: Optional[float] = None
+        if has_buyhold_data:
             last_bh_price = self.buyhold_history[-1]["price"]
             buyhold_return = (last_bh_price - self.buyhold_start_price) / self.buyhold_start_price
-        # Strategy alpha over buy-and-hold
-        strategy_alpha = total_return - buyhold_return
+            strategy_alpha = total_return - buyhold_return
 
         # Total commissions paid across all trades
         total_commissions = sum(t.get("commission", 0.0) for t in self.trade_history)
 
-        return {
-            "Total Return":       f"{total_return:.2%}",
-            "Benchmark Return":   f"{benchmark_return:.2%}",
-            "Alpha":              f"{alpha:.2%}",
-            "Buy&Hold Return":    f"{buyhold_return:.2%}",
-            "Strategy Alpha":     f"{strategy_alpha:.2%}",
-            "Win Rate":           f"{win_rate:.2%}",
-            "Max Drawdown":       f"{max_drawdown:.2%}",
-            "Sharpe Ratio":       f"{sharpe:.2f}",
-            "Calmar Ratio":       f"{calmar:.2f}",
-            "Total Trades":       len(self.trade_history),
-            "Total Commissions":  f"{total_commissions:,.2f} EGP",
-            "Final Portfolio":    f"{self.portfolio_value:,.2f} EGP",
+        ci_str = (
+            f" [95% CI {wr_ci_lo:.2%}–{wr_ci_hi:.2%}]"
+            if (wr_ci_lo is not None and wr_ci_hi is not None) else ""
+        )
+        out: Dict[str, Any] = {
+            "Total Return":         f"{total_return:.2%}",
+            "Win Rate":             f"{win_rate:.2%}{ci_str}",
+            "Win Rate CI Lo":       wr_ci_lo,
+            "Win Rate CI Hi":       wr_ci_hi,
+            "Closed Trades":        total_closed,
+            "Max Drawdown":         f"{max_drawdown:.2%}",
+            "Sharpe Ratio":         f"{sharpe:.2f}",
+            "Calmar Ratio":         f"{calmar:.2f}",
+            "Total Trades":         len(self.trade_history),
+            "Total Commissions":    f"{total_commissions:,.2f} EGP",
+            "Risk-Free Rate Used":  f"{self.risk_free_rate:.4f}",
+            "Final Portfolio":      f"{self.portfolio_value:,.2f} EGP",
         }
+        if has_benchmark_data:
+            out["Benchmark Return"] = f"{benchmark_return:.2%}"
+            out["Alpha"] = f"{alpha:.2%}"
+        if has_buyhold_data:
+            out["Buy&Hold Return"] = f"{buyhold_return:.2%}"
+            out["Strategy Alpha"] = f"{strategy_alpha:.2%}"
+        return out
+
+    # =========================================================================
+    # Decision resolution (LLM judge + trader plan + deterministic veto)
+    # =========================================================================
+
+    @staticmethod
+    def _resolve_decision(
+        final_state: Dict,
+        execution_plan: Dict,
+    ) -> Tuple[str, str]:
+        """Reduce the final state to a single ``BUY`` / ``SELL`` / ``HOLD`` action.
+
+        Priority order (each step is short-circuiting):
+
+          1. **Deterministic veto** — if the Risk Scorer set
+             ``final_state['risk_action'] == 'VETO'`` OR the risk-manager dict
+             reports ``approved=False`` OR ``critical_violations > 0``, force
+             HOLD. This is the safety floor — regulatory and capital-limit
+             constraints. Never bypassed.
+
+          2. **LLM judge bare action** — if ``final_trade_decision`` is the
+             literal string ``BUY``/``SELL``/``HOLD``, take it as the LLM
+             judge's verdict.
+
+          3. **LLM judge JSON / free-text** — extract ``{"action": "..."}``
+             from the raw judge output, or fall back to BUY/SELL keyword
+             scanning (excluding ``VETO`` context).
+
+          4. **Trust-the-trader fallback** — when the LLM judge returns HOLD
+             *and* there is no deterministic veto *and* the trader's
+             ``execution_plan.decision`` is BUY or SELL, prefer the trader's
+             plan. This handles the common case where the LLM Risk Judge
+             rubber-stamps "HOLD" as a default text response even though the
+             deterministic gate cleared the trade.
+
+        Returns ``(decision, path)`` where ``path`` is one of
+        ``{"deterministic_veto", "judge_bare", "judge_json", "judge_freetext",
+        "trader_fallback", "default_hold"}`` for audit-log readability.
+        """
+        risk_assessment = final_state.get("risk_assessment", {}) or {}
+        risk_action = str(final_state.get("risk_action", "") or "").upper()
+
+        critical_v = 0
+        approved_explicit_false = False
+        if isinstance(risk_assessment, dict):
+            critical_v = int(risk_assessment.get("critical_violations", 0) or 0)
+            # Only treat `approved=False` as a veto when the key is present and
+            # explicitly False. Missing keys / None must not block trades.
+            if risk_assessment.get("approved", None) is False:
+                approved_explicit_false = True
+
+        deterministic_veto = (
+            risk_action == "VETO"
+            or approved_explicit_false
+            or critical_v > 0
+        )
+        if deterministic_veto:
+            return "HOLD", "deterministic_veto"
+
+        raw_decision = final_state.get("final_trade_decision", "HOLD")
+
+        # Step 2 — bare BUY/SELL/HOLD string
+        if isinstance(raw_decision, str) and raw_decision.strip().upper() in ("BUY", "SELL", "HOLD"):
+            judge_decision = raw_decision.strip().upper()
+            judge_path = "judge_bare"
+        elif isinstance(raw_decision, str):
+            # Step 3 — JSON action, then free-text BUY/SELL scan
+            judge_decision = "HOLD"
+            judge_path = "judge_freetext"
+            json_match = re.search(
+                r'\{[^{}]*"action"\s*:\s*"(BUY|SELL|HOLD)"[^{}]*\}',
+                raw_decision,
+                re.IGNORECASE,
+            )
+            if json_match:
+                judge_decision = json_match.group(1).upper()
+                judge_path = "judge_json"
+            elif "BUY" in raw_decision.upper() and "VETO" not in raw_decision.upper():
+                judge_decision = "BUY"
+            elif "SELL" in raw_decision.upper() and "VETO" not in raw_decision.upper():
+                judge_decision = "SELL"
+        else:
+            judge_decision = "HOLD"
+            judge_path = "default_hold"
+
+        # Step 4 — when the LLM judge gave HOLD but the trader had a real
+        # plan and the deterministic gate is green, trust the trader. This
+        # closes the silent-downgrade bug reported on the dashboard run where
+        # trader=BUY + 0 violations + judge="HOLD" became HOLD on every date.
+        if judge_decision == "HOLD":
+            plan_decision = ""
+            if isinstance(execution_plan, dict):
+                plan_decision = (execution_plan.get("decision", "") or "").upper()
+            if plan_decision in ("BUY", "SELL"):
+                return plan_decision, "trader_fallback"
+
+        return judge_decision, judge_path
 
     # =========================================================================
     # Trade Execution
@@ -637,6 +1006,12 @@ class BacktestingEngine:
             # downstream readers see a uniform schema.
             trade_record["rl_meta_policy_enabled"] = bool(self.rl_policy_enabled)
             trade_record["rl_size_multiplier"] = round(float(rl_size_mult), 4)
+            # Exit plan from the trader's structured execution_plan. The
+            # dashboard's expandable trade-row reveals these targets so the
+            # user can see what the agent said about WHEN to sell after BUY.
+            exit_plan = getattr(self, "_next_exit_plan", None)
+            if isinstance(exit_plan, dict):
+                trade_record["exit_plan"] = exit_plan
             if rl_prediction is not None:
                 fp = rl_prediction.model_fingerprint or {}
                 trade_record["rl_action_index"] = int(rl_prediction.action_index)
@@ -662,6 +1037,7 @@ class BacktestingEngine:
         analysts: list = None,
         cooldown: int = 5,
         train_end_date: Optional[str] = None,
+        resume: bool = False,
     ):
         """
         Run the backtest loop for a specific ticker.
@@ -680,10 +1056,15 @@ class BacktestingEngine:
         self._bt_start_date = start_date
         self._bt_end_date = end_date
 
-        # PR 7: Post-backtest reflection queue. Captures (date, state_snapshot)
-        # for every decision date so reflection can run AFTER the loop with
-        # realized forward returns instead of look-ahead PnL. See MEMORY.md §C2.
-        self._reflection_state_queue: list = []
+        # Workstream A — resume from a previous partial if requested.
+        # Returns the set of completed date strings to skip in the main loop.
+        seen_dates = self._load_partial_if_resume(ticker, resume)
+
+        # MEMORY §C1 (this PR): the old forward-return reflection batch
+        # depended on _evaluate_trade_outcomes, which used look-ahead prices.
+        # That function has been deleted. Reflection memory is not updated
+        # from backtests anymore — production realized outcomes are the
+        # only legitimate training signal for agent memory.
 
         split_info = (
             f" | Train ≤ {train_end_date} / Test > {train_end_date}"
@@ -705,8 +1086,13 @@ class BacktestingEngine:
         if self.benchmark_ticker:
             logger.info(f"Fetching benchmark: {self.benchmark_ticker}")
             # Try local EGX30 CSV first (avoids unreliable yfinance ^EGX30 feed)
+            # Project-root filenames the EGX30 CSV loader will accept. Investing.com
+            # exports come in several flavours — index history, ETF history — so we
+            # accept all the common ones. First match wins.
             _csv_candidates = [
                 os.path.join(os.path.dirname(__file__), "..", "EGX 30 Historical Data.csv"),
+                os.path.join(os.path.dirname(__file__), "..", "EGX30ETF ETF Stock Price History.csv"),
+                os.path.join(os.path.dirname(__file__), "..", "EGX30 ETF Stock Price History.csv"),
                 os.path.join(os.path.dirname(__file__), "..", "egx30.csv"),
             ]
             _csv_loaded = False
@@ -778,6 +1164,10 @@ class BacktestingEngine:
 
         import time
         for i, date in enumerate(test_dates):
+            if date in seen_dates:
+                logger.info(f"[RESUME] Skipping already-completed date {date}")
+                continue
+
             logger.info(f"\n{'='*64}")
             logger.info(f"[{date}]  Evaluating {ticker}  ({i+1}/{len(test_dates)})")
 
@@ -792,21 +1182,42 @@ class BacktestingEngine:
             fetch_start = (
                 datetime.strptime(date, "%Y-%m-%d") - timedelta(days=252)
             ).strftime("%Y-%m-%d")
-            stock_data = self.gateway.fetch_stock_data(
-                ticker, start_date=fetch_start, end_date=date
+            stock_data = self._fetch_stock_data_with_retry(
+                ticker, fetch_start, date
             )
 
-            if not stock_data.get("data"):
+            if not stock_data or not stock_data.get("data"):
                 logger.warning(f"No price data for {date}. Skipping.")
+                self.audit_log.append({
+                    "date": date,
+                    "decision_status": "data_fetch_failed",
+                    "parsed_decision": "HOLD",
+                    "confidence": None,
+                })
+                self._maybe_write_partial(ticker)
+                continue
+
+            # Defensive: vendor returned a non-empty list but the last row has
+            # no usable close. Skip rather than crash on indexing.
+            last_row = stock_data["data"][-1] if stock_data["data"] else {}
+            current_price = float(last_row.get("close") or 0.0)
+            if current_price <= 0:
+                logger.warning(f"Invalid close price for {date}: {current_price}. Skipping.")
+                self.audit_log.append({
+                    "date": date,
+                    "decision_status": "invalid_close_price",
+                    "parsed_decision": "HOLD",
+                    "confidence": None,
+                })
+                self._maybe_write_partial(ticker)
                 continue
 
             evaluated_dates += 1
 
-            current_price = stock_data["data"][-1].get("close", 0.0)
             low_liquidity = stock_data.get("low_liquidity", False)
 
             # ---- Track buy-and-hold benchmark (same ticker) ----
-            if self.buyhold_start_price is None:
+            if self.buyhold_start_price is None or self.buyhold_start_price <= 0:
                 self.buyhold_start_price = current_price
             buyhold_value = self.initial_capital * (current_price / self.buyhold_start_price)
             self.buyhold_history.append({
@@ -839,14 +1250,20 @@ class BacktestingEngine:
                 "split":           _split,
             })
 
-            # ---- Track benchmark value ----
-            if self.benchmark_ticker and self._bm_data_map and self.benchmark_start_price:
+            # ---- Track benchmark value (MEMORY §C4 — strict date-intersect) ----
+            # The legacy "nearest earlier date" fallback drifted alpha when the
+            # EGX30 CSV had a gap. Now we only record benchmark history when
+            # the exact strategy date has a matching benchmark close. The
+            # _align_benchmark_to_strategy() step in save_results does the
+            # final intersection across the whole series.
+            if (
+                self.benchmark_ticker
+                and self._bm_data_map
+                and self.benchmark_start_price
+                and self.benchmark_start_price > 0
+            ):
                 bm_price = self._bm_data_map.get(date)
-                if bm_price is None:
-                    # Use nearest earlier date in the benchmark series
-                    earlier = [d for d in sorted(self._bm_data_map) if d <= date]
-                    bm_price = self._bm_data_map[earlier[-1]] if earlier else None
-                if bm_price:
+                if bm_price and bm_price > 0:
                     bm_value = self.initial_capital * (bm_price / self.benchmark_start_price)
                     self.benchmark_history.append({
                         "date": date, "price": bm_price, "value": bm_value
@@ -906,52 +1323,103 @@ class BacktestingEngine:
                 _reasoning_score = _compute_reasoning_score(final_state)
 
                 # ---- Extract decision from final state ----
-                decision = "HOLD"  # Safe default
+                # Delegated to _resolve_decision() so the priority logic is
+                # unit-testable in isolation. See:
+                #   tests/test_backtester_robustness.py::test_decision_priority_*
                 raw_decision = final_state.get("final_trade_decision", "HOLD")
                 execution_plan = final_state.get("execution_plan", {})
                 risk_assessment = final_state.get("risk_assessment", {})
                 if isinstance(execution_plan, dict) and "execution_plan" in execution_plan:
                     execution_plan = execution_plan["execution_plan"]
 
-                # Priority 1: If risk assessment vetoed, force HOLD
-                if isinstance(risk_assessment, dict) and not risk_assessment.get("approved", True):
-                    decision = "HOLD"
-                    logger.info("Risk VETO active — forcing HOLD")
-
-                # Priority 2: Parse clean action from risk manager output
-                elif isinstance(raw_decision, str) and raw_decision.strip().upper() in ("BUY", "SELL", "HOLD"):
-                    decision = raw_decision.strip().upper()
-
-                # Priority 3: Search for JSON block in free text
-                elif isinstance(raw_decision, str):
-                    json_match = re.search(
-                        r'\{[^{}]*"action"\s*:\s*"(BUY|SELL|HOLD)"[^{}]*\}',
-                        raw_decision,
-                        re.IGNORECASE,
-                    )
-                    if json_match:
-                        decision = json_match.group(1).upper()
-                    elif "BUY" in raw_decision.upper() and "VETO" not in raw_decision.upper():
-                        decision = "BUY"
-                    elif "SELL" in raw_decision.upper() and "VETO" not in raw_decision.upper():
-                        decision = "SELL"
-
-                # Priority 4: Fall back to trader's execution plan decision
-                if decision == "HOLD" and isinstance(risk_assessment, dict) and risk_assessment.get("approved", False):
-                    plan_decision = ""
-                    if isinstance(execution_plan, dict):
-                        plan_decision = (execution_plan.get("decision", "") or "").upper()
-                    if plan_decision in ("BUY", "SELL"):
-                        logger.info(f"Risk approved, using trader plan decision: {plan_decision}")
-                        decision = plan_decision
+                decision, _decision_path = self._resolve_decision(final_state, execution_plan)
+                logger.info(
+                    "Resolved decision: %s (path=%s, raw_judge=%r, "
+                    "plan_decision=%r, risk_action=%r, critical_violations=%s)",
+                    decision,
+                    _decision_path,
+                    str(raw_decision)[:60],
+                    (execution_plan.get("decision") if isinstance(execution_plan, dict) else None),
+                    final_state.get("risk_action"),
+                    (risk_assessment.get("critical_violations", 0)
+                     if isinstance(risk_assessment, dict) else 0),
+                )
 
                 confidence = final_state.get("confidence_scores", {}).get("overall", 50.0)
                 if confidence is None:
                     confidence = 50.0
+
+                # ---- Capture real agent text from the final state ----
+                # The dashboard previously showed templated "Standard execution"
+                # strings because the trade-record reasoning field never pulled
+                # the actual agent output. The text is all in final_state — we
+                # just need to surface it.
+                investment_debate = final_state.get("investment_debate_state", {}) or {}
+                risk_debate = final_state.get("risk_debate_state", {}) or {}
+                # The Bull/Bear researchers write their structured theses INTO
+                # investment_debate_state, not the top-level state keys (those
+                # stay None — no node assigns them). Reading the top-level keys
+                # made `bear_thesis_present` always False, so the dashboard
+                # showed a stale "bear produced no structured thesis" warning
+                # even when the bear thesis was fully populated.
+                bull_thesis = (
+                    investment_debate.get("bull_thesis")
+                    or final_state.get("bull_thesis")
+                    or {}
+                )
+                bear_thesis = (
+                    investment_debate.get("bear_thesis")
+                    or final_state.get("bear_thesis")
+                    or {}
+                )
+
+                # Risk Judge's clause-by-clause Constitutional analysis lives
+                # here when the structured `risk_assessment` dict isn't filled
+                # (which is the common case — risk_assessment ends up `{}`).
+                risk_judge_text = (
+                    (risk_debate.get("judge_decision") if isinstance(risk_debate, dict) else "")
+                    or (investment_debate.get("judge_decision") if isinstance(investment_debate, dict) else "")
+                    or ""
+                )
+
+                # Choose the best available reasoning string for the trade
+                # record. Priority: explicit veto explanation → execution_plan
+                # entry-logic timing/conditions → Risk Judge first paragraph →
+                # fallback boilerplate.
+                def _first_paragraph(s: str, limit: int = 400) -> str:
+                    if not isinstance(s, str):
+                        return ""
+                    s2 = s.strip()
+                    if not s2:
+                        return ""
+                    p = s2.split("\n\n", 1)[0]
+                    return p[:limit].strip()
+
+                entry_logic = (
+                    execution_plan.get("entry_logic", {})
+                    if isinstance(execution_plan, dict) else {}
+                )
                 reasoning = (
-                    risk_assessment.get("veto_explanation")
+                    (risk_assessment.get("veto_explanation") if isinstance(risk_assessment, dict) else None)
+                    or entry_logic.get("timing")
+                    or _first_paragraph(risk_judge_text)
                     or "Standard execution"
                 )
+
+                # The Research Manager (debate judge) ends its verdict with a
+                # JSON block {"decision","confidence","rationale"}. Surface the
+                # one-line rationale so HOLD dates carry an explicit "why" — a
+                # HOLD is a real decision, not an absence of one.
+                judge_text = (
+                    investment_debate.get("judge_decision")
+                    if isinstance(investment_debate, dict) else ""
+                ) or ""
+                judge_rationale = None
+                _jm = re.search(
+                    r'"rationale"\s*:\s*"([^"]+)"', judge_text
+                )
+                if _jm:
+                    judge_rationale = _jm.group(1).strip()
 
                 logger.info(f"Agent Decision: {decision} | Confidence: {confidence:.2f}")
 
@@ -961,6 +1429,8 @@ class BacktestingEngine:
                     "price": current_price,
                     "raw_decision": str(raw_decision)[:200],  # Truncate long LLM text
                     "parsed_decision": decision,
+                    "decision_path": _decision_path,
+                    "risk_action": final_state.get("risk_action"),
                     "risk_approved": risk_assessment.get("approved") if isinstance(risk_assessment, dict) else None,
                     "risk_violations": risk_assessment.get("total_violations", 0) if isinstance(risk_assessment, dict) else 0,
                     "critical_violations": risk_assessment.get("critical_violations", 0) if isinstance(risk_assessment, dict) else 0,
@@ -969,9 +1439,42 @@ class BacktestingEngine:
                     "llm_calls": _llm_calls,
                     "trade_time_s": round(_trade_time_s, 1),
                     "reasoning_score": _reasoning_score,
+                    # Real agent text — capped so the JSON stays small. The
+                    # dashboard renders these directly in the Risk / Bull /
+                    # Bear cards instead of the templated boilerplate.
+                    "risk_judge_text": (risk_judge_text or "")[:3000] or None,
+                    "bull_thesis_summary": _summarize_thesis(bull_thesis) if bull_thesis else None,
+                    "bear_thesis_summary": _summarize_thesis(bear_thesis) if bear_thesis else None,
+                    "bear_thesis_present": bool(bear_thesis),
+                    # Per-date "why" — populated for every evaluation including
+                    # HOLD dates, so the dashboard can explain a no-trade verdict
+                    # instead of rendering an unexplained row of zeros.
+                    "reasoning": (
+                        None if str(reasoning).strip() in ("", "Standard execution", "N/A")
+                        else str(reasoning)[:1500]
+                    ),
+                    "judge_rationale": judge_rationale,
                 }
                 logger.info(f"[AUDIT] {json.dumps(audit_entry, default=str)}")
                 self.audit_log.append(audit_entry)
+
+                # ---- Attach exit plan to the upcoming trade record ----
+                # When the trader recommends BUY, the execution_plan carries
+                # take-profit / stop-loss / time-stop. We stash a compact view
+                # on the engine so execute_trade can copy it into the next
+                # trade_record. SELLs reuse the same field as a passthrough.
+                if isinstance(execution_plan, dict):
+                    exit_logic = execution_plan.get("exit_logic", {}) or {}
+                    invalidation = execution_plan.get("invalidation_triggers", []) or []
+                    self._next_exit_plan = {
+                        "take_profit": exit_logic.get("take_profit") or {},
+                        "stop_loss": exit_logic.get("stop_loss") or {},
+                        "time_stop": exit_logic.get("time_stop"),
+                        "invalidation_triggers": list(invalidation)[:8],
+                        "conviction": execution_plan.get("conviction"),
+                    }
+                else:
+                    self._next_exit_plan = None
 
                 self.execute_trade(
                     date, ticker, decision, current_price,
@@ -1012,22 +1515,30 @@ class BacktestingEngine:
                     audit_entry["rl_model_fingerprint"] = None
                 audit_entry["rl_meta_policy_enabled"] = bool(self.rl_policy_enabled)
 
-                # ── PR 7 / MEMORY.md §C2: capture (date, state) for end-of-run
-                # reflection. The in-loop `reflect_and_remember()` call was
-                # removed because it fed look-ahead instantaneous PnL into the
-                # agent memory BEFORE the next decision date. Reflection is now
-                # batched in _flush_reflection_with_forward_returns() once the
-                # full backtest is complete and ≥10-day forward returns are
-                # realised. Live (non-backtest) propagate() calls do NOT trigger
-                # reflection — only this batch does.
-                try:
-                    self._reflection_state_queue.append((date, dict(final_state)))
-                except Exception as _e:
-                    logger.debug("Could not queue reflection state for %s: %s", date, _e)
-
+            except (KeyboardInterrupt, SystemExit):
+                # Don't swallow user-driven aborts. The partial JSON we wrote
+                # at the end of the previous date lets `--resume` pick up.
+                self._maybe_write_partial(ticker)
+                raise
             except Exception as e:
-                import traceback
-                logger.error(f"Agent Graph failed on {date}: {e}\n{traceback.format_exc()}")
+                # MEMORY §A (replaces bare except). Surface the failure in the
+                # audit log so a phantom HOLD doesn't masquerade as a real
+                # decision. The loop continues to the next trade date.
+                logger.exception("Agent Graph failed on %s for %s", date, ticker)
+                err_entry = {
+                    "date": date,
+                    "price": current_price,
+                    "decision_status": "agent_error",
+                    "error_class": type(e).__name__,
+                    "error_message": str(e)[:300],
+                    "parsed_decision": "HOLD",
+                    "confidence": None,
+                }
+                self.audit_log.append(err_entry)
+
+            # Always checkpoint, even on agent_error / circuit_halted, so the
+            # next --resume run skips this date and we never replay an LLM call.
+            self._maybe_write_partial(ticker)
 
         # ---- End of loop: force-settle all remaining T+2 proceeds ----
         logger.info("\nForce-settling remaining T+2 proceeds at end of backtest...")
@@ -1035,22 +1546,11 @@ class BacktestingEngine:
             self.cash += amount
         self.pending_cash_settlements = []
 
-        # ---- Post-hoc trade outcome evaluation ----
-        # For each trade, look forward in the price series to judge whether
-        # the decision was profitable. Uses future data *intentionally* —
-        # this is evaluation, not signal generation.
-        self._evaluate_trade_outcomes(ticker, end_date)
-
-        # ---- Post-hoc reflection batch (MEMORY.md §C2 fix) ----
-        # The in-loop reflect_and_remember() call was removed because feeding
-        # realized PnL back into agent memory mid-backtest is look-ahead. Now
-        # that the loop is done AND _evaluate_trade_outcomes has populated
-        # forward returns on each trade, run reflection once per captured
-        # decision state with the realized 20-day forward outcome.
-        try:
-            self._flush_reflection_with_forward_returns(graph, lag_days=10)
-        except Exception as _e:
-            logger.warning("Post-backtest reflection batch failed: %s", _e)
+        # MEMORY §C1 — deleted: _evaluate_trade_outcomes (look-ahead "Hit Rate")
+        # and _flush_reflection_with_forward_returns (depended on it).
+        # The only honest win-rate metric is realized PnL on closed (SELL)
+        # trades, with a Wilson CI for small-sample interpretability.
+        # See _calculate_metrics() above.
 
         logger.info("\n" + "=" * 64)
         logger.info("BACKTEST COMPLETE")
@@ -1059,249 +1559,51 @@ class BacktestingEngine:
         for k, v in metrics.items():
             logger.info(f"  {k:<26}: {v}")
 
-        # ---- Trade outcome summary ----
-        if any("forward_return_20d" in t for t in self.trade_history):
-            wins = sum(1 for t in self.trade_history if t.get("trade_result") == "WIN")
-            losses = sum(1 for t in self.trade_history if t.get("trade_result") == "LOSS")
-            neutral = sum(1 for t in self.trade_history if t.get("trade_result") == "NEUTRAL")
-            pending = sum(1 for t in self.trade_history if t.get("trade_result") == "PENDING")
-            total_eval = wins + losses + neutral
-            hit_rate = wins / total_eval if total_eval > 0 else 0.0
-            logger.info("")
-            logger.info("  Trade Outcomes (forward-looking):")
-            logger.info(f"    {'WIN':<24}: {wins}")
-            logger.info(f"    {'LOSS':<24}: {losses}")
-            logger.info(f"    {'NEUTRAL':<24}: {neutral}")
-            logger.info(f"    {'PENDING (no fwd data)':<24}: {pending}")
-            logger.info(f"    {'Hit Rate':<24}: {hit_rate:.2%}")
-
         # If we couldn't evaluate even a single date, emit a minimal baseline series
         # so the dashboard can still render (and show a clear error message).
-        if evaluated_dates == 0:
+        if evaluated_dates == 0 and not self.daily_history:
             self._run_error = (
                 f"No historical price data returned for {ticker} "
                 f"in window {start_date} → {end_date}."
             )
-            if not self.daily_history:
-                self.daily_history = [
-                    {"date": start_date, "portfolio_value": float(self.initial_capital), "split": "full"},
-                    {"date": end_date, "portfolio_value": float(self.initial_capital), "split": "full"},
-                ]
+            self.daily_history = [
+                {"date": start_date, "portfolio_value": float(self.initial_capital), "split": "full"},
+                {"date": end_date, "portfolio_value": float(self.initial_capital), "split": "full"},
+            ]
             logger.warning(self._run_error)
+
+        # MEMORY §C4 + Workstream C — compute the structured benchmark block
+        # on the exact strategy/benchmark date intersection.
+        try:
+            self._benchmark_block = self._align_benchmark_to_strategy()
+        except Exception as exc:
+            logger.warning("Benchmark alignment failed: %s", exc)
+            self._benchmark_block = {}
 
         self.save_results(ticker)
 
-    # =========================================================================
-    # Post-hoc Reflection Batch (MEMORY.md §C2)
-    # =========================================================================
-
-    def _flush_reflection_with_forward_returns(
-        self,
-        graph,
-        lag_days: int = 10,
-    ) -> dict:
-        """Replay queued per-date states through the reflection LLM using
-        realized forward returns instead of look-ahead instantaneous PnL.
-
-        Called after the main backtest loop completes AND
-        ``_evaluate_trade_outcomes`` has annotated every entry in
-        ``self.trade_history`` with ``forward_return_Nd`` and ``trade_result``.
-
-        For each (date, state) captured during the loop:
-          - look up the matching trade record by date
-          - skip when no realized forward return is available
-            (e.g., HOLDs, or trades within ``lag_days`` of backtest end)
-          - synthesize ``returns_losses`` with the realized verdict
-          - call ``graph._run_reflections()`` with the historical state restored
-
-        Args:
-            graph: the TradingAgentsGraph instance used during this backtest.
-            lag_days: minimum forward window required for a reflection to fire.
-                Defaults to 10 to satisfy MEMORY.md §C2 (≥10 trading days).
-
-        Returns:
-            dict: ``{"flushed": int, "skipped": int}`` for telemetry / tests.
-        """
-        queue = getattr(self, "_reflection_state_queue", []) or []
-        if not queue:
-            return {"flushed": 0, "skipped": 0}
-
-        # Use the longest available forward horizon if 20-day is recorded
-        # (matches _evaluate_trade_outcomes default). lag_days is the floor.
-        forward_horizon = max(lag_days, 20)
-        forward_key = f"forward_return_{forward_horizon}d"
-        # Fallback to whatever horizon is present on the trade record.
-        fallback_keys = ("forward_return_20d", "forward_return_10d", "forward_return_5d")
-
-        trades_by_date = {t["date"]: t for t in self.trade_history}
-        original_state = getattr(graph, "curr_state", None)
-        flushed = 0
-        skipped = 0
-
+        # Clean up partial checkpoint once the full run + save_results
+        # succeeded — the canonical JSON now holds the same data.
         try:
-            for date, state in queue:
-                trade = trades_by_date.get(date)
-                if not trade:
-                    skipped += 1
-                    continue  # HOLD dates (no trade) — no realized PnL to reflect on
-
-                forward_ret = trade.get(forward_key)
-                if forward_ret is None:
-                    for fk in fallback_keys:
-                        if trade.get(fk) is not None:
-                            forward_ret = trade[fk]
-                            break
-                if forward_ret is None:
-                    skipped += 1
-                    continue  # forward window has not closed yet — skip to keep causal
-
-                verdict = trade.get("trade_result", "UNKNOWN")
-                returns_losses = {
-                    "action": trade.get("action", "HOLD"),
-                    "forward_return": forward_ret,
-                    "forward_horizon_days": forward_horizon,
-                    "verdict": verdict,
-                    "lag_days": lag_days,
-                    "date": date,
-                    "realized_pnl": trade.get("realized_pnl"),
-                }
-
-                try:
-                    # Swap graph state to the historical snapshot so reflection
-                    # prompts see what the agents saw on `date`, not what they
-                    # know now at end-of-run.
-                    graph.curr_state = state
-                    graph._run_reflections(returns_losses)
-                    flushed += 1
-                except Exception as exc:
-                    logger.warning(
-                        "Reflection failed for %s (skipping): %s", date, exc
-                    )
-                    skipped += 1
-        finally:
-            graph.curr_state = original_state
-            self._reflection_state_queue = []
-
-        logger.info(
-            "[REFLECTION] post-backtest batch: %d flushed, %d skipped "
-            "(lag_days=%d, horizon=%dd) — MEMORY.md §C2",
-            flushed, skipped, lag_days, forward_horizon,
-        )
-        return {"flushed": flushed, "skipped": skipped}
+            ppath = self._partial_path(ticker)
+            if os.path.exists(ppath):
+                os.remove(ppath)
+        except Exception:
+            pass
 
     # =========================================================================
-    # Post-hoc Trade Outcome Evaluation
+    # (Removed) Post-hoc Reflection Batch + Trade Outcome Evaluation — §C1
     # =========================================================================
-
-    def _evaluate_trade_outcomes(
-        self,
-        ticker: str,
-        backtest_end_date: str,
-        horizons_days: Tuple[int, int] = (5, 20),
-        neutral_threshold: float = 0.01,
-    ):
-        """
-        For each trade in self.trade_history, fetch the forward price series
-        and annotate:
-          - price_at_+Nd  (close N trading days after the trade)
-          - forward_return_Nd  (signed return for the trade action)
-          - trade_result  (WIN / LOSS / NEUTRAL / PENDING)
-
-        A BUY is WIN if price rose by more than neutral_threshold within the
-        primary horizon (second value in horizons_days). A SELL is WIN if
-        price fell by more than neutral_threshold (i.e., we avoided a drop).
-
-        Forward data is fetched up to today, so trades too close to the
-        backtest end get PENDING for missing horizons.
-        """
-        if not self.trade_history:
-            return
-
-        primary_horizon = horizons_days[-1]
-
-        # Fetch a single extended price window covering every trade + the
-        # longest horizon, so we only hit the data gateway once.
-        first_trade_date = min(t["date"] for t in self.trade_history)
-        # Pad by 2x primary horizon in calendar days to safely cover weekends
-        pad_days = primary_horizon * 2 + 10
-        fetch_end = (
-            datetime.strptime(backtest_end_date, "%Y-%m-%d") + timedelta(days=pad_days)
-        ).strftime("%Y-%m-%d")
-        today = datetime.utcnow().strftime("%Y-%m-%d")
-        if fetch_end > today:
-            fetch_end = today
-
-        try:
-            price_data = self.gateway.fetch_stock_data(
-                ticker, start_date=first_trade_date, end_date=fetch_end
-            )
-        except Exception as e:
-            logger.warning(f"Forward-price fetch failed for outcome eval: {e}")
-            return
-
-        rows = price_data.get("data") if isinstance(price_data, dict) else None
-        if not rows:
-            logger.warning("No forward-price data returned; skipping outcome eval.")
-            return
-
-        # Index: ordered list of (date_str, close)
-        series = [
-            (r["date"], r["close"])
-            for r in rows
-            if "date" in r and "close" in r and r.get("close")
-        ]
-        series.sort(key=lambda x: x[0])
-        date_to_idx = {d: i for i, (d, _) in enumerate(series)}
-
-        def _price_n_bars_ahead(trade_date: str, n_bars: int) -> Optional[float]:
-            """Return close price n trading bars after trade_date, or None."""
-            # Walk forward to the first bar >= trade_date
-            idx = date_to_idx.get(trade_date)
-            if idx is None:
-                # Find earliest bar > trade_date
-                candidates = [i for i, (d, _) in enumerate(series) if d > trade_date]
-                if not candidates:
-                    return None
-                idx = candidates[0] - 1  # treat as "just before" trade
-            target_idx = idx + n_bars
-            if target_idx >= len(series):
-                return None
-            return series[target_idx][1]
-
-        for trade in self.trade_history:
-            entry_price = trade.get("exec_price") or trade.get("close_price") or 0.0
-            if entry_price <= 0:
-                trade["trade_result"] = "PENDING"
-                continue
-
-            for h in horizons_days:
-                fwd_price = _price_n_bars_ahead(trade["date"], h)
-                if fwd_price is None:
-                    trade[f"price_at_+{h}d"] = None
-                    trade[f"forward_return_{h}d"] = None
-                else:
-                    raw_ret = (fwd_price - entry_price) / entry_price
-                    # For SELL, a price DROP is favorable — flip the sign
-                    signed = raw_ret if trade["action"] == "BUY" else -raw_ret
-                    trade[f"price_at_+{h}d"] = round(fwd_price, 4)
-                    trade[f"forward_return_{h}d"] = round(signed, 6)
-
-            primary_ret = trade.get(f"forward_return_{primary_horizon}d")
-            if primary_ret is None:
-                trade["trade_result"] = "PENDING"
-            elif primary_ret > neutral_threshold:
-                trade["trade_result"] = "WIN"
-            elif primary_ret < -neutral_threshold:
-                trade["trade_result"] = "LOSS"
-            else:
-                trade["trade_result"] = "NEUTRAL"
-
-            logger.info(
-                f"[OUTCOME] {trade['date']} {trade['action']} → "
-                f"{trade['trade_result']} "
-                f"(+{primary_horizon}d return: "
-                f"{primary_ret if primary_ret is not None else 'N/A'})"
-            )
+    # _flush_reflection_with_forward_returns and _evaluate_trade_outcomes were
+    # both deleted in the §C1 fix: they fetched prices AFTER the backtest's
+    # end_date to label trades WIN/LOSS and to feed forward returns back into
+    # agent memory. Both are look-ahead by definition. Backtests no longer
+    # update agent memory — production realized live trades are the only
+    # legitimate training signal. Win-rate uses realized PnL on SELL trades
+    # (see _calculate_metrics).
+    #
+    # Regression-gate tests assert these attributes no longer exist:
+    #   tests/test_backtester_robustness.py::test_no_lookahead_functions
 
     # =========================================================================
     # Results Persistence
@@ -1349,21 +1651,9 @@ class BacktestingEngine:
                 for k, v in sm.items():
                     logger.info(f"    {k:<26}: {v}")
 
-        # Per-trade outcome summary (post-hoc forward-looking eval)
-        outcome_summary = {}
-        if any("trade_result" in t for t in self.trade_history):
-            wins = sum(1 for t in self.trade_history if t.get("trade_result") == "WIN")
-            losses = sum(1 for t in self.trade_history if t.get("trade_result") == "LOSS")
-            neutral = sum(1 for t in self.trade_history if t.get("trade_result") == "NEUTRAL")
-            pending = sum(1 for t in self.trade_history if t.get("trade_result") == "PENDING")
-            evaluated = wins + losses + neutral
-            outcome_summary = {
-                "wins":     wins,
-                "losses":   losses,
-                "neutral":  neutral,
-                "pending":  pending,
-                "hit_rate": f"{(wins / evaluated):.2%}" if evaluated else "N/A",
-            }
+        # MEMORY §C1 — removed: outcome_summary used to consume the look-ahead
+        # `trade_result` annotations from _evaluate_trade_outcomes. The win-rate
+        # in `metrics` (with Wilson CI) is the only honest substitute.
 
         # ---- Pipeline efficiency summary (aggregated from audit_log) ----
         efficiency_summary = {}
@@ -1390,13 +1680,14 @@ class BacktestingEngine:
             "error":                getattr(self, "_run_error", None),
             "metrics":              metrics,
             "split_metrics":        split_metrics,
-            "trade_outcomes":       outcome_summary,
+            "benchmark":            getattr(self, "_benchmark_block", {}),
             "pipeline_efficiency":  efficiency_summary,
             "trades":               self.trade_history,
             "daily_portfolio":      self.daily_history,
             "benchmark_history":    self.benchmark_history,
             "buyhold_history":      self.buyhold_history,
             "audit_log":            self.audit_log,
+            "risk_free_rate_used":  self.risk_free_rate,
             "cost_model": {
                 "commission_per_side": f"{EGX_TOTAL_COST_SIDE:.4%}",
                 "slippage_normal":     f"{EGX_SLIPPAGE_NORMAL:.3%}",
@@ -1479,6 +1770,10 @@ if __name__ == "__main__":
                         help="Benchmark ticker for Alpha calculation (pass 'none' to disable)")
     parser.add_argument("--cooldown",   type=int,   default=5,
                         help="Seconds to wait between evaluations (rate limit)")
+    parser.add_argument("--resume",     action="store_true",
+                        help="Resume from the per-ticker partial checkpoint if "
+                             "one exists in backtest_results/. Skips dates that "
+                             "have already been evaluated.")
 
     args = parser.parse_args()
 
@@ -1496,4 +1791,5 @@ if __name__ == "__main__":
         analysts=analysts_list,
         cooldown=args.cooldown,
         train_end_date=train_end,
+        resume=args.resume,
     )

@@ -184,3 +184,39 @@ JOIN backtest_runs cls
     AND llm.end_date   = cls.end_date
 WHERE llm.strategy = 'llm'
   AND cls.strategy  = 'classical';
+
+-- =============================================================================
+-- social_v2_posts — historical social-media post archive
+-- =============================================================================
+-- Written by tradingagents/dataflows/social_v2/post_store.py on every live
+-- pipeline run. Lets future backtests replay real historical social data
+-- instead of using news-derived proxies. The signal_adapter falls back to
+-- this table when curr_date is more than 1 day in the past.
+--
+-- Idempotency: post_hash = sha256(platform|url|timestamp|text[:500]).
+-- Conflicting rows are ignored, so re-scraping the same posts is safe.
+CREATE TABLE IF NOT EXISTS social_v2_posts (
+    id              BIGSERIAL PRIMARY KEY,
+    post_hash       TEXT UNIQUE NOT NULL,
+    platform        TEXT NOT NULL,
+    source          TEXT NOT NULL,
+    url             TEXT,
+    username        TEXT,
+    post_timestamp  TIMESTAMPTZ,
+    scraped_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    text            TEXT NOT NULL,
+    engagement      INTEGER DEFAULT 0,
+    symbols         TEXT[],
+    intents         TEXT[],
+    content_label   TEXT,
+    sentiment_score REAL,
+    sentiment_label TEXT
+);
+
+CREATE INDEX IF NOT EXISTS social_v2_posts_ts_idx
+    ON social_v2_posts (post_timestamp);
+
+-- GIN index supports the `WHERE %s = ANY(symbols)` style lookups used by
+-- the signal_adapter archive-replay path.
+CREATE INDEX IF NOT EXISTS social_v2_posts_symbols_idx
+    ON social_v2_posts USING GIN (symbols);

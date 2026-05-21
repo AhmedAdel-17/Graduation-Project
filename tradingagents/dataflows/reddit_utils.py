@@ -67,7 +67,6 @@ def fetch_top_from_category(
 
     category_path = os.path.join(base_path, category)
     if not os.path.exists(category_path):
-        print(f"WARNING: Reddit category directory not found: {category_path}")
         return []
 
     if max_limit < len(os.listdir(category_path)):

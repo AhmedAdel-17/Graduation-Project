@@ -88,6 +88,101 @@ def _yf_spot_price(ticker: str, as_of_date: str, lookback_days: int = 5) -> Opti
         return None
 
 
+def _yf_last_two_closes(
+    ticker: str, as_of_date: str, lookback_days: int = 30
+) -> tuple[Optional[float], Optional[float]]:
+    """
+    Return (last_close, prev_close) on or before `as_of_date`.
+
+    Used to derive a spot level and a 1-day percentage change for the
+    headline market-index strip. The window is generous (default 30 days)
+    because some indices — notably ^CASE30 — have sparse Yahoo coverage.
+    Returns (None, None) on any failure.
+    """
+    try:
+        import yfinance as yf
+        end   = datetime.strptime(as_of_date, "%Y-%m-%d") + timedelta(days=1)
+        start = end - timedelta(days=lookback_days)
+        df = yf.download(
+            ticker,
+            start=start.strftime("%Y-%m-%d"),
+            end=end.strftime("%Y-%m-%d"),
+            progress=False,
+            auto_adjust=True,
+        )
+        if df is None or df.empty or "Close" not in df.columns:
+            return None, None
+        closes = df["Close"].dropna()
+        if closes.empty:
+            return None, None
+
+        def _scalar(v: Any) -> float:
+            return float(v.iloc[0]) if hasattr(v, "iloc") else float(v)
+
+        last = _scalar(closes.iloc[-1])
+        prev = _scalar(closes.iloc[-2]) if len(closes) >= 2 else None
+        return last, prev
+    except Exception as exc:
+        logger.debug("_yf_last_two_closes(%s, %s) failed: %s", ticker, as_of_date, exc)
+        return None, None
+
+
+# Headline market indices for the dashboard strip. Only instruments with a
+# dependable free feed are listed — EGX70/EGX100 have no reliable public
+# source and are intentionally excluded. ``yf`` lists fallback symbols tried
+# in order until two closes are found.
+_MARKET_INDEX_SPECS = (
+    {"key": "egx30",   "label": "EGX 30",   "yf": ["^CASE30", "EGX30.CA"], "kind": "index",     "decimals": 0},
+    {"key": "gold",    "label": "Gold",     "yf": ["GC=F", "GLD"],         "kind": "commodity", "decimals": 2},
+    {"key": "usd_egp", "label": "USD / EGP", "yf": ["USDEGP=X", "EGP=X"],  "kind": "fx",        "decimals": 2},
+)
+
+
+def get_market_indices(as_of_date: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Live spot level + 1-day percentage change for the headline market indices.
+
+    Deterministic, no LLM. Each instrument degrades independently: a feed
+    failure yields ``available: false`` rather than failing the whole call.
+    Fallback symbols are tried until both a last and prior close are found.
+    """
+    target = as_of_date or datetime.now().strftime("%Y-%m-%d")
+    indices = []
+    for spec in _MARKET_INDEX_SPECS:
+        last: Optional[float] = None
+        prev: Optional[float] = None
+        for symbol in spec["yf"]:
+            cand_last, cand_prev = _yf_last_two_closes(symbol, target)
+            if cand_last is not None:
+                # Keep the first symbol that yields a usable spot; prefer one
+                # that also provides a prior close for the 1-day change.
+                if last is None or (prev is None and cand_prev is not None):
+                    last, prev = cand_last, cand_prev
+                if prev is not None:
+                    break
+        change_pct = None
+        change_source = "intraday"
+        if last is not None and prev not in (None, 0):
+            change_pct = round((last - prev) / prev * 100, 2)
+        # ^CASE30 exposes only one Yahoo point — fall back to a constituent
+        # basket so the EGX30 tile still shows a daily move.
+        if change_pct is None and spec["key"] == "egx30" and last is not None:
+            proxy = _egx30_proxy_1d_return(target)
+            if proxy is not None:
+                change_pct = round(proxy * 100, 2)
+                change_source = "constituent_basket"
+        indices.append({
+            "key": spec["key"],
+            "label": spec["label"],
+            "kind": spec["kind"],
+            "value": round(last, spec["decimals"]) if last is not None else None,
+            "change_pct": change_pct,
+            "change_source": change_source if change_pct is not None else None,
+            "available": last is not None,
+        })
+    return {"as_of_date": target, "indices": indices}
+
+
 def _yf_1m_return(ticker: str, as_of_date: str) -> Optional[float]:
     """
     Compute the 1-month price return of `ticker` ending at `as_of_date`.
@@ -133,6 +228,71 @@ def _classify_fx_trend(usd_egp_1m_return: Optional[float]) -> str:
     if usd_egp_1m_return < -0.02:
         return "appreciating"     # EGP gained >2% — positive
     return "stable"
+
+
+# Liquid EGX-30 constituents used to proxy index 1m return when ^CASE30
+# only exposes the most recent point on Yahoo. Equal-weighted by design —
+# weighting drift across rebalances would add noise, not signal.
+_EGX30_PROXY_CONSTITUENTS = (
+    "COMI.CA", "ETEL.CA", "HRHO.CA", "SWDY.CA", "TMGH.CA",
+    "ABUK.CA", "EAST.CA", "MFPC.CA", "FWRY.CA", "ADIB.CA",
+    "ORAS.CA", "HELI.CA", "PHDC.CA", "EFIH.CA", "JUFO.CA",
+)
+
+
+def _egx30_proxy_1m_return(as_of_date: str) -> Optional[float]:
+    import math
+    rets: list[float] = []
+    for sym in _EGX30_PROXY_CONSTITUENTS:
+        r = _yf_1m_return(sym, as_of_date)
+        if r is not None and not math.isnan(r) and math.isfinite(r):
+            rets.append(r)
+    if len(rets) < 5:
+        return None
+    return sum(rets) / len(rets)
+
+
+def _egx30_proxy_1d_return(as_of_date: str) -> Optional[float]:
+    """
+    Equal-weighted average 1-day return of liquid EGX-30 constituents.
+
+    Yahoo's ^CASE30 only exposes a single point, so it cannot yield a daily
+    change. The ``.CA`` constituents have proper daily history — averaging
+    their last-session returns is a faithful proxy for the index move.
+    Constituents are fetched in one batched request to keep the call fast.
+    """
+    try:
+        import math
+        import yfinance as yf
+        end   = datetime.strptime(as_of_date, "%Y-%m-%d") + timedelta(days=1)
+        start = end - timedelta(days=12)
+        df = yf.download(
+            list(_EGX30_PROXY_CONSTITUENTS),
+            start=start.strftime("%Y-%m-%d"),
+            end=end.strftime("%Y-%m-%d"),
+            progress=False,
+            auto_adjust=True,
+        )
+        if df is None or df.empty or "Close" not in df.columns:
+            return None
+        close = df["Close"]
+        rets: list[float] = []
+        for col in close.columns:
+            series = close[col].dropna()
+            if len(series) < 2:
+                continue
+            prev = float(series.iloc[-2])
+            last = float(series.iloc[-1])
+            if prev:
+                r = (last - prev) / prev
+                if math.isfinite(r):
+                    rets.append(r)
+        if len(rets) < 5:
+            return None
+        return sum(rets) / len(rets)
+    except Exception as exc:
+        logger.debug("_egx30_proxy_1d_return(%s) failed: %s", as_of_date, exc)
+        return None
 
 
 def _classify_egx30_trend(return_1m: Optional[float]) -> str:
@@ -221,13 +381,19 @@ def get_egx_macro_context(
     fx_source = "yfinance" if usd_egp_1m is not None else "default"
 
     # ── 6. EGX30 (^CASE30) ────────────────────────────────────────────────────
+    # Yahoo's ^CASE30 / EGX30.CA only expose the latest snapshot — not enough
+    # to compute a 1-month return. Fall back to a constituent-basket proxy
+    # (equal-weighted mean of liquid EGX-30 names), which Yahoo does serve.
     egx30_1m = _yf_1m_return("^CASE30", as_of_date)
     egx30_source = "yfinance"
     if egx30_1m is None:
-        # Try alternative ticker
         egx30_1m = _yf_1m_return("EGX30.CA", as_of_date)
         if egx30_1m is not None:
             egx30_source = "yfinance(alt)"
+    if egx30_1m is None:
+        egx30_1m = _egx30_proxy_1m_return(as_of_date)
+        if egx30_1m is not None:
+            egx30_source = "yfinance(proxy_basket)"
         else:
             egx30_source = "unavailable"
             logger.info("EGX30 1m return: not available from yfinance")

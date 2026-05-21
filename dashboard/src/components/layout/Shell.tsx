@@ -35,7 +35,7 @@ import { cn } from "../../lib/utils";
 import { useTheme } from "../../hooks/useTheme";
 
 const NAV = [
-  { to: "/", label: "Analysis", icon: Activity },
+  { to: "/", label: "Home", icon: Activity },
   { to: "/backtest", label: "Backtesting", icon: BarChart3 },
   { to: "/history", label: "History", icon: Clock4 },
 ];

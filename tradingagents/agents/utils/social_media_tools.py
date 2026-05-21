@@ -49,6 +49,16 @@ def get_social_sentiment(
     if _trade_date and curr_date > _trade_date:
         curr_date = _trade_date
 
+    # Preferred path: v2 pipeline (Facebook Apify + Reddit + transformer
+    # sentiment + per-stock aggregation). Returns the agent-compatible
+    # JSON directly.
+    try:
+        from tradingagents.dataflows.social_v2.signal_adapter import fetch_v2_signal_json
+        return fetch_v2_signal_json(ticker, curr_date, look_back_days)
+    except Exception:
+        # Fall through to legacy v1 below.
+        pass
+
     # Step 1: Collect social media data
     social_data = get_social_media_data(ticker, curr_date, look_back_days)
     

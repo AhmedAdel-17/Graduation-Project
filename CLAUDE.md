@@ -93,6 +93,26 @@ tradingagents/
       *_tools.py                     <- @tool wrappers used by ToolNodes
 
   dataflows/
+    social_v2/                       <- PRODUCTION social sentiment pipeline (2026-05-18)
+      models.py                      <- Post dataclass (shared by all sources)
+      relevance.py                   <- Layer-0 EGX gate
+      entities.py                    <- 84-issuer SYMBOL_REGISTRY (EN + AR aliases)
+      intent.py                      <- BUY/SELL/BULLISH/BEARISH/HOLD/REACTION detector
+      content_type.py                <- OPINION/NEWS/ANALYSIS/QUESTION
+      quality_gate.py                <- permissive gate (downgrade vs hard-drop)
+      aggregator.py                  <- weighted per-stock + market signal
+      sentiment_runner.py            <- bridges to sentiment_engine + VADER baseline
+      cache.py                       <- diskcache (Apify TTL 1 h, signal TTL 30 min)
+      post_store.py                  <- Postgres archive (social_v2_posts table)
+      pipeline.py                    <- 7-stage orchestrator (SCRAPE..ARCHIVE)
+      signal_adapter.py              <- AGENT-FACING entry; backtest honesty gate
+      sources/
+        facebook_apify.py            <- Apify actor 2chN8UQcH1CfxLRNE, 5 AR groups,
+                                        stale-cache fallback on 402/403/429/5xx
+        mubasher_news.py             <- Mubasher EGX RSS (AR + EN), no auth/quota
+        telegram_public.py           <- t.me/s/<channel> previews, no auth
+        reddit_targeted.py           <- intent-rich queries, requires real
+                                        ticker mention (strict relevance gate)
     gateway.py                       <- DataGateway: cache -> primary -> fallback chain
     interface.py                     <- route_to_vendor() dispatcher
     y_finance.py                     <- primary OHLCV provider
@@ -129,10 +149,14 @@ server/api_server.py                 <- FastAPI REST + WebSocket (NO AUTH - see 
 cli/main.py                          <- Rich-TUI CLI (interactive only - no flags)
 dashboard/                           <- React 19 + Vite + lightweight-charts
 scripts/
-  backtester.py                      <- LLM backtest engine (HAS LOOK-AHEAD BUGS - see MEMORY.md)
+  backtester.py                      <- LLM backtest engine (look-ahead §C1/C3/C4 RESOLVED 2026-05-20;
+                                        crash-hardened + retry + --resume; honest closed-trade win-rate)
   bt_benchmark.py                    <- Backtrader classical baseline
   benchmark_comparison.py            <- side-by-side comparator
-  run_real_backtests.py              <- multi-ticker driver
+  run_real_backtests.py              <- multi-ticker driver (legacy 3-ticker)
+  evaluate_egx_backtests.py          <- multi-ticker eval harness: runs N tickers, aggregates
+                                        per-ticker JSON via walkforward.compute_arm_metrics,
+                                        emits CSV + Markdown pooled summary vs EGX30
   parse_egx_annex5.py                <- PDF parser for fundamentals
   social_pipeline/                  <- v1: scrape-only validation
   social_pipeline/v2/               <- v2: layered trading-signal engine (Apify-backed)
@@ -174,7 +198,10 @@ redis_pubsub.py                      <- AgentEventPublisher / Subscriber for Web
 - `DEEPSEEK_API_KEY` (or `OPENAI_API_KEY`) - required for LLM
 - `EODHD_API_KEY` - fallback OHLCV provider
 - `NEWS_API_KEY` - news fallback chain
-- `APIFY_API_TOKEN` - Facebook Groups scraping (v2 social pipeline)
+- `APIFY_API_TOKEN` - Facebook Groups scraping (v2 social pipeline). Used by `tradingagents/dataflows/social_v2/sources/facebook_apify.py` (actor `2chN8UQcH1CfxLRNE`). Rotate after any chat/log exposure.
+- `EGX_FB_GROUP_URLS` - optional, comma-separated list of Facebook group URLs. If unset, social_v2 uses the 5 user-confirmed default Arabic groups baked into `facebook_apify.DEFAULT_GROUP_URLS`.
+- `EGX_FB_MAX_POST_AGE_DAYS` / `MUBASHER_MAX_POST_AGE_DAYS` / `TELEGRAM_MAX_POST_AGE_DAYS` - optional per-source recency filters. Defaults: FB=3, Mubasher=3, Telegram=7. Posts older than the limit are dropped at source.
+- `EGX_TELEGRAM_CHANNELS` - optional, comma-separated list of public Telegram channel handles (no `@`). Defaults to a small set of known-public Egyptian financial channels; replace with channels you actually follow that have public previews enabled at `t.me/s/<handle>`.
 - `POSTGRES_URL` - optional, enables persistent memory + audit
 - `REDIS_URL` - optional, enables WebSocket streaming
 - `TRADINGAGENTS_MEMORY_BACKEND` - optional; defaults to `chroma`, set to `postgres` only with pgvector ready
@@ -221,15 +248,19 @@ uvicorn server.api_server:app --reload --port 8000
 # Dashboard
 cd dashboard && npm install && npm run dev   # http://localhost:5173
 
-# LLM backtest
+# LLM backtest (--resume picks up from the per-ticker partial checkpoint)
 python scripts/backtester.py --ticker COMI.CA --start 2023-10-01 --end 2024-01-01 \
-    --interval 20 --analysts market,fundamentals,news,social
+    --interval 20 --analysts market,fundamentals,news,social [--resume]
 
 # Classical baseline (no LLM, no API key)
 python scripts/bt_benchmark.py --ticker COMI.CA --start 2023-10-01 --end 2024-01-01
 
 # Multi-engine driver
 python scripts/run_real_backtests.py
+
+# Multi-ticker evaluation harness vs EGX30 (CSV + Markdown pooled summary)
+python scripts/evaluate_egx_backtests.py --tickers ETEL.CA,TMGH.CA \
+    --start 2024-01-01 --end 2024-03-31 --interval 20
 
 # Twitter/social v2 pipeline
 PYTHONIOENCODING=utf-8 python scripts/social_pipeline/v2/pipeline.py
@@ -251,8 +282,9 @@ python -c "from tradingagents.graph.trading_graph import TradingAgentsGraph; pri
 | `run_egx_prediction.py` | Direct LLM prediction with live/historical price; powers `/api/test/random-egx` |
 | `cli/main.py` | Interactive Rich TUI - research workflow |
 | `server/api_server.py` | FastAPI REST + WebSocket - dashboard backend |
-| `scripts/backtester.py` | LLM multi-agent backtest engine |
+| `scripts/backtester.py` | LLM multi-agent backtest engine (crash-hardened, `--resume`-able, look-ahead-free metrics) |
 | `scripts/bt_benchmark.py` | Backtrader classical RSI/MACD/BB baseline |
+| `scripts/evaluate_egx_backtests.py` | Multi-ticker evaluation harness — pooled CSV + Markdown summary vs EGX30 |
 | `scripts/social_pipeline/v2/pipeline.py` | Production-style trading-signal aggregator from social sources |
 
 ---
@@ -298,11 +330,12 @@ Output: `results_<stamp>.json` with `market_sentiment`, `per_stock_sentiment`, f
 
 This codebase has **critical production blockers**. Do not deploy as a live trading system. Acceptable Week-4 ship target is a **research console** with audit, auth, fixed reproducibility, and a defensible backtest. Full list of blockers and 4-week plan is in `MEMORY.md` section 3.
 
-**The three things every Claude session must internalize:**
+**The things every Claude session must internalize:**
 
-1. **Reproducibility is broken.** LLM `.invoke()` calls don't pin temperature/seed everywhere. Until fixed, every backtest result is unrepeatable and every audit trail is partial. Top of fix list.
-2. **The LLM backtester has look-ahead bugs.** `_evaluate_trade_outcomes` uses future prices; reflection runs inside the loop with realized PnL. Any reported alpha/Sharpe number is overstated until these are fixed.
-3. **Hardcoded EODHD API key in source.** Rotate + scrub before anything else.
+1. **Reproducibility is broken.** LLM `.invoke()` calls don't pin temperature/seed everywhere (MEMORY.md §B). Until fixed, every backtest result is unrepeatable and every audit trail is partial. Top of fix list.
+2. **Backtester look-ahead is RESOLVED (2026-05-20).** `_evaluate_trade_outcomes` deleted, risk-free rate is config-driven, benchmark window is strictly date-intersected (MEMORY.md §C C1/C3/C4 resolved). The backtester is also crash-hardened, retry-wrapped, and `--resume`-able. Reported win-rate is now realized closed-trade only, with a Wilson CI.
+3. **Hardcoded EODHD API key in source.** Rotate + scrub before anything else (MEMORY.md §A).
+4. **Bear researcher empty output — RESOLVED 2026-05-20 (MEMORY.md §AA).** The debate was a Bull↔Bear cycle with a leaky "Analysts Sync" fan-in barrier; a re-triggered concurrent Bull task clobbered Bear's `investment_debate_state` write via the `_keep_last` reducer. Fixed by linearizing the debate (`Bull → Bear → Research Manager`) in both `graph/setup.py` and `ablation/runner.py` and deferring the barrier. Debates are now genuinely two-sided.
 
 When in doubt, read `MEMORY.md` first.
 

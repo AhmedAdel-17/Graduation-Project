@@ -61,14 +61,26 @@ class DataPrefetcher:
             return ""
 
     def _fetch_social_sentiment(self, ticker: str, trade_date: str) -> str:
-        """Fetch pre-aggregated social sentiment scores."""
+        """Fetch pre-aggregated social sentiment via the v2 pipeline.
+
+        v2 = Facebook (Apify, primary) + Reddit + transformer sentiment.
+        Returns the agent-compatible JSON shape that
+        ``social_media_analyst._try_build_*_sentiment`` understands.
+        Falls back to the legacy v1 tool only when v2 raises an exception.
+        """
         try:
-            from tradingagents.agents.utils.social_media_tools import get_social_sentiment
-            result = get_social_sentiment.invoke({"ticker": ticker, "curr_date": trade_date})
-            return str(result) if result else ""
+            from tradingagents.dataflows.social_v2 import fetch_v2_signal
+            from tradingagents.dataflows.social_v2.signal_adapter import fetch_v2_signal_json
+            return fetch_v2_signal_json(ticker, trade_date)
         except Exception as e:
-            logger.warning("Prefetch social sentiment failed for %s: %s", ticker, e)
-            return ""
+            logger.warning("Prefetch social v2 failed for %s: %s — falling back to v1", ticker, e)
+            try:
+                from tradingagents.agents.utils.social_media_tools import get_social_sentiment
+                result = get_social_sentiment.invoke({"ticker": ticker, "curr_date": trade_date})
+                return str(result) if result else ""
+            except Exception as e2:
+                logger.warning("Prefetch v1 social sentiment also failed for %s: %s", ticker, e2)
+                return ""
 
     def _fetch_social_posts(self, ticker: str, trade_date: str) -> str:
         """Fetch actual social media post content."""
@@ -110,7 +122,15 @@ class DataPrefetcher:
         """
         logger.info("Prefetching data for %s on %s ...", ticker, trade_date)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        # Do NOT use `with ThreadPoolExecutor(...) as executor:` — its
+        # __exit__ calls shutdown(wait=True), which blocks until every
+        # worker thread finishes. If one task is stuck on a socket with
+        # no timeout, the entire pipeline hangs even though we already
+        # collected a timeout result for that future. Manage shutdown
+        # explicitly with wait=False + cancel_futures=True so the pipeline
+        # can move on while a runaway thread dies in the background.
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+        try:
             futures = {
                 "prefetched_company_news": executor.submit(
                     self._fetch_company_news, ticker, str(trade_date)
@@ -139,6 +159,12 @@ class DataPrefetcher:
                 except Exception as e:
                     logger.warning("Prefetch error for %s: %s", key, e)
                     results[key] = "" if key != "macro_context" else None
+        finally:
+            # cancel_futures only cancels pending (not-yet-running) tasks;
+            # running ones will die when their socket times out (which is
+            # why every requests.get must pass a timeout — see
+            # googlenews_utils.GOOGLENEWS_HTTP_TIMEOUT).
+            executor.shutdown(wait=False, cancel_futures=True)
 
         non_empty_str = sum(1 for k, v in results.items() if k != "macro_context" and v)
         macro_ok = results.get("macro_context") is not None

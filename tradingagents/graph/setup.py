@@ -196,7 +196,17 @@ class GraphSetup:
         # LangGraph super-step.  Each analyst has its own isolated message
         # channel so tool calls don't interfere.  All clear nodes converge
         # at "Analysts Sync" before the debate phase.
-        workflow.add_node("Analysts Sync", lambda state: {})
+        #
+        # defer=True makes "Analysts Sync" a TRUE barrier: it executes once,
+        # only after every analyst branch has fully settled. Without it the
+        # node fires once per super-step in which any analyst's "Msg Clear"
+        # edge delivers a trigger — and analysts finish in different
+        # super-steps (each runs a variable number of tool-call rounds).
+        # Multiple firings re-trigger "Bull Researcher", so a second Bull
+        # task runs concurrently with the Bear task; both write
+        # investment_debate_state and the _keep_last reducer drops one —
+        # which is why bear_history came back empty on every run (MEMORY §AA).
+        workflow.add_node("Analysts Sync", lambda state: {}, defer=True)
 
         for analyst_type in selected_analysts:
             current_analyst = f"{analyst_type.capitalize()} Analyst"
@@ -217,26 +227,24 @@ class GraphSetup:
             # Fan-in: each clear node → shared sync barrier
             workflow.add_edge(current_clear, "Analysts Sync")
 
-        # After all analysts are done, start the debate phase
+        # After all analysts are done, start the debate phase.
+        #
+        # The debate is a STRICT LINEAR CHAIN: Bull → Bear → Research Manager.
+        # It used to be a Bull↔Bear cycle driven by `should_continue_debate`
+        # conditional edges, but that cycle re-triggered a second concurrent
+        # Bull task. Both Bull and Bear write `investment_debate_state`; the
+        # `_keep_last` reducer then dropped one write — and Bear's structured
+        # thesis was the one lost, leaving `bear_history` empty on every run
+        # (MEMORY §AA — one-sided debates).
+        #
+        # A linear chain is also functionally equivalent to the prior intent:
+        # `ConditionalLogic()` is always constructed with no arguments, so
+        # `max_debate_rounds` is permanently 1 regardless of config — the
+        # debate was already a single Bull/Bear round in practice. Multi-round
+        # debate would need a real round-counter node, not a self-cycle.
         workflow.add_edge("Analysts Sync", "Bull Researcher")
-
-        # Add remaining edges
-        workflow.add_conditional_edges(
-            "Bull Researcher",
-            self.conditional_logic.should_continue_debate,
-            {
-                "Bear Researcher": "Bear Researcher",
-                "Research Manager": "Research Manager",
-            },
-        )
-        workflow.add_conditional_edges(
-            "Bear Researcher",
-            self.conditional_logic.should_continue_debate,
-            {
-                "Bull Researcher": "Bull Researcher",
-                "Research Manager": "Research Manager",
-            },
-        )
+        workflow.add_edge("Bull Researcher", "Bear Researcher")
+        workflow.add_edge("Bear Researcher", "Research Manager")
         workflow.add_edge("Research Manager", "Trader")
 
         # Phase 3: Risk pipeline routing
