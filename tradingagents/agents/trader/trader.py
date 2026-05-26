@@ -259,6 +259,27 @@ max_target_shares     = max_loss_egp / loss_per_share
         # no margin, no shorts).
         macro_section = format_macro_context_for_prompt(state.get("macro_context"))
 
+        # Risk appetite — only affects POSITION SIZING here, not the decision.
+        # The decision itself (BUY/SELL/HOLD) is set by the Research Manager
+        # upstream; the Trader's job is to implement it. See research_manager.py
+        # for the decision-level risk_appetite handling.
+        risk_appetite = str(config.get("risk_appetite") or "conservative").lower()
+        sizing_hint = {
+            "conservative": "Position sizes: cap at 5% of portfolio per trade. Prefer the lower end of ADV limits.",
+            "balanced":     "Position sizes: 5-10% of portfolio when conviction is moderate, up to ADV limits.",
+            "aggressive":   "Position sizes: 8-12% of portfolio when conviction is high, up to ADV limits.",
+        }.get(risk_appetite, "")
+
+        macro_guidance = (
+            "## TRADER GUIDANCE ON MACRO\n"
+            "- The CBE policy rate above is the AUTHORITATIVE current rate. Do NOT cite a different rate from the analyst reports.\n"
+            "- IMPORTANT: Your decision (BUY/SELL/HOLD) MUST match the Research Manager's verdict. You implement; you do not re-decide.\n"
+            "- If the Research Manager said HOLD, your execution plan should output HOLD with no entry plan.\n"
+            "- If FX trend is \"depreciating\", reduce position sizes (USD-denominated input costs hurt margins).\n"
+            "- NEVER use leverage, margin, or borrowed capital. EGX is 100% cash only.\n"
+            f"- {sizing_hint}\n"
+        )
+
         prompt_context = f"""You are an Institutional Trader generating a detailed EXECUTION PLAN for {company_name}.
 
 {egx_constraints}
@@ -266,11 +287,7 @@ max_target_shares     = max_loss_egp / loss_per_share
 
 {macro_section}
 
-## TRADER GUIDANCE ON MACRO
-- The CBE policy rate above is the AUTHORITATIVE current rate. Do NOT cite a different rate from the analyst reports.
-- Compare equity earnings yield to the T-bill yield. If equity earnings yield < T-bill yield, prefer smaller positions or HOLD.
-- If FX trend is "depreciating", reduce position sizes (USD-denominated input costs hurt margins).
-- NEVER use leverage, margin, or borrowed capital. EGX is 100% cash only — even when rates are low, do NOT use any "margin" indicator.
+{macro_guidance}
 
 ## Your Task
 Based on the investment thesis and analyst reports, create a comprehensive execution plan that includes:

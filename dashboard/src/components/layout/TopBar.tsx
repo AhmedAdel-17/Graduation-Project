@@ -1,48 +1,60 @@
+import { useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { endpoints } from "../../services/api";
-import { Activity, Clock } from "lucide-react";
-import { format } from "date-fns";
+import { ArrowDown, ArrowUp } from "lucide-react";
+import { api } from "@/lib/api";
+import { formatPct } from "@/lib/formatters";
+import { cn } from "@/lib/utils";
 
-export function TopBar({ title, subtitle }: { title: string; subtitle?: string }) {
-  const { data: health } = useQuery({
-    queryKey: ["health"],
-    queryFn: () => endpoints.health(),
-    refetchInterval: 30_000,
-    retry: 0,
+const TITLES: Record<string, string> = {
+  "/": "Home",
+  "/run": "Run analysis",
+  "/backtest": "Backtest",
+  "/history": "History",
+  "/settings": "Settings",
+};
+
+export function Topbar() {
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const title =
+    TITLES[path] ||
+    (path.startsWith("/history/")
+      ? "Run detail"
+      : path.startsWith("/backtest/")
+        ? "Backtest detail"
+        : "TradingAgents");
+
+  const { data: hist } = useQuery({
+    queryKey: ["egx30-mini"],
+    queryFn: () => api.market.egx30History(2),
+    refetchInterval: 60_000,
+    staleTime: 50_000,
   });
-
-  const online = health?.status === "ok";
+  const last = hist?.[hist.length - 1];
+  const prev = hist?.[hist.length - 2];
+  const change = last && prev ? ((last.close - prev.close) / prev.close) * 100 : 0;
 
   return (
-    <header className="sticky top-0 z-30 h-16 border-b border-line bg-ink-900/60 backdrop-blur-md px-5 lg:px-8 flex items-center justify-between">
-      <div className="min-w-0">
-        <h1 className="text-base font-semibold tracking-tight text-fg truncate">
-          {title}
-        </h1>
-        {subtitle && (
-          <p className="text-xs text-fg-muted truncate">{subtitle}</p>
-        )}
+    <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-background/80 px-6 backdrop-blur">
+      <div className="text-sm text-muted-foreground">
+        <span className="font-medium text-foreground">{title}</span>
       </div>
-
-      <div className="flex items-center gap-3">
-        <div className="hidden sm:flex items-center gap-1.5 text-xs text-fg-muted">
-          <Clock className="h-3.5 w-3.5" />
-          <span className="num">{format(new Date(), "MMM d, yyyy · HH:mm")}</span>
-        </div>
-        <div
-          className={
-            "flex items-center gap-1.5 px-2.5 h-7 rounded-md border text-[11px] font-medium " +
-            (online
-              ? "bg-up/10 border-up/30 text-up"
-              : "bg-down/10 border-down/30 text-down")
-          }
-        >
-          <Activity className="h-3 w-3" />
-          <span className="uppercase tracking-wider">
-            {online ? "API Online" : "API Offline"}
+      {last && (
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-muted-foreground">EGX30</span>
+          <span className="font-mono font-medium tabular">
+            {last.close.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+          </span>
+          <span
+            className={cn(
+              "flex items-center gap-0.5 font-mono tabular",
+              change >= 0 ? "text-primary" : "text-destructive",
+            )}
+          >
+            {change >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+            {formatPct(change)}
           </span>
         </div>
-      </div>
+      )}
     </header>
   );
 }

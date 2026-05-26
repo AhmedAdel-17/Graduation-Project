@@ -1,26 +1,14 @@
-import React from "react";
+import type { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
-import { TopBar } from "./TopBar";
-import { MobileNav } from "./MobileNav";
+import { Topbar } from "./Topbar";
 
-export function AppShell({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
+export function AppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen flex">
+    <div className="flex min-h-screen w-full bg-background text-foreground">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0">
-        <TopBar title={title} subtitle={subtitle} />
-        <MobileNav />
-        <main className="flex-1 px-4 lg:px-8 py-6 lg:py-8 max-w-7xl w-full mx-auto animate-fade-in">
-          {children}
-        </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Topbar />
+        <main className="flex-1 overflow-x-hidden p-6">{children}</main>
       </div>
     </div>
   );

@@ -65,6 +65,12 @@ EGX_SLIPPAGE_LOW_LIQ = 0.005    # 0.5%  — low-liquidity stocks (wider spreads)
 EGX_CIRCUIT_BREAKER  = 0.10     # ±10% daily price move halts trading on EGX
 EGX_SETTLEMENT_DAYS  = 2        # T+2: cash from a SELL settles after 2 business days
 
+# Annualized EGP risk-free rate for Sharpe. EGP T-bills / CBE policy yield ~24-27%
+# in 2024-2026. Using the old 5% placeholder massively OVERSTATES Sharpe because
+# it under-subtracts the opportunity cost of holding cash. (MEMORY.md §C3)
+# Overridable via the EGX_RISK_FREE_RATE env var for sensitivity analysis.
+EGX_RISK_FREE_RATE = float(os.environ.get("EGX_RISK_FREE_RATE", "0.24"))
+
 
 def _compute_reasoning_score(final_state: dict) -> int:
     """
@@ -108,6 +114,13 @@ class BacktestingEngine:
         self.positions: Dict[str, Dict] = {}  # {ticker: {"shares": int, "avg_cost": float}}
         self.trade_history: List[Dict] = []
         self.daily_history: List[Dict] = []   # For drawdown and Sharpe tracking
+
+        # Idle settled cash accrues the EGP risk-free rate (T-bills / CBE policy
+        # rate), reflecting the real opportunity cost for an Egyptian investor.
+        # Without this, sitting in cash looks like a 0% return and unfairly
+        # tanks the Sharpe vs a ~24% risk-free benchmark. (MEMORY.md §C3)
+        self.credit_cash_interest = True
+        self._last_valuation_date: Optional[str] = None
 
         # T+2 settlement queue: list of (settle_date_str, amount_egp)
         self.pending_cash_settlements: List[Tuple[str, float]] = []
@@ -371,7 +384,7 @@ class BacktestingEngine:
 
         mean_ret = df["returns"].mean()
         std_ret  = df["returns"].std()
-        sharpe = (mean_ret * 252 - 0.05) / (std_ret * np.sqrt(252)) if std_ret > 0 else 0.0
+        sharpe = (mean_ret * 252 - EGX_RISK_FREE_RATE) / (std_ret * np.sqrt(252)) if std_ret > 0 else 0.0
 
         n_days = len(df)
         ann_return = (1 + total_return) ** (252 / max(n_days, 1)) - 1
@@ -423,10 +436,11 @@ class BacktestingEngine:
         df["drawdown"] = (df["portfolio_value"] - df["cummax"]) / df["cummax"]
         max_drawdown = df["drawdown"].min() if not df.empty else 0.0
 
-        # Sharpe Ratio (annualized, 5% EGP risk-free rate proxy)
+        # Sharpe Ratio (annualized) — uses the real EGP risk-free rate (~24%),
+        # NOT the old 5% placeholder which overstated Sharpe. (MEMORY.md §C3)
         mean_ret = df["returns"].mean()
         std_ret = df["returns"].std()
-        sharpe = (mean_ret * 252 - 0.05) / (std_ret * np.sqrt(252)) if std_ret > 0 else 0.0
+        sharpe = (mean_ret * 252 - EGX_RISK_FREE_RATE) / (std_ret * np.sqrt(252)) if std_ret > 0 else 0.0
 
         # Calmar Ratio (annualized return / max drawdown magnitude)
         n_days = len(df)
@@ -670,9 +684,13 @@ class BacktestingEngine:
         analysts: list = None,
         cooldown: int = 5,
         train_end_date: Optional[str] = None,
+        progress_callback=None,
     ):
         """
         Run the backtest loop for a specific ticker.
+
+        progress_callback(done:int, total:int, date:str, decision:str|None) is
+        invoked after each decision date so callers can stream live progress.
         interval_days: calendar days between each agent evaluation.
         cooldown: seconds to sleep between evaluations (rate limit guard).
         train_end_date: optional split date (YYYY-MM-DD). Records on or before
@@ -785,9 +803,11 @@ class BacktestingEngine:
             current_dt += timedelta(days=interval_days)
 
         import time
+        _total_dates = len(test_dates)
         for i, date in enumerate(test_dates):
+            decision = None  # ensure defined even if the date's eval throws
             logger.info(f"\n{'='*64}")
-            logger.info(f"[{date}]  Evaluating {ticker}  ({i+1}/{len(test_dates)})")
+            logger.info(f"[{date}]  Evaluating {ticker}  ({i+1}/{_total_dates})")
 
             # ---- Release any T+2 proceeds that have now settled ----
             self._settle_pending_cash(date)
@@ -822,6 +842,22 @@ class BacktestingEngine:
                 "price": current_price,
                 "value": buyhold_value,
             })
+
+            # ---- Accrue risk-free interest on idle settled cash ----
+            # Models parking EGP cash in T-bills between decision dates.
+            if self.credit_cash_interest and self._last_valuation_date is not None and self.cash > 0:
+                try:
+                    days_elapsed = (
+                        datetime.strptime(date, "%Y-%m-%d")
+                        - datetime.strptime(self._last_valuation_date, "%Y-%m-%d")
+                    ).days
+                    if days_elapsed > 0:
+                        daily_rf = EGX_RISK_FREE_RATE / 365.0
+                        interest = self.cash * ((1 + daily_rf) ** days_elapsed - 1)
+                        self.cash += interest
+                except (ValueError, TypeError):
+                    pass
+            self._last_valuation_date = date
 
             # ---- Circuit breaker check ----
             circuit_halted = self._check_circuit_breaker(ticker, current_price)
@@ -1037,6 +1073,13 @@ class BacktestingEngine:
                 import traceback
                 logger.error(f"Agent Graph failed on {date}: {e}\n{traceback.format_exc()}")
 
+            # ---- Stream live progress after each decision date ----
+            if progress_callback is not None:
+                try:
+                    progress_callback(i + 1, _total_dates, date, decision)
+                except Exception as _pe:
+                    logger.debug("progress_callback failed for %s: %s", date, _pe)
+
         # ---- End of loop: force-settle all remaining T+2 proceeds ----
         logger.info("\nForce-settling remaining T+2 proceeds at end of backtest...")
         for _, amount in self.pending_cash_settlements:
@@ -1047,7 +1090,12 @@ class BacktestingEngine:
         # For each trade, look forward in the price series to judge whether
         # the decision was profitable. Uses future data *intentionally* —
         # this is evaluation, not signal generation.
-        self._evaluate_trade_outcomes(ticker, end_date)
+        # Multiple horizons (1/5/10/20/40d) let us plot an ALPHA DECAY curve:
+        # how the signal's edge evolves with holding period. The primary
+        # horizon (last value) still drives the WIN/LOSS label.
+        self._evaluate_trade_outcomes(
+            ticker, end_date, horizons_days=(1, 5, 10, 20, 40), primary_horizon=20
+        )
 
         # ---- Post-hoc reflection batch (MEMORY.md §C2 fix) ----
         # The in-loop reflect_and_remember() call was removed because feeding
@@ -1205,8 +1253,9 @@ class BacktestingEngine:
         self,
         ticker: str,
         backtest_end_date: str,
-        horizons_days: Tuple[int, int] = (5, 20),
+        horizons_days: Tuple[int, ...] = (5, 20),
         neutral_threshold: float = 0.01,
+        primary_horizon: int = 20,
     ):
         """
         For each trade in self.trade_history, fetch the forward price series
@@ -1216,8 +1265,12 @@ class BacktestingEngine:
           - trade_result  (WIN / LOSS / NEUTRAL / PENDING)
 
         A BUY is WIN if price rose by more than neutral_threshold within the
-        primary horizon (second value in horizons_days). A SELL is WIN if
-        price fell by more than neutral_threshold (i.e., we avoided a drop).
+        primary horizon. A SELL is WIN if price fell by more than
+        neutral_threshold (i.e., we avoided a drop).
+
+        `horizons_days` may list several horizons (e.g. 1/5/10/20/40) to
+        support alpha-decay analysis; `primary_horizon` selects which one
+        drives the WIN/LOSS label (defaults to 20d for backward compat).
 
         Forward data is fetched up to today, so trades too close to the
         backtest end get PENDING for missing horizons.
@@ -1225,13 +1278,15 @@ class BacktestingEngine:
         if not self.trade_history:
             return
 
-        primary_horizon = horizons_days[-1]
+        # Ensure the primary horizon is always among those we fetch
+        if primary_horizon not in horizons_days:
+            horizons_days = tuple(horizons_days) + (primary_horizon,)
 
         # Fetch a single extended price window covering every trade + the
         # longest horizon, so we only hit the data gateway once.
         first_trade_date = min(t["date"] for t in self.trade_history)
-        # Pad by 2x primary horizon in calendar days to safely cover weekends
-        pad_days = primary_horizon * 2 + 10
+        # Pad by 2x the LONGEST horizon in calendar days to safely cover weekends
+        pad_days = max(horizons_days) * 2 + 10
         fetch_end = (
             datetime.strptime(backtest_end_date, "%Y-%m-%d") + timedelta(days=pad_days)
         ).strftime("%Y-%m-%d")
@@ -1239,17 +1294,60 @@ class BacktestingEngine:
         if fetch_end > today:
             fetch_end = today
 
+        # IMPORTANT: fetch the forward-price series directly from yfinance, NOT
+        # via self.gateway.fetch_stock_data — the gateway truncates to ~20 rows
+        # and returns the TAIL, which makes "N bars ahead of the trade date"
+        # read a price from the wrong (much later) window. That bug produced
+        # impossible forward returns (e.g. +148% over 20 days). A direct,
+        # contiguous daily series fixes the index alignment. (MEMORY.md §C1)
+        rows = None
         try:
-            price_data = self.gateway.fetch_stock_data(
-                ticker, start_date=first_trade_date, end_date=fetch_end
+            import yfinance as _yf
+            _df = _yf.download(
+                ticker,
+                start=first_trade_date,
+                end=(datetime.strptime(fetch_end, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d"),
+                progress=False,
+                auto_adjust=True,
             )
+            if _df is not None and not _df.empty and "Close" in _df.columns:
+                _close = _df["Close"]
+                # Single-ticker yfinance returns MultiIndex columns → _close is a
+                # DataFrame; squeeze to the ticker's Series so .items() iterates
+                # (date, price) rows rather than columns.
+                if hasattr(_close, "columns"):
+                    _close = _close.iloc[:, 0]
+                _closes = _close.dropna()
+                rows = []
+                for _dt, _c in _closes.items():
+                    rows.append({"date": _dt.strftime("%Y-%m-%d"), "close": float(_c)})
         except Exception as e:
-            logger.warning(f"Forward-price fetch failed for outcome eval: {e}")
-            return
+            logger.warning(f"yfinance forward-price fetch failed: {e}; trying gateway")
 
-        rows = price_data.get("data") if isinstance(price_data, dict) else None
+        # Fallback to the gateway only if yfinance returned nothing
+        if not rows:
+            try:
+                price_data = self.gateway.fetch_stock_data(
+                    ticker, start_date=first_trade_date, end_date=fetch_end
+                )
+                rows = price_data.get("data") if isinstance(price_data, dict) else None
+            except Exception as e:
+                logger.warning(f"Forward-price fetch failed for outcome eval: {e}")
+                return
+
         if not rows:
             logger.warning("No forward-price data returned; skipping outcome eval.")
+            return
+
+        # Guard: if the series doesn't actually cover the trade dates (truncation),
+        # the index walk would read wrong prices — bail rather than emit garbage.
+        _series_dates = {r["date"] for r in rows if r.get("date")}
+        _earliest = min(_series_dates) if _series_dates else None
+        if _earliest and _earliest > first_trade_date:
+            logger.warning(
+                f"Forward-price series starts {_earliest} > first trade {first_trade_date}; "
+                f"series may be truncated — forward returns skipped to avoid bad data."
+            )
             return
 
         # Index: ordered list of (date_str, close)
@@ -1262,15 +1360,20 @@ class BacktestingEngine:
         date_to_idx = {d: i for i, (d, _) in enumerate(series)}
 
         def _price_n_bars_ahead(trade_date: str, n_bars: int) -> Optional[float]:
-            """Return close price n trading bars after trade_date, or None."""
-            # Walk forward to the first bar >= trade_date
+            """Return close price n trading bars after trade_date, or None.
+
+            The "anchor" bar is trade_date itself if it's a trading day,
+            otherwise the first trading day ON OR AFTER it. n_bars is counted
+            forward from that anchor.
+            """
             idx = date_to_idx.get(trade_date)
             if idx is None:
-                # Find earliest bar > trade_date
-                candidates = [i for i, (d, _) in enumerate(series) if d > trade_date]
+                # First bar on or after the trade date (NOT before — that was the
+                # old bug path that could yield idx = -1 and read the tail).
+                candidates = [i for i, (d, _) in enumerate(series) if d >= trade_date]
                 if not candidates:
                     return None
-                idx = candidates[0] - 1  # treat as "just before" trade
+                idx = candidates[0]
             target_idx = idx + n_bars
             if target_idx >= len(series):
                 return None

@@ -34,7 +34,7 @@ Architecture literature:
 import json
 import logging
 import re
-from typing import List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional
 
 from tradingagents.dataflows.config import get_config
 from tradingagents.agents.risk_mgmt.risk_scorer import EGX_FOREIGN_RESTRICTED
@@ -257,9 +257,35 @@ Risk Action: **{risk_action}**
         )
 
         # ── Full prompt ───────────────────────────────────────────────────────
+        # Risk appetite — user-tunable per run. Modulates how readily the Risk
+        # Manager confirms a directional call vs. defaulting to HOLD.
+        risk_appetite = str(get_config().get("risk_appetite") or "conservative").lower()
+        appetite_section = {
+            "conservative": (
+                "## RISK PROFILE: CONSERVATIVE\n"
+                "- Capital preservation is paramount. Default to HOLD when qualitative risks are material.\n"
+                "- Only confirm a BUY when the thesis is robust across multiple factors.\n"
+            ),
+            "balanced": (
+                "## RISK PROFILE: BALANCED\n"
+                "- Confirm the Trader's directional call (BUY/SELL) UNLESS there is a substantive qualitative risk the scorer missed.\n"
+                "- A high-rate macro environment is NOT by itself grounds to override a BUY to HOLD — the scorer already enforces hard limits.\n"
+                "- Only override to HOLD if you can name a specific, evidence-backed risk.\n"
+            ),
+            "aggressive": (
+                "## RISK PROFILE: AGGRESSIVE\n"
+                "- Your job is to catch HARD violations only; the deterministic scorer already did that. If risk_action is ALLOW/WARN/THROTTLE, CONFIRM the Trader's BUY/SELL.\n"
+                "- Do NOT override a directional call to HOLD on macro/valuation grounds — those are opportunity-cost arguments, not risk violations.\n"
+                "- HOLD is only justified if there is a concrete, severe, evidence-backed danger (e.g., imminent insolvency, fraud, halted trading).\n"
+                "- When in doubt, CONFIRM the Trader's recommendation.\n"
+            ),
+        }.get(risk_appetite, "")
+
         prompt = f"""You are the Constitutional Risk Manager for {company_name} on {"EGX" if is_egx else "the market"}.
 
 {constitution_section}
+
+{appetite_section}
 
 {scorer_context}
 
@@ -376,33 +402,86 @@ Replace BUY with SELL or HOLD. Confidence: 0.0 (low) to 1.0 (high).
             final_trade_decision = response.content
 
         # ── Extract structured commentary from the LLM response ─────────────
-        # The Risk Manager prompt asks for 4 sections; capture them so the
-        # audit trail preserves WHY a decision was made, not just WHAT.
-        def _extract_section(text: str, keywords: tuple, max_chars: int = 800) -> str:
-            """Find a numbered section by keyword match (e.g. 'Constitution')."""
-            for kw in keywords:
-                # Match "1. Constitution compliance:" then capture until next number/json/end
-                pattern = (
-                    rf"(?:\d+\.\s*)?{re.escape(kw)}[^\n]*[:\-]?\s*(.+?)"
-                    rf"(?=\n\s*\d+\.\s|\n\s*```|\n\s*\*\*\d|\Z)"
-                )
-                m = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
-                if m:
-                    return m.group(1).strip()[:max_chars]
-            return ""
+        # The Risk Manager prompt asks for 4 numbered sections in this order:
+        #   1. Constitution compliance
+        #   2. Debate quality note
+        #   3. Qualitative risk commentary
+        #   4. Final decision (JSON)
+        #
+        # We split the response by the section number markers ("1.", "2.", ...)
+        # and assign by ORDER, not by fuzzy keyword match.  This avoids the
+        # bug where the regex captured the WRONG section's content (section 1
+        # picked up section 2's text, etc.).
+        def _split_numbered_sections(text: str) -> Dict[int, str]:
+            """
+            Split the LLM response into numbered sections (1., 2., 3., 4.).
 
-        constitution_commentary = _extract_section(
-            response.content,
-            ("Constitution compliance", "Constitution check", "Constitution"),
-        )
-        debate_quality = _extract_section(
-            response.content,
-            ("Debate quality", "Debate"),
-        )
-        qualitative_risks = _extract_section(
-            response.content,
-            ("Qualitative risk", "Qualitative", "Risk commentary"),
-        )
+            The Risk Manager prompt asks for 4 numbered sections in this order:
+              1. Constitution compliance
+              2. Debate quality note
+              3. Qualitative risk commentary
+              4. Final decision (JSON)
+
+            Strategy: find all "1.", "2.", "3.", "4." markers and slice the
+            text between consecutive markers. If the LLM skipped marker "1."
+            and went straight to "**Constitution compliance**:", we treat the
+            text before "2." as section 1.
+
+            Returns {section_number: body_text}.
+            """
+            if not text:
+                return {}
+            markers = list(re.finditer(r"(?:^|\n)\s*\**\s*(\d+)\s*\.", text))
+            out: Dict[int, str] = {}
+
+            # If no "1." but there's content before the first marker, infer it
+            if markers and int(markers[0].group(1)) > 1:
+                body = text[: markers[0].start()].strip()
+                # Strip the leading "**Heading**:" or "Heading:" prefix
+                body = re.sub(r"^\**[^:\n]*:[*\s]*", "", body, count=1).strip()
+                if body and len(body) > 5:
+                    out[1] = body[:1500]
+
+            for i, m in enumerate(markers):
+                num = int(m.group(1))
+                if not (1 <= num <= 9):
+                    continue
+                start = m.end()
+                end = markers[i + 1].start() if i + 1 < len(markers) else len(text)
+                body = text[start:end].strip()
+                # Strip the section's own "**Heading**:" or "Heading:" prefix
+                body = re.sub(r"^\**[^:\n]*:[*\s]*", "", body, count=1).strip()
+                # Strip the JSON block (it's the structured form of "section 4")
+                body = re.sub(r"```json\s*\{.*?\}\s*```", "", body, flags=re.DOTALL).strip()
+                if body and len(body) > 5:
+                    out[num] = body[:1500]
+
+            return out
+
+        sections = _split_numbered_sections(response.content)
+        constitution_commentary = sections.get(1, "")
+        debate_quality          = sections.get(2, "")
+        qualitative_risks       = sections.get(3, "")
+
+        # Fallback to keyword match if the LLM didn't use numbered headings
+        if not constitution_commentary:
+            m = re.search(
+                r"(?:constitution\s*(?:compliance|check)?)[:\s]*([^\n]+(?:\n(?!\s*\d+\.)[^\n]+)*)",
+                response.content, re.IGNORECASE,
+            )
+            if m: constitution_commentary = m.group(1).strip()[:1500]
+        if not debate_quality:
+            m = re.search(
+                r"debate\s*quality[^:]*:?\s*([^\n]+(?:\n(?!\s*\d+\.)[^\n]+)*)",
+                response.content, re.IGNORECASE,
+            )
+            if m: debate_quality = m.group(1).strip()[:1500]
+        if not qualitative_risks:
+            m = re.search(
+                r"qualitative\s*risk[^:]*:?\s*([^\n]+(?:\n(?!\s*\d+\.)[^\n]+)*)",
+                response.content, re.IGNORECASE,
+            )
+            if m: qualitative_risks = m.group(1).strip()[:1500]
 
         # Identify which constitution clauses were referenced (any "clause N" mention)
         clauses_referenced = sorted({

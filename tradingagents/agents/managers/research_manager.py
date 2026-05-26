@@ -3,6 +3,7 @@ import json
 import logging
 import re
 
+from tradingagents.dataflows.config import get_config
 from tradingagents.dataflows.macro_provider import format_macro_context_for_prompt
 from tradingagents.agents.utils.llm_failover import safe_invoke
 
@@ -81,18 +82,44 @@ def create_research_manager(llm, memory):
         else:
             bear_section = f"### Bear Argument (last exchange)\n{recent_history}"
 
+        # ── Risk-appetite-aware framing ──────────────────────────────────────
+        # The user picks one of three profiles per run; the framing below adjusts
+        # the bar for issuing BUY/SELL vs falling back to HOLD.
+        risk_appetite = str(get_config().get("risk_appetite") or "conservative").lower()
+
+        appetite_framing = {
+            "conservative": (
+                "## RISK PROFILE: CONSERVATIVE (capital preservation)\n"
+                "- HOLD is acceptable if fundamentals show material deterioration even when valuation is cheap.\n"
+                "- Require strong, multi-factor alignment (fundamentals + technicals + sentiment) before issuing BUY.\n"
+                "- When in doubt, preserve capital.\n"
+            ),
+            "balanced": (
+                "## RISK PROFILE: BALANCED (alpha-seeking with risk control)\n"
+                "- HOLD is valid only when bull and bear are roughly even AND risk/reward is unattractive.\n"
+                "- Issue BUY when the bull case has a clear edge, even if one factor (e.g., macro) is unfavorable.\n"
+                "- Weight catalysts, momentum, and valuation alongside fundamentals — don't let any single negative dominate.\n"
+            ),
+            "aggressive": (
+                "## RISK PROFILE: AGGRESSIVE (opportunistic, high-conviction-led)\n"
+                "- HOLD is the LAST RESORT, valid only when bull and bear are EXACTLY balanced.\n"
+                "- Issue BUY whenever the bull case has any meaningful edge — even if fundamentals show stress, if technicals/momentum/sentiment are aligned, take the trade.\n"
+                "- Cheap valuation + bullish technicals is sufficient for BUY even with elevated fundamental risk.\n"
+                "- Macro is a tiebreaker, NOT a veto. The opportunity cost of being in cash matters.\n"
+            ),
+        }.get(risk_appetite, "")
+
         prompt = f"""You are the Chief Investment Officer making the FINAL investment decision for {state.get('company_of_interest', 'this stock')}.
 
+{appetite_framing}
 ## Decision Framework
 You MUST commit to one of these decisions:
 - **BUY**: The bull case is more compelling. Even moderate bullish evidence with acceptable risk = BUY.
 - **SELL**: The bear case is more compelling. Even moderate bearish evidence = SELL (if holding) or AVOID.
-- **HOLD**: ONLY valid if:
-  (a) The data is genuinely insufficient to form any view, OR
-  (b) The bull and bear cases are EXACTLY balanced AND the risk/reward is unfavorable.
+- **HOLD**: As specified by your risk profile above.
 
 ## CRITICAL RULE
-HOLD is a COST — it means missing opportunities. If either the bull or bear case has even a slight edge, you MUST choose that side. Indecision is worse than a small mistake.
+HOLD is a COST — it means missing opportunities. Apply your risk profile honestly when choosing between BUY/SELL/HOLD.
 
 ## Macro Environment
 {macro_section}

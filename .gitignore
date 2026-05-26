@@ -47,3 +47,6 @@ dashboard/dist/
 
 # CSV data files
 *.csv
+
+# Local dashboard SQLite DB (contains user data + password hashes)
+dashboard.db

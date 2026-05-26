@@ -1,65 +1,22 @@
-import React from "react";
-import { cn } from "../../lib/utils";
+import * as React from "react";
 
-export interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  hint?: string;
-  error?: string;
-  leftAddon?: React.ReactNode;
-  rightAddon?: React.ReactNode;
-}
+import { cn } from "@/lib/utils";
 
-export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  function Input(
-    { label, hint, error, leftAddon, rightAddon, className, id, ...props },
-    ref
-  ) {
-    const autoId = React.useId();
-    const inputId = id ?? autoId;
+const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
+  ({ className, type, ...props }, ref) => {
     return (
-      <div className="flex flex-col gap-1.5">
-        {label && (
-          <label
-            htmlFor={inputId}
-            className="text-xs font-medium text-fg-muted"
-          >
-            {label}
-          </label>
+      <input
+        type={type}
+        className={cn(
+          "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+          className,
         )}
-        <div
-          className={cn(
-            "flex items-stretch rounded-lg overflow-hidden bg-ink-800/80 border",
-            error ? "border-down/60" : "border-line focus-within:border-brand-500/50"
-          )}
-        >
-          {leftAddon && (
-            <span className="flex items-center px-3 text-fg-muted text-xs border-r border-line bg-ink-900/50">
-              {leftAddon}
-            </span>
-          )}
-          <input
-            ref={ref}
-            id={inputId}
-            className={cn(
-              "flex-1 bg-transparent px-3 h-10 text-sm text-fg placeholder:text-fg-subtle",
-              "focus:outline-none",
-              className
-            )}
-            {...props}
-          />
-          {rightAddon && (
-            <span className="flex items-center px-3 text-fg-muted text-xs border-l border-line bg-ink-900/50">
-              {rightAddon}
-            </span>
-          )}
-        </div>
-        {(hint || error) && (
-          <p className={cn("text-xs", error ? "text-down" : "text-fg-subtle")}>
-            {error || hint}
-          </p>
-        )}
-      </div>
+        ref={ref}
+        {...props}
+      />
     );
-  }
+  },
 );
+Input.displayName = "Input";
+
+export { Input };
