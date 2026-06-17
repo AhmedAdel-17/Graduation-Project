@@ -23,6 +23,7 @@ def get_YFin_data_online(
     start_date: Annotated[str, "Start date in yyyy-mm-dd format"],
     end_date: Annotated[str, "End date in yyyy-mm-dd format"],
     liquidity_threshold: Annotated[int, "ADV threshold for low liquidity flag"] = DEFAULT_LOW_LIQUIDITY_THRESHOLD,
+    max_records: Annotated[Optional[int], "Cap the returned bars to the last N (token-budget guard for LLM analysts). Pass None for the full history (e.g. covariance/momentum math)."] = 20,
 ) -> Dict[str, Any]:
     """
     Fetch daily OHLCV data for EGX stocks via yfinance.
@@ -70,36 +71,50 @@ def get_YFin_data_online(
     # Create ticker object
     ticker = yf.Ticker(symbol_upper)
     
-    # Fetch historical data for the specified date range (daily bars only)
+    # Pick a fallback period based on the requested window
+    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+    end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+    days_diff = (end_dt - start_dt).days
+    if days_diff <= 7:
+        period = "1wk"
+    elif days_diff <= 30:
+        period = "1mo"
+    elif days_diff <= 90:
+        period = "3mo"
+    elif days_diff <= 365:
+        period = "1y"
+    else:
+        period = "2y"
+
+    # Fetch historical data for the specified date range (daily bars only).
+    # If the date-range call raises or returns empty, fall back to period-based fetch.
+    data = None
+    range_error: Optional[Exception] = None
     try:
         data = ticker.history(start=start_date, end=end_date, interval="1d")
-        
-        # Fallback: if date range returns empty, try period-based fetch
-        if data.empty:
-            # Calculate approximate period needed
-            from dateutil.relativedelta import relativedelta
-            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
-            days_diff = (end_dt - start_dt).days
-            
-            if days_diff <= 7:
-                period = "1wk"
-            elif days_diff <= 30:
-                period = "1mo"
-            elif days_diff <= 90:
-                period = "3mo"
-            else:
-                period = "6mo"
-            
-            errors.append(f"Date range returned empty, using period='{period}' fallback")
-            data = ticker.history(period=period, interval="1d")
-            
     except Exception as e:
-        return {
-            "symbol": symbol_upper,
-            "error": f"Failed to fetch data: {e}",
-            "data": []
-        }
+        range_error = e
+
+    if data is None or data.empty:
+        if range_error is not None:
+            errors.append(f"Date-range fetch failed ({range_error}); using period='{period}' fallback")
+        else:
+            errors.append(f"Date range returned empty, using period='{period}' fallback")
+        try:
+            data = ticker.history(period=period, interval="1d")
+            # Trim to the requested window when possible
+            if not data.empty:
+                idx = data.index.tz_localize(None) if data.index.tz is not None else data.index
+                mask = (idx >= start_dt) & (idx <= end_dt)
+                trimmed = data.loc[mask]
+                if not trimmed.empty:
+                    data = trimmed
+        except Exception as e:
+            return {
+                "symbol": symbol_upper,
+                "error": f"Failed to fetch data: {e}",
+                "data": []
+            }
     
     # Check if data is empty
     if data.empty:
@@ -149,11 +164,13 @@ def get_YFin_data_online(
     
     print(f"DEBUG: y_finance.get_YFin_data_online generated {len(ohlcv_records)} records before truncation", flush=True)
     
-    # Limit to max 20 recent records to prevent token overflow (Groq TPM limit 12k/request)
-    MAX_RECORDS = 20
-    if len(ohlcv_records) > MAX_RECORDS:
-        ohlcv_records = ohlcv_records[-MAX_RECORDS:]
-        errors.append(f"Result truncated to last {MAX_RECORDS} records to prevent context overflow.")
+    # Limit to the last `max_records` bars to prevent token overflow on the LLM
+    # analyst path (Groq TPM limit 12k/request). `max_records=None` returns the
+    # full history — required by the portfolio risk math (covariance / momentum),
+    # which would otherwise be starved of observations.
+    if max_records is not None and len(ohlcv_records) > max_records:
+        ohlcv_records = ohlcv_records[-max_records:]
+        errors.append(f"Result truncated to last {max_records} records to prevent context overflow.")
 
     # Calculate average daily volume and liquidity flag
     num_records = len(ohlcv_records)

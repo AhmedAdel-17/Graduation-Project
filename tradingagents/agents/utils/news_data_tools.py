@@ -97,6 +97,25 @@ from tradingagents.dataflows.local import (
 import json
 
 
+_ARTICLE_DROP_KEYS = {"url", "sentiment", "raw_text", "full_text", "content"}
+
+
+def _slim_articles(articles: list) -> list:
+    """Strip high-token fields that add no analytical value for the LLM.
+
+    url: Google News URLs are base64-encoded and can be 400+ chars each.
+    sentiment/raw_text/full_text/content: either null or redundant with summary.
+    summary: truncate to 300 chars so the LLM gets the gist without token bloat.
+    """
+    slimmed = []
+    for a in articles:
+        slim = {k: v for k, v in a.items() if k not in _ARTICLE_DROP_KEYS}
+        if "summary" in slim and slim["summary"]:
+            slim["summary"] = slim["summary"][:300]
+        slimmed.append(slim)
+    return slimmed
+
+
 def _fetch_live_news(ticker_clean: str, look_back_days: int) -> dict:
     """
     Pull news from the 12-source live aggregator (Mubasher, Al Borsa,
@@ -116,6 +135,7 @@ def _fetch_live_news(ticker_clean: str, look_back_days: int) -> dict:
         if not articles:
             return None
 
+        articles = _slim_articles(articles)
         sources = sorted({a.get("source", "?") for a in articles if a.get("source")})
         languages = sorted({a.get("language", "?") for a in articles if a.get("language")})
 

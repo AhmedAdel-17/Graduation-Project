@@ -289,7 +289,63 @@ def _extract_narrative(text: str) -> Dict[str, Any]:
 # Report text builder (shown to bull/bear researchers)
 # ---------------------------------------------------------------------------
 
-def _build_sentiment_report(ticker: str, narrative: str, blend_result: Dict) -> str:
+def _summarize_sentiment_layers(prefetched: Any) -> str:
+    """Render a compact market → index → sector summary for the researchers.
+
+    The redesigned engine produces sentiment at the *market level* (whole EGX),
+    per *index* (EGX30 / EGX70 / EGX100), and per *sector* — which is far more
+    data-rich than per-stock chatter. This surfaces those layers so the bull /
+    bear researchers reason from index/sector mood, not noise on one ticker.
+    Returns "" when no structured layers are present.
+    """
+    if not prefetched or not isinstance(prefetched, str):
+        return ""
+    try:
+        data = json.loads(prefetched)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return ""
+    if not isinstance(data, dict):
+        return ""
+
+    def _fmt(block: Any, name: str) -> Optional[str]:
+        if not isinstance(block, dict):
+            return None
+        status = str(block.get("status", "")).upper()
+        if status != "SIGNAL" or block.get("score") is None:
+            return None
+        score = block.get("score")
+        conf = block.get("confidence", 0.0)
+        regime = block.get("regime")
+        extra = f", regime={regime}" if regime and regime != "NO_SIGNAL" else ""
+        return f"  - {name}: score={score:+.3f} (confidence={conf:.2f}{extra}, n={block.get('n_posts', 0)})"
+
+    lines: List[str] = []
+    overall = _fmt(data.get("market_overall") or data.get("market_sentiment"), "Whole EGX market")
+    if overall:
+        lines.append(overall)
+
+    primary_index = data.get("primary_index")
+    for code, block in (data.get("index_sentiment") or {}).items():
+        label = f"Index {code}" + (" (this stock's index)" if code == primary_index else "")
+        rendered = _fmt(block, label)
+        if rendered:
+            lines.append(rendered)
+
+    sector_line = _fmt(data.get("sector_sentiment"), "Sector")
+    if sector_line:
+        # SectorSentiment uses `sector` not `regime`; relabel with sector name.
+        sec_name = (data.get("sector_sentiment") or {}).get("sector", "sector")
+        sector_line = sector_line.replace("Sector:", f"Sector ({sec_name}):")
+        lines.append(sector_line)
+
+    if not lines:
+        return ""
+    return "Market-level sentiment layers (directional context only):\n" + "\n".join(lines)
+
+
+def _build_sentiment_report(
+    ticker: str, narrative: str, blend_result: Dict, layer_summary: str = ""
+) -> str:
     """Build the human-readable ``sentiment_report`` string stored in state.
 
     This is what bull_researcher and bear_researcher read. It surfaces:
@@ -301,15 +357,18 @@ def _build_sentiment_report(ticker: str, narrative: str, blend_result: Dict) -> 
     blend_note = (
         f"Blend modifiers: confidence×{conf_mult:.2f}, position-size×{size_mult:.2f}"
     )
+    layer_block = f"\n{layer_summary}\n" if layer_summary else ""
     if not narrative or narrative == _NO_SIGNAL_TEMPLATE:
         return (
             f"[Social sentiment for {ticker}]\n"
             f"Status: EXCLUDED — insufficient data to compute sentiment signal.\n"
+            f"{layer_block}"
             f"{blend_note} (pass-through — no sentiment data)"
         )
     return (
         f"[Social sentiment for {ticker}]\n"
-        f"{narrative}\n\n"
+        f"{narrative}\n"
+        f"{layer_block}\n"
         f"{blend_note}\n"
         f"Note: The above modifiers affect execution sizing only. "
         f"Social sentiment does NOT alter the directional investment thesis."
@@ -447,7 +506,10 @@ def create_social_media_analyst(llm):
             "blend_result": blend_result,
         }
 
-        sentiment_report = _build_sentiment_report(ticker, extracted["narrative"], blend_result)
+        layer_summary = _summarize_sentiment_layers(state.get("prefetched_social_sentiment", ""))
+        sentiment_report = _build_sentiment_report(
+            ticker, extracted["narrative"], blend_result, layer_summary
+        )
 
         return {
             "social_messages": [result],

@@ -167,6 +167,7 @@ class InvestorProfilingAgent:
             return ChatGoogleGenerativeAI(
                 model=quick_model,
                 temperature=0,
+                seed=42,
             )
         raise ValueError(f"Unsupported LLM provider: {provider}")
 
