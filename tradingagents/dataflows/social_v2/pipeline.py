@@ -17,6 +17,7 @@ prefetch path. The standalone script entrypoint is preserved at
 from __future__ import annotations
 
 import logging
+import os
 import re
 from typing import Dict, List
 
@@ -28,17 +29,27 @@ from .aggregator import (
     MIN_TOTAL_POSTS,
     ScoredPost,
     aggregate,
+    aggregate_events,
+    aggregate_indices,
+    aggregate_sectors,
     split_outputs,
 )
 from .content_type import classify as classify_content
 from .entities import extract as extract_entities, has_market_term
+from .events import extract_events
 from .intent import detect as detect_intent
 from .models import Post
 from .quality_gate import evaluate as quality_evaluate
 from .relevance import classify as classify_relevance
+from .sectors import extract_sector_mentions
 from .sentiment_runner import analyze_egx_batch, analyze_vader_batch
 from .sources import (
+    bing_news_ar,
+    egypt_news_rss,
     facebook_apify,
+    facebook_dork,
+    google_news_ar,
+    investing_com_ar,
     mubasher_news,
     reddit_targeted,
     telegram_public,
@@ -61,10 +72,26 @@ def _normalized_text_key(text: str) -> str:
 
 
 def _passes_facebook_egx_guard(post: Post) -> bool:
-    """Light EGX guard used by curated-origin platforms (FB groups, Telegram
-    channels, news feeds) where the source itself is the EGX signal."""
-    mentions = extract_entities(post.text)
-    return bool(mentions) or has_market_term(post.text)
+    """Light EGX guard for curated-origin platforms.
+
+    Accepts any of four EGX-relevance signals — the source itself is curated
+    (EGX-Arabic FB groups, EGX-specific RSS, Egyptian news searches), so any
+    layer of the layered sentiment system is a valid reason to keep the post:
+
+      * a ticker / company mention   → ticker layer
+      * a market-index term          → market layer
+      * a sector keyword             → sector layer
+      * an event keyword             → event layer
+    """
+    if extract_entities(post.text):
+        return True
+    if has_market_term(post.text):
+        return True
+    if extract_sector_mentions(post.text):
+        return True
+    if extract_events(post.text):
+        return True
+    return False
 
 
 def stage_scrape(
@@ -84,6 +111,10 @@ def stage_scrape(
     sources = [
         ("facebook_apify", lambda: facebook_apify.scrape(results_per_group=fb_per_group)),
         ("mubasher", lambda: mubasher_news.scrape(max_per_feed=mubasher_per_feed)),
+        ("google_news_ar", lambda: google_news_ar.scrape()),
+        ("bing_news_ar", lambda: bing_news_ar.scrape()),
+        ("egypt_news_rss", lambda: egypt_news_rss.scrape()),
+        ("investing_com_ar", lambda: investing_com_ar.scrape()),
         ("telegram_public", lambda: telegram_public.scrape()),
         ("reddit", lambda: reddit_targeted.scrape(per_query=reddit_per_query, max_total=reddit_max)),
     ]
@@ -95,6 +126,28 @@ def stage_scrape(
             batch = []
         by_source[name] = batch
         raw.extend(batch)
+
+    # Conditional Facebook fallback. facebook_apify is PRIMARY but burns a
+    # paid Apify quota; when it comes back thin (quota exhausted / cold cache),
+    # recover public FB group posts via Google dorking so the retail-social
+    # layer doesn't go dark. Gated on the Apify yield so the scarce dork quota
+    # (free CSE is 100 q/day) is only spent when actually needed.
+    fb_apify_count = len(by_source.get("facebook_apify", []))
+    dork_threshold = int(os.getenv("FACEBOOK_DORK_MIN_APIFY_POSTS", "10"))
+    if fb_apify_count < dork_threshold:
+        try:
+            dork_batch = facebook_dork.scrape()
+        except Exception as exc:
+            log.exception("source facebook_dork failed: %s", exc)
+            dork_batch = []
+        by_source["facebook_dork"] = dork_batch
+        raw.extend(dork_batch)
+        log.info(
+            "Apify thin (%d < %d) — facebook_dork fallback yielded %d posts",
+            fb_apify_count, dork_threshold, len(dork_batch),
+        )
+    else:
+        by_source["facebook_dork"] = []
 
     # URL dedup
     seen_urls = set()
@@ -169,6 +222,8 @@ def stage_enrich(posts: List[Post]) -> List[dict]:
         out.append({
             "post": post,
             "mentions": extract_entities(post.text),
+            "sector_mentions": extract_sector_mentions(post.text),
+            "event_mentions": extract_events(post.text),
             "intent": detect_intent(post.text).to_dict(),
             "content": classify_content(post.text).to_dict(),
         })
@@ -202,8 +257,16 @@ def stage_sentiment(enriched: List[dict]) -> List[dict]:
     return enriched
 
 
-def stage_aggregate(enriched: List[dict]) -> Dict[str, dict]:
-    log.info("STAGE 6 — AGGREGATE")
+def stage_aggregate(enriched: List[dict]) -> Dict[str, Dict[str, dict]]:
+    """Build the layered aggregate.
+
+    Returns a dict with four sub-dicts:
+      * ``per_symbol`` (market + per-ticker, as before)
+      * ``per_index`` (EGX30 / EGX70 / EGX100 — the market-level layer)
+      * ``per_sector``
+      * ``per_event``
+    """
+    log.info("STAGE 6 — AGGREGATE (layered)")
     scored: List[ScoredPost] = []
     for record in enriched:
         post = record["post"]
@@ -219,9 +282,16 @@ def stage_aggregate(enriched: List[dict]) -> Dict[str, dict]:
                 intent=record["intent"],
                 content=record["content"],
                 sentiment=record["sentiment"],
+                sector_mentions=record.get("sector_mentions", []),
+                event_mentions=record.get("event_mentions", []),
             )
         )
-    return aggregate(scored)
+    return {
+        "per_symbol": aggregate(scored),
+        "per_index": aggregate_indices(scored),
+        "per_sector": aggregate_sectors(scored),
+        "per_event": aggregate_events(scored),
+    }
 
 
 def run_pipeline(
@@ -241,15 +311,21 @@ def run_pipeline(
     pre_gate = stage_enrich(relevant)
     enriched = stage_quality_gate(pre_gate)
     enriched = stage_sentiment(enriched)
-    per_symbol = stage_aggregate(enriched)
+    aggregated = stage_aggregate(enriched)
 
     output = split_outputs(
-        per_symbol,
+        aggregated["per_symbol"],
         total_posts=len(relevant),
         used_posts=len(enriched),
         source_counts=source_counts,
+        per_sector=aggregated["per_sector"],
+        per_event=aggregated["per_event"],
+        per_index=aggregated["per_index"],
     )
-    output["per_symbol_full"] = per_symbol
+    output["per_symbol_full"] = aggregated["per_symbol"]
+    output["per_index_full"] = aggregated["per_index"]
+    output["per_sector_full"] = aggregated["per_sector"]
+    output["per_event_full"] = aggregated["per_event"]
     output["source_counts"] = source_counts
 
     if archive_posts and enriched:
@@ -261,11 +337,14 @@ def run_pipeline(
             log.warning("Archive failed (continuing): %s", exc)
 
     log.info(
-        "Pipeline done: market=%s (n=%d conf=%.2f) per_stock=%d MIN_TOTAL=%d",
+        "Pipeline done: market=%s (n=%d conf=%.2f) indices=%d sectors=%d tickers=%d events=%d MIN_TOTAL=%d",
         output["market_sentiment"]["label"].upper(),
         output["market_sentiment"]["n"],
         output["market_sentiment"]["confidence"],
+        len(output.get("index_sentiment", {})),
+        len(output.get("sector_sentiment", {})),
         len(output["per_stock_sentiment"]),
+        len(output.get("event_sentiment", {})),
         MIN_TOTAL_POSTS,
     )
     return output

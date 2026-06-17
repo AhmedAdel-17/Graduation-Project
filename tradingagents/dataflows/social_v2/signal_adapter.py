@@ -177,22 +177,68 @@ def _macro_direction_from_score(score: float, confidence: float) -> str:
     return "NEUTRAL"
 
 
+def _primary_index_code(ticker: str) -> Optional[str]:
+    """Canonical index code (EGX30/EGX70/EGX100) the ticker rolls up into."""
+    try:
+        from tradingagents.sentiment.taxonomy import primary_index
+        idx = primary_index(ticker)
+        return idx.value if idx is not None else None
+    except Exception:
+        return None
+
+
+def _index_block(code: str, signal: dict) -> dict:
+    """Convert an aggregator index signal into the agent-facing block shape.
+
+    Mirrors the market block (status / score / confidence / regime / counts) so
+    the blender can treat an index signal exactly like the overall-market one.
+    """
+    score = float(signal.get("weighted_sentiment", 0.0))
+    confidence = float(signal.get("confidence", 0.0))
+    n = int(signal.get("n", 0))
+    if confidence <= 0.0 or n == 0:
+        return {
+            "status": "NO_SIGNAL",
+            "index": code,
+            "score": None,
+            "confidence": 0.0,
+            "regime": "NO_SIGNAL",
+            "n_posts": n,
+            "n_distinct_sources": int(signal.get("n_distinct_sources", 0)),
+            "n_distinct_days": int(signal.get("n_distinct_days", 0)),
+        }
+    return {
+        "status": "SIGNAL",
+        "index": code,
+        "score": round(score, 4),
+        "confidence": round(confidence, 4),
+        "regime": _regime_from_score(score, confidence),
+        "n_posts": n,
+        "n_distinct_sources": int(signal.get("n_distinct_sources", 0)),
+        "n_distinct_days": int(signal.get("n_distinct_days", 0)),
+    }
+
+
 def _build_no_signal_payload(ticker: str, reason: str, gate: str) -> dict:
     """Emit a payload shaped so the analyst's _try_build_* builders return
     NO_SIGNAL objects (forces blend to pass-through 1.0 / 1.0)."""
+    no_signal_market = {
+        "status": "NO_SIGNAL",
+        "score": None,
+        "confidence": 0.0,
+        "regime": "NO_SIGNAL",
+        "n_posts": 0,
+        "n_distinct_sources": 0,
+    }
     return {
         "ticker": ticker,
         "status": "NO_SIGNAL",
         "tier": "none",
         "reason": reason,
-        "market_sentiment": {
-            "status": "NO_SIGNAL",
-            "score": None,
-            "confidence": 0.0,
-            "regime": "NO_SIGNAL",
-            "n_posts": 0,
-            "n_distinct_sources": 0,
-        },
+        "market_sentiment": dict(no_signal_market),
+        "market_overall": dict(no_signal_market),
+        "index_sentiment": {},
+        "primary_index": _primary_index_code(ticker),
         "macro_sentiment": {"composite_regime": "NO_SIGNAL"},
         "sector_sentiment": {
             "status": "NO_SIGNAL",
@@ -295,12 +341,31 @@ def _to_agent_shape(ticker: str, pipeline_output: dict, source_label: str) -> di
             }
             tier_used = "none"
 
+    # ── Index-level layer (EGX30 / EGX70 / EGX100) — headline market view ─────
+    index_full = pipeline_output.get("index_sentiment", {}) or {}
+    index_blocks: dict = {
+        code: _index_block(code, sig) for code, sig in index_full.items()
+    }
+    primary_idx_code = _primary_index_code(ticker)
+    primary_index_block = index_blocks.get(primary_idx_code) if primary_idx_code else None
+
+    # Drive the blend's market-regime input from the ticker's OWN index when it
+    # carries a signal — that is the precise market-level read for this stock —
+    # and fall back to the broad-market signal otherwise. The raw broad-market
+    # block stays available as `market_overall` for transparency.
+    if primary_index_block and primary_index_block.get("status") == "SIGNAL":
+        market_for_blend = {**primary_index_block, "driven_by": f"index:{primary_idx_code}"}
+    else:
+        market_for_blend = {**market_block, "driven_by": "market_overall"}
+
     macro_block = {
         "composite_regime": _macro_direction_from_score(market_score, market_confidence),
     }
 
     metadata = dict(pipeline_output.get("metadata", {}) or {})
     metadata["sentiment_tier"] = tier_used
+    metadata["market_regime_driven_by"] = market_for_blend.get("driven_by")
+    metadata["primary_index"] = primary_idx_code
     metadata["sentiment_fallback_note"] = {
         "stock": "Direct stock coverage — signal applies to this ticker.",
         "sector": f"No direct stock coverage; using {sector_name} sector peer average.",
@@ -313,7 +378,13 @@ def _to_agent_shape(ticker: str, pipeline_output: dict, source_label: str) -> di
         "status": "SIGNAL" if sector_block.get("status") == "SIGNAL" else "OK",
         "source": source_label,
         "tier": tier_used,
-        "market_sentiment": market_block,
+        # `market_sentiment` drives the blend (index-level when available);
+        # `market_overall` is the raw whole-market read; `index_sentiment` is the
+        # full EGX30/70/100 breakdown.
+        "market_sentiment": market_for_blend,
+        "market_overall": market_block,
+        "index_sentiment": index_blocks,
+        "primary_index": primary_idx_code,
         "macro_sentiment": macro_block,
         "sector_sentiment": sector_block,
         "per_stock_sentiment": per_stock,
@@ -371,7 +442,13 @@ def _try_archive_replay(ticker: str, curr_date: str, look_back_days: int) -> Opt
         return None
 
     # Rebuild ScoredPost-equivalent records and reuse the aggregator.
-    from .aggregator import ScoredPost, aggregate, split_outputs
+    from .aggregator import (
+        ScoredPost,
+        aggregate,
+        aggregate_indices,
+        aggregate_sectors,
+        split_outputs,
+    )
     from .entities import Mention
 
     scored = []
@@ -397,8 +474,17 @@ def _try_archive_replay(ticker: str, curr_date: str, look_back_days: int) -> Opt
         )
 
     per_symbol = aggregate(scored)
-    output = split_outputs(per_symbol, total_posts=len(rows), used_posts=len(rows))
+    per_index = aggregate_indices(scored)
+    per_sector = aggregate_sectors(scored)
+    output = split_outputs(
+        per_symbol,
+        total_posts=len(rows),
+        used_posts=len(rows),
+        per_sector=per_sector,
+        per_index=per_index,
+    )
     output["per_symbol_full"] = per_symbol
+    output["per_index_full"] = per_index
     log.info(
         "Archive replay for %s [%s..%s]: %d rows -> market=%s",
         ticker, start_date, end_date, len(rows),

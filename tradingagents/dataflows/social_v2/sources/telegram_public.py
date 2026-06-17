@@ -38,15 +38,31 @@ from ..models import Post
 log = logging.getLogger("tradingagents.social_v2.telegram_public")
 
 DEFAULT_CHANNELS = [
-    "EGX_30",
-    "alborsanews",
-    "EgyptianStockExchange",
-    "stock_egypt",
-    "AlMalNews",
+    # Curated 2026-06 from a live public-preview probe — only channels that
+    # (a) actually expose a t.me/s/ preview (HTTP 200) AND (b) carry EGX /
+    # finance content. Channels that 302 (gone private) were dropped because
+    # each one still costs an HTTP round-trip per run for nothing.
+    # --- EGX / markets focus (highest signal) ---
+    "EGX_30",                # EGX30 index channel
+    "alborsanews",           # Al Borsa markets news
+    "stock_egypt",           # Egyptian stocks aggregator
+    "AlMalNews",             # Al Mal financial news
+    "egystocks",             # Egyptian stocks aggregator
+    "EgyptianStockExchange", # EGX broadcast
+    "Egypt_Stocks",          # Egypt stocks
+    "mainstocks",            # markets aggregator
+    "egyptbusiness",         # Egypt Business news
+    # --- General Egyptian news (macro / event layer signal) ---
+    "ahram_news",            # Al-Ahram news
+    # Override with EGX_TELEGRAM_CHANNELS to point at channels you follow that
+    # have public previews. Private channels return 302 and are skipped.
 ]
 
-DEFAULT_MAX_AGE_DAYS = 7
-MIN_TEXT_CHARS = 30
+# News-grade channels stay relevant longer than retail chatter, and the
+# preview only holds ~20 messages, so a wider window keeps the signal alive on
+# quieter days. Override with TELEGRAM_MAX_POST_AGE_DAYS.
+DEFAULT_MAX_AGE_DAYS = 14
+MIN_TEXT_CHARS = 20
 HTTP_TIMEOUT = 15
 PER_CHANNEL_SLEEP = 1.0
 
