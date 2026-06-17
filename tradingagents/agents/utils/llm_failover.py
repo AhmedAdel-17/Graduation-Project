@@ -180,11 +180,14 @@ class ReliableChatModel(BaseChatModel):
                 "rate_limit", "rate limit",
                 "429",
                 "503",
+                "504",
+                "gateway timeout",
                 "overloaded",
                 "resource_exhausted",
                 "quota exceeded",
                 "payload too large",
                 "413",
+                "internal server error",
             )
         )
 
@@ -246,6 +249,7 @@ def build_resilient_llm(
     role: str = "deep",
     seed: int = 42,
     max_retries_per_provider: int = 0,
+    max_tokens: Optional[int] = None,
 ) -> ReliableChatModel:
     """
     Build a ReliableChatModel from the project config.
@@ -255,6 +259,11 @@ def build_resilient_llm(
     config  : The DEFAULT_CONFIG dict (or a copy with overrides).
     role    : "deep" → uses ``deep_think_llm``; "quick" → uses ``quick_think_llm``.
     seed    : Seed value passed to providers that support it (OpenAI, Google).
+    max_tokens : Optional completion-token cap. ``None`` (default) leaves the
+                 provider/model default untouched, so existing agent-graph callers
+                 are unaffected. Set it for endpoints (e.g. some NVIDIA-hosted
+                 models) whose default completion budget truncates structured
+                 JSON output mid-token.
 
     Returns a ReliableChatModel with providers in the order specified by
     ``config["llm_failover_priority"]`` (default: ["primary", "openrouter", "groq"]).
@@ -262,21 +271,43 @@ def build_resilient_llm(
     model_key = "deep_think_llm" if role == "deep" else "quick_think_llm"
     model_name = config[model_key]
 
-    priority = config.get("llm_failover_priority", ["primary", "openrouter", "groq"])
+    priority = config.get("llm_failover_priority", ["nvidia", "deepseek", "google"])
     providers: List[BaseChatModel] = []
 
     for p_name in priority:
         try:
-            if p_name == "primary":
-                # Use the configured primary provider
+            if p_name == "nvidia":
+                # NVIDIA Build — DeepSeek-V4-Pro (primary)
+                api_key = config.get("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY")
+                if not api_key:
+                    logger.debug("build_resilient_llm: skipping nvidia — no NVIDIA_API_KEY")
+                    continue
                 from langchain_openai import ChatOpenAI
                 providers.append(ChatOpenAI(
                     model=model_name,
-                    base_url=config.get("backend_url", "https://api.deepseek.com"),
-                    api_key=config.get("DEEPSEEK_API_KEY") or os.getenv("DEEPSEEK_API_KEY"),
+                    base_url="https://integrate.api.nvidia.com/v1",
+                    api_key=api_key,
                     temperature=0,
                     seed=seed,
                     max_retries=max_retries_per_provider,
+                    max_tokens=max_tokens,
+                ))
+
+            elif p_name in ("primary", "deepseek"):
+                # DeepSeek direct (fallback #1)
+                api_key = config.get("DEEPSEEK_API_KEY") or os.getenv("DEEPSEEK_API_KEY")
+                if not api_key:
+                    logger.debug("build_resilient_llm: skipping deepseek — no DEEPSEEK_API_KEY")
+                    continue
+                from langchain_openai import ChatOpenAI
+                providers.append(ChatOpenAI(
+                    model=config.get("deepseek_model", "deepseek-chat"),
+                    base_url="https://api.deepseek.com",
+                    api_key=api_key,
+                    temperature=0,
+                    seed=seed,
+                    max_retries=max_retries_per_provider,
+                    max_tokens=max_tokens,
                 ))
 
             elif p_name == "openrouter":
@@ -292,6 +323,7 @@ def build_resilient_llm(
                     temperature=0,
                     seed=seed,
                     max_retries=max_retries_per_provider,
+                    max_tokens=max_tokens,
                 ))
 
             elif p_name == "groq":
@@ -306,6 +338,7 @@ def build_resilient_llm(
                     api_key=api_key,
                     temperature=0,
                     max_retries=max_retries_per_provider,
+                    max_tokens=max_tokens,
                 ))
 
             elif p_name == "google":
@@ -318,6 +351,7 @@ def build_resilient_llm(
                     model=config.get("google_model", "gemini-1.5-flash"),
                     temperature=0,
                     google_api_key=api_key,
+                    max_output_tokens=max_tokens,
                 ))
 
         except Exception as exc:
@@ -336,3 +370,88 @@ def build_resilient_llm(
         [p.__class__.__name__ for p in providers],
     )
     return ReliableChatModel(providers=providers)
+
+
+def build_conversational_llm(
+    config: Dict[str, Any],
+    seed: Optional[int] = None,
+    max_retries_per_provider: int = 0,
+) -> ReliableChatModel:
+    """Build the Portfolio Assistant conversational boundary LLM.
+
+    The TradingAgentsGraph keeps using ``build_resilient_llm`` for its deep and
+    quick reasoning roles. Portfolio Assistant P2 adapters use this third role
+    for bilingual user-facing understanding and narration. The default provider
+    is NVIDIA Build with ``openai/gpt-oss-120b`` on the existing
+    ``NVIDIA_API_KEY`` (DeepSeek stays on the agent graph for the heavy task).
+    """
+    conversational_model = config.get("conversational_llm", "openai/gpt-oss-120b")
+    provider = str(config.get("conversational_provider", "nvidia")).lower()
+    backend_url = config.get("conversational_backend_url", "https://integrate.api.nvidia.com/v1")
+    seed_value = int(seed if seed is not None else config.get("llm_seed", 42))
+    # NVIDIA-hosted endpoints default the completion budget low enough to truncate
+    # the adapters' structured JSON mid-token. gpt-oss is a reasoning model whose
+    # hidden reasoning trace shares this budget, so keep generous headroom.
+    max_tokens = int(config.get("conversational_max_tokens", 3072))
+    # Reasoning models (gpt-oss) accept a reasoning_effort hint; "low" keeps the
+    # boundary adapters fast and stops the reasoning trace from eating the budget.
+    # ChatOpenAI exposes it as a first-class param, so pass it explicitly (only
+    # when set) rather than via model_kwargs.
+    reasoning_effort = str(config.get("conversational_reasoning_effort", "low")).strip().lower()
+    reasoning_kwargs: Dict[str, Any] = {}
+    if reasoning_effort and reasoning_effort != "none":
+        reasoning_kwargs["reasoning_effort"] = reasoning_effort
+
+    conv_config = dict(config)
+    conv_config["quick_think_llm"] = conversational_model
+    conv_config["deep_think_llm"] = conversational_model
+
+    if provider == "nvidia":
+        # Build the NVIDIA ChatOpenAI directly so we can attach reasoning_effort
+        # (build_resilient_llm has no per-call model_kwargs hook).
+        api_key = config.get("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY")
+        if not api_key:
+            raise ValueError("build_conversational_llm: NVIDIA_API_KEY is not set")
+        from langchain_openai import ChatOpenAI
+        return ReliableChatModel(providers=[ChatOpenAI(
+            model=conversational_model,
+            base_url=backend_url or "https://integrate.api.nvidia.com/v1",
+            api_key=api_key,
+            temperature=0,
+            seed=seed_value,
+            max_retries=max_retries_per_provider,
+            max_tokens=max_tokens,
+            **reasoning_kwargs,
+        )])
+    elif provider == "deepseek":
+        conv_config["llm_failover_priority"] = ["deepseek"]
+    elif provider == "google":
+        conv_config["llm_failover_priority"] = ["google"]
+    elif provider == "openrouter":
+        conv_config["llm_failover_priority"] = ["openrouter"]
+        conv_config["openrouter_model"] = conversational_model
+    elif provider == "openai":
+        api_key = config.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("build_conversational_llm: OPENAI_API_KEY is not set")
+        from langchain_openai import ChatOpenAI
+        return ReliableChatModel(providers=[ChatOpenAI(
+            model=conversational_model,
+            base_url=backend_url or "https://api.openai.com/v1",
+            api_key=api_key,
+            temperature=0,
+            seed=seed_value,
+            max_retries=max_retries_per_provider,
+            max_tokens=max_tokens,
+            **reasoning_kwargs,
+        )])
+    else:
+        conv_config["llm_failover_priority"] = [provider]
+
+    return build_resilient_llm(
+        conv_config,
+        role="quick",
+        seed=seed_value,
+        max_retries_per_provider=max_retries_per_provider,
+        max_tokens=max_tokens,
+    )

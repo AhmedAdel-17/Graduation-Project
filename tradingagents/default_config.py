@@ -25,11 +25,58 @@ DEFAULT_CONFIG = {
         os.path.abspath(os.path.join(os.path.dirname(__file__), ".")),
         "dataflows/data_cache",
     ),
-    # LLM settings - DeepSeek (OpenAI-compatible)
+    # LLM settings - NVIDIA Build / DeepSeek-V4-Pro (primary, OpenAI-compatible)
+    # Fallback chain: nvidia -> deepseek -> google (see llm_failover_priority below).
     "llm_provider": "openai",
-    "deep_think_llm": os.getenv("DEEP_THINK_LLM", "deepseek-chat"),
-    "quick_think_llm": os.getenv("QUICK_THINK_LLM", "deepseek-chat"),
-    "backend_url": os.getenv("LLM_BACKEND_URL", "https://api.deepseek.com"),
+    "deep_think_llm": os.getenv("DEEP_THINK_LLM", "deepseek-ai/deepseek-v4-pro"),
+    "quick_think_llm": os.getenv("QUICK_THINK_LLM", "deepseek-ai/deepseek-v4-pro"),
+    "backend_url": os.getenv("LLM_BACKEND_URL", "https://integrate.api.nvidia.com/v1"),
+    # Portfolio Assistant conversational boundary model. This is separate from
+    # the TradingAgentsGraph deep/quick roles: it handles bilingual extraction,
+    # strategy, what-if interpretation, routing, and narration. NVIDIA Build is
+    # an OpenAI-compatible host, so the existing NVIDIA_API_KEY reaches the whole
+    # catalog. Default is openai/gpt-oss-120b — markedly faster + more reliable
+    # at the bilingual structured-extraction (ticker) task than the prior Qwen
+    # endpoint, which was slow and frequently truncated. DeepSeek-V4-Pro stays on
+    # the agent graph (deep/quick roles) for the heavy analysis/optimization task.
+    "conversational_provider": os.getenv("CONVERSATIONAL_PROVIDER", "nvidia"),
+    "conversational_llm": os.getenv("CONVERSATIONAL_LLM", "openai/gpt-oss-120b"),
+    "conversational_backend_url": os.getenv(
+        "CONVERSATIONAL_BACKEND_URL", "https://integrate.api.nvidia.com/v1"
+    ),
+    # Completion-token budget for the conversational boundary adapters. NVIDIA
+    # Build endpoints default this low enough to truncate structured JSON
+    # mid-token. gpt-oss is a reasoning model whose hidden reasoning shares this
+    # budget, so keep generous headroom (raised from 2048) so the JSON answer
+    # always closes after the reasoning trace.
+    "conversational_max_tokens": int(os.getenv("CONVERSATIONAL_MAX_TOKENS", "3072")),
+    # Reasoning effort for the conversational model when it is a reasoning model
+    # (e.g. gpt-oss). "low" keeps boundary adapters (extraction/router/narrate)
+    # fast and prevents the reasoning trace from eating the completion budget.
+    # Set "none"/"" to omit the parameter entirely (e.g. for non-reasoning models).
+    "conversational_reasoning_effort": os.getenv("CONVERSATIONAL_REASONING_EFFORT", "low"),
+    # ─── Portfolio Assistant copilot (subsystem P3) ─────────────────────────
+    # Freshness window for agent signals consumed by the optimizer's BL views.
+    # A cached analysis_sessions decision newer than this is used as-is; older
+    # (or missing) ⇒ enqueue a fresh TradingAgentsGraph run or degrade to a
+    # neutral quant-prior with a low_confidence flag (design §6, roadmap P3).
+    "pa_signal_max_age_days": int(os.getenv("PA_SIGNAL_MAX_AGE_DAYS", "7")),
+    # Hard cap on concurrent signal-refresh graph runs the copilot may launch,
+    # so a multi-holding refresh cannot self-DoS the LLM quota (roadmap finding
+    # #2). Enforced by a process-global semaphore in signals.SignalResolver.
+    "pa_max_concurrent_runs": int(os.getenv("PA_MAX_CONCURRENT_RUNS", "2")),
+    # Master toggle for mounting the /api/portfolio/* router (P4). Default on;
+    # documents the no-auth blocker (MEMORY.md) — portfolios are personal data.
+    "pa_enabled": os.getenv("PA_ENABLED", "1") == "1",
+    # Provider failover order used by build_resilient_llm().
+    # "nvidia"  -> NVIDIA Build (DeepSeek-V4-Pro, NVIDIA_API_KEY)
+    # "deepseek"-> DeepSeek direct (DEEPSEEK_API_KEY)
+    # "google"  -> Gemini flash  (GOOGLE_API_KEY)
+    "llm_failover_priority": ["nvidia", "deepseek", "google"],
+    # Determinism: every LLM is built with temperature=0; this seed is also
+    # pinned on providers that support it (OpenAI/DeepSeek, Google) so backtest
+    # runs and audit trails are reproducible. Override with LLM_SEED.
+    "llm_seed": int(os.getenv("LLM_SEED", "42")),
     # Separate backend for embeddings (DeepSeek has no embeddings API).
     # Default: local Ollama with `nomic-embed-text` (free, persistent vectors).
     # Override with EMBEDDINGS_BACKEND_URL env var (e.g. https://api.openai.com/v1).
