@@ -33,6 +33,13 @@ if __name__ == "__main__":
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+# Load .env so DEEPSEEK_API_KEY (and other keys) are available — every other
+# entry point (main.py, run_egx_prediction.py, cli/main.py, api_server.py) does
+# this; the backtester previously did not, so it crashed with "DEEPSEEK_API_KEY
+# is not set" even when the key was present in .env.
+from dotenv import load_dotenv
+load_dotenv()
+
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.dataflows.config import get_config, set_config
 from tradingagents.dataflows.gateway import DataGateway
@@ -501,13 +508,41 @@ class BacktestingEngine:
     # Benchmark window alignment (MEMORY §C4)
     # =========================================================================
 
-    def _align_benchmark_to_strategy(self) -> Dict:
-        """Compute a structured EGX30 benchmark block on the exact date
-        intersection between the strategy's daily_history and the
-        benchmark price map.
+    def _bm_price_asof(self, date: str) -> Optional[float]:
+        """Forward-filled EGX30 close on or before ``date``.
 
-        Returns a dict suitable for the report's ``benchmark`` key. Empty
-        dict when no benchmark data is available.
+        Look-ahead-safe: only ever returns a close dated <= the strategy date,
+        so it cannot leak future index information into the benchmark. This is
+        the correct way to price a daily strategy against a coarser (e.g.
+        monthly) index series — unlike a "nearest date" lookup, which could pick
+        a future close (the drift MEMORY §C4 warned about).
+        """
+        if not self._bm_data_map:
+            return None
+        import bisect
+        cached = getattr(self, "_bm_sorted_dates", None)
+        if cached is None or len(cached) != len(self._bm_data_map):
+            self._bm_sorted_dates = sorted(self._bm_data_map.keys())
+        i = bisect.bisect_right(self._bm_sorted_dates, date) - 1
+        if i < 0:
+            return None
+        price = self._bm_data_map.get(self._bm_sorted_dates[i])
+        return price if price and price > 0 else None
+
+    def _align_benchmark_to_strategy(self) -> Dict:
+        """Compute a structured EGX30 benchmark block aligned to the strategy's
+        daily_history via FORWARD-FILL (the most recent benchmark close on or
+        before each strategy date).
+
+        Why forward-fill instead of an exact-date intersection: the local EGX30
+        series can be coarse (the bundled CSV is monthly), so requiring an exact
+        YYYY-MM-DD match left only ~1 aligned day and made benchmark_return /
+        alpha unreportable. Forward-fill is the standard way to compare a daily
+        strategy against a lower-frequency index: every strategy day is priced
+        at the last known index close, so the endpoint return is correct.
+
+        Returns a dict suitable for the report's ``benchmark`` key. Empty dict
+        when no benchmark data is available.
         """
         if not (self.benchmark_ticker and self._bm_data_map and self.daily_history):
             return {}
@@ -516,36 +551,38 @@ class BacktestingEngine:
         if not strat_dates:
             return {}
 
-        intersected = [d for d in strat_dates if d in self._bm_data_map]
-        coverage = len(intersected) / max(len(strat_dates), 1)
+        # Forward-filled benchmark aligned to each strategy date.
+        aligned = [(d, self._bm_price_asof(d)) for d in strat_dates]
+        aligned = [(d, p) for d, p in aligned if p is not None]
+        coverage = len(aligned) / max(len(strat_dates), 1)
+        n_exact = sum(1 for d in strat_dates if d in self._bm_data_map)
         if coverage < 0.80:
             logger.warning(
-                "Benchmark coverage %.0f%% < 80%% (%d / %d strategy dates "
-                "have a matching EGX30 close). Reporting alpha but flagging "
-                "low coverage.",
-                coverage * 100.0, len(intersected), len(strat_dates),
+                "Benchmark forward-fill coverage %.0f%% < 80%% (%d / %d strategy "
+                "dates priced; %d exact matches). EGX30 series may start after the "
+                "backtest window.",
+                coverage * 100.0, len(aligned), len(strat_dates), n_exact,
             )
-        if not intersected:
+        if len(aligned) < 2:
             return {
                 "name": "EGX30",
-                "n_aligned_days": 0,
-                "note": "no_overlap_with_benchmark_series",
+                "n_aligned_days": len(aligned),
+                "note": "insufficient_benchmark_overlap",
             }
 
-        first_date = intersected[0]
-        last_date = intersected[-1]
-        bm_first = self._bm_data_map.get(first_date) or 0.0
-        bm_last = self._bm_data_map.get(last_date) or 0.0
+        first_date, bm_first = aligned[0]
+        last_date, bm_last = aligned[-1]
         if bm_first <= 0:
-            return {"name": "EGX30", "n_aligned_days": len(intersected),
+            return {"name": "EGX30", "n_aligned_days": len(aligned),
                     "note": "benchmark_first_price_invalid"}
 
         bm_total_return = (bm_last - bm_first) / bm_first
 
-        # Daily returns on the aligned intersection
-        bm_series = [self._bm_data_map[d] for d in intersected if self._bm_data_map[d] > 0]
+        # Daily returns on the forward-filled aligned series
+        bm_series = [p for _d, p in aligned]
         strat_by_date = {r["date"]: r["portfolio_value"] for r in self.daily_history}
-        strat_series = [strat_by_date[d] for d in intersected if d in strat_by_date]
+        strat_series = [strat_by_date[d] for d, _p in aligned if d in strat_by_date]
+        intersected = [d for d, _p in aligned]
 
         tracking_error_pct: Optional[float] = None
         if len(bm_series) > 2 and len(strat_series) == len(bm_series):
@@ -569,9 +606,16 @@ class BacktestingEngine:
         return {
             "name": "EGX30",
             "source": "local_csv",
+            "alignment": "forward_fill",
+            "benchmark_granularity_note": (
+                "EGX30 series aligned by forward-fill (last close on/before each "
+                "strategy date); endpoint return is exact, intra-period daily "
+                "tracking is approximate when the index series is coarse."
+            ),
             "first_aligned_date": first_date,
             "last_aligned_date": last_date,
             "n_aligned_days": n_days,
+            "n_exact_matches": n_exact,
             "coverage_pct": round(coverage * 100.0, 2),
             "total_return_pct": round(bm_total_return * 100.0, 4),
             "annualized_return_pct": round(ann_return_pct, 4) if ann_return_pct is not None else None,
@@ -1250,19 +1294,20 @@ class BacktestingEngine:
                 "split":           _split,
             })
 
-            # ---- Track benchmark value (MEMORY §C4 — strict date-intersect) ----
-            # The legacy "nearest earlier date" fallback drifted alpha when the
-            # EGX30 CSV had a gap. Now we only record benchmark history when
-            # the exact strategy date has a matching benchmark close. The
-            # _align_benchmark_to_strategy() step in save_results does the
-            # final intersection across the whole series.
+            # ---- Track benchmark value (forward-fill, look-ahead-safe) --------
+            # Price each strategy date at the most recent EGX30 close on or
+            # BEFORE that date (_bm_price_asof). This never uses a future close
+            # (so it respects MEMORY §C4's no-drift intent) while still working
+            # when the index series is coarser than the daily strategy — the
+            # exact-match-only rule left the monthly CSV with ~0 aligned days
+            # and reported a bogus 0% benchmark return.
             if (
                 self.benchmark_ticker
                 and self._bm_data_map
                 and self.benchmark_start_price
                 and self.benchmark_start_price > 0
             ):
-                bm_price = self._bm_data_map.get(date)
+                bm_price = self._bm_price_asof(date)
                 if bm_price and bm_price > 0:
                     bm_value = self.initial_capital * (bm_price / self.benchmark_start_price)
                     self.benchmark_history.append({
@@ -1774,12 +1819,25 @@ if __name__ == "__main__":
                         help="Resume from the per-ticker partial checkpoint if "
                              "one exists in backtest_results/. Skips dates that "
                              "have already been evaluated.")
+    parser.add_argument("--rl-model",   type=str,   default=None,
+                        help="Path to an RL position-sizing policy checkpoint "
+                             "(offline `models/rl_sizing.pt` OR an online "
+                             "`models/rl_sizing_online.pt`). When given, the RL "
+                             "meta-policy is enabled and scales position size "
+                             "(can only shrink; the risk veto still wins). "
+                             "Omit to run with the identity policy (size×1.0).")
 
     args = parser.parse_args()
 
     analysts_list = args.analysts.split(",")
     benchmark  = None if args.benchmark.lower()  == "none" else args.benchmark
     train_end  = None if args.train_end.lower()  == "none" else args.train_end
+
+    # Wire the RL meta-policy from the CLI. set_config() here lands BEFORE the
+    # engine's own set_config() merge (which only touches market/currency/mode),
+    # so these keys survive into the get_config() the engine reads.
+    if args.rl_model:
+        set_config({"rl_meta_policy_enabled": True, "rl_model_path": args.rl_model})
 
     engine = BacktestingEngine(
         initial_capital=args.capital,

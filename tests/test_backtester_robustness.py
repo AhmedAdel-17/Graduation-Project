@@ -127,17 +127,24 @@ def test_risk_free_rate_used_in_sharpe() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_align_benchmark_intersects_dates_only() -> None:
-    """When the strategy has dates {Jan 2, Jan 3, Jan 4} and the EGX30 CSV
-    only has {Jan 2, Jan 4}, alignment must reflect a 2-day intersection —
-    no nearest-earlier fuzzy fill."""
+def test_align_benchmark_forward_fills_missing_dates() -> None:
+    """The benchmark is aligned by LOOK-AHEAD-SAFE forward-fill: a strategy date
+    with no exact benchmark close is priced at the most recent close ON OR
+    BEFORE it (never a future close). With strategy {Jan 2, Jan 3, Jan 4} and an
+    EGX30 series missing Jan 3, all three days are priced — Jan 3 borrows Jan 2's
+    close — so endpoint return is still Jan2→Jan4.
+
+    (Replaces the former exact-intersection-only test: requiring exact YYYY-MM-DD
+    matches left a monthly EGX30 series with ~1 aligned day and a bogus 0%
+    benchmark return. Forward-fill respects MEMORY §C4's no-future-drift intent
+    while working against a coarser index series.)"""
     e = _make_engine()
     e.benchmark_ticker = "^EGX30"
     e.benchmark_start_price = 30_000.0
     e._bm_data_map = {
         "2024-01-02": 30_000.0,
         "2024-01-04": 30_600.0,
-        # 2024-01-03 deliberately missing
+        # 2024-01-03 deliberately missing — must forward-fill from Jan 2.
     }
     e.daily_history = [
         {"date": "2024-01-02", "portfolio_value": 100_000.0, "split": "full"},
@@ -147,13 +154,25 @@ def test_align_benchmark_intersects_dates_only() -> None:
     e.portfolio_value = 102_000.0
 
     block = e._align_benchmark_to_strategy()
-    assert block["n_aligned_days"] == 2, block
+    assert block["alignment"] == "forward_fill"
+    assert block["n_aligned_days"] == 3, block          # all 3 priced via fill
+    assert block["n_exact_matches"] == 2                 # only Jan 2 & Jan 4 exact
     assert block["first_aligned_date"] == "2024-01-02"
     assert block["last_aligned_date"] == "2024-01-04"
-    # EGX30 went 30000 → 30600 over the intersection ⇒ +2.00%
+    # EGX30 went 30000 → 30600 over the window ⇒ +2.00%
     assert abs(block["total_return_pct"] - 2.0) < 0.01
-    # Coverage is 2 / 3 ≈ 66.67% ⇒ should be tagged but still return alpha
-    assert block["coverage_pct"] < 80.0
+    assert block["coverage_pct"] == 100.0
+
+
+def test_bm_price_asof_is_look_ahead_safe() -> None:
+    """_bm_price_asof never returns a FUTURE close: a date before the first
+    benchmark point yields None, and an in-between date uses the prior close."""
+    e = _make_engine()
+    e._bm_data_map = {"2024-01-02": 30_000.0, "2024-01-04": 30_600.0}
+    assert e._bm_price_asof("2024-01-01") is None        # nothing on/before → None
+    assert e._bm_price_asof("2024-01-03") == 30_000.0     # uses Jan 2 (past), not Jan 4
+    assert e._bm_price_asof("2024-01-04") == 30_600.0     # exact
+    assert e._bm_price_asof("2024-02-01") == 30_600.0     # forward-fill latest
 
 
 def test_align_benchmark_handles_empty_map() -> None:
