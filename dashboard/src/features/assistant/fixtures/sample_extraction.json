@@ -1,0 +1,45 @@
+{
+  "type": "extraction",
+  "blocks": [
+    {
+      "is_hypothetical": false,
+      "scenario_id": null,
+      "type": "extracted_portfolio_table",
+      "data": {
+        "holdings": [
+          {
+            "ticker": "ETEL.CA",
+            "shares": null,
+            "avg_cost": 38.0,
+            "weight_pct": 20.0,
+            "source": "extracted",
+            "name_raw": "المصرية للاتصالات"
+          },
+          {
+            "ticker": "FWRY.CA",
+            "shares": null,
+            "avg_cost": 12.0,
+            "weight_pct": 30.0,
+            "source": "extracted",
+            "name_raw": "Fawry"
+          },
+          {
+            "ticker": "TMGH.CA",
+            "shares": null,
+            "avg_cost": 65.0,
+            "weight_pct": 50.0,
+            "source": "extracted",
+            "name_raw": "Talaat Moustafa"
+          }
+        ],
+        "cash_egp": 50000.0,
+        "unresolved_names": [
+          "بنك مصر"
+        ],
+        "warnings": [
+          "Allocations sum to 100% before cash; cash held separately."
+        ]
+      }
+    }
+  ]
+}

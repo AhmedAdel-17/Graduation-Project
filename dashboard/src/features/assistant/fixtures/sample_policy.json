@@ -1,0 +1,30 @@
+{
+  "type": "policy_update",
+  "policy": {
+    "objective": "capital_preservation",
+    "risk_tolerance": "low",
+    "horizon": "lt_6m",
+    "income_preference": false,
+    "excluded_sectors": [],
+    "excluded_tickers": [],
+    "max_position_pct": null,
+    "min_cash_egp": null,
+    "notes": "",
+    "source_spans": {
+      "horizon": "saving for marriage in 6 months",
+      "objective": "I want the safest portfolio possible"
+    },
+    "inferred_fields": [
+      "horizon",
+      "objective"
+    ],
+    "version": 1,
+    "confirmed_by_user": false,
+    "created_at": "2026-06-14T21:40:42.604281Z"
+  },
+  "inferred_fields": [
+    "horizon",
+    "objective"
+  ],
+  "requires_confirm": true
+}
