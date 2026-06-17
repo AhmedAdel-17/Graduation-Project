@@ -108,25 +108,34 @@ class TradingAgentsGraph:
 
         # Initialize LLMs
         if self.config["llm_provider"].lower() == "openai" or self.config["llm_provider"] == "ollama" or self.config["llm_provider"] == "openrouter":
-            # When backend_url points at a non-OpenAI provider (DeepSeek, OpenRouter, Ollama),
-            # the matching key lives under a provider-specific env var. ChatOpenAI only checks
-            # OPENAI_API_KEY by default, so resolve explicitly here.
-            # DeepSeek is the only supported LLM backend. OPENAI_API_KEY is
-            # intentionally never read — see feedback_chatopenai_api_key.md.
-            api_key = os.getenv("DEEPSEEK_API_KEY")
+            # Resolve the API key by backend URL so the right credential is used
+            # regardless of which provider is active.
+            # Priority: NVIDIA Build > DeepSeek direct > generic OPENAI_API_KEY.
+            # OPENAI_API_KEY is intentionally last — it maps to Groq in this repo's
+            # .env and would be silently sent to the wrong backend (see feedback_chatopenai_api_key.md).
+            backend_url = self.config.get("backend_url", "")
+            if "nvidia" in backend_url:
+                api_key = os.getenv("NVIDIA_API_KEY") or os.getenv("DEEPSEEK_API_KEY")
+            else:
+                api_key = os.getenv("DEEPSEEK_API_KEY") or os.getenv("NVIDIA_API_KEY")
             if not api_key:
                 raise RuntimeError(
-                    "DEEPSEEK_API_KEY is not set. DeepSeek is the only configured "
-                    "LLM backend for this project — see .env."
+                    "No LLM API key found. Set NVIDIA_API_KEY (primary) or "
+                    "DEEPSEEK_API_KEY (fallback) in .env."
                 )
-            self.deep_thinking_llm = ChatOpenAI(model=self.config["deep_think_llm"], base_url=self.config["backend_url"], temperature=0, api_key=api_key)
-            self.quick_thinking_llm = ChatOpenAI(model=self.config["quick_think_llm"], base_url=self.config["backend_url"], temperature=0, api_key=api_key)
+            # seed is pinned for reproducibility — DeepSeek (OpenAI-compatible)
+            # honours the OpenAI `seed` parameter. See default_config "llm_seed".
+            _seed = int(self.config.get("llm_seed", 42))
+            self.deep_thinking_llm = ChatOpenAI(model=self.config["deep_think_llm"], base_url=self.config["backend_url"], temperature=0, seed=_seed, api_key=api_key, max_retries=3)
+            self.quick_thinking_llm = ChatOpenAI(model=self.config["quick_think_llm"], base_url=self.config["backend_url"], temperature=0, seed=_seed, api_key=api_key, max_retries=3)
         elif self.config["llm_provider"].lower() == "anthropic":
+            # ChatAnthropic has no seed parameter; temperature=0 is the only knob.
             self.deep_thinking_llm = ChatAnthropic(model=self.config["deep_think_llm"], base_url=self.config["backend_url"], temperature=0)
             self.quick_thinking_llm = ChatAnthropic(model=self.config["quick_think_llm"], base_url=self.config["backend_url"], temperature=0)
         elif self.config["llm_provider"].lower() == "google":
-            self.deep_thinking_llm = ChatGoogleGenerativeAI(model=self.config["deep_think_llm"], temperature=0)
-            self.quick_thinking_llm = ChatGoogleGenerativeAI(model=self.config["quick_think_llm"], temperature=0)
+            _seed = int(self.config.get("llm_seed", 42))
+            self.deep_thinking_llm = ChatGoogleGenerativeAI(model=self.config["deep_think_llm"], temperature=0, seed=_seed)
+            self.quick_thinking_llm = ChatGoogleGenerativeAI(model=self.config["quick_think_llm"], temperature=0, seed=_seed)
         else:
             raise ValueError(f"Unsupported LLM provider: {self.config['llm_provider']}")
         
