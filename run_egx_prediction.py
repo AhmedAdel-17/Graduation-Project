@@ -37,16 +37,19 @@ from datetime import datetime, timedelta
 
 
 def _resolve_llm_api_key(backend_url: str) -> str:
-    """Return DEEPSEEK_API_KEY. DeepSeek is the sole supported LLM backend.
+    """Resolve the API key that matches the configured backend URL.
 
-    Do not fall back to OPENAI_API_KEY — historically it was set to a Groq
-    key in .env and got shipped to DeepSeek, returning 401.
+    Priority: NVIDIA Build > DeepSeek direct.
+    OPENAI_API_KEY is intentionally never read (maps to Groq in this repo's .env).
     """
-    key = os.getenv("DEEPSEEK_API_KEY")
+    if "nvidia" in backend_url:
+        key = os.getenv("NVIDIA_API_KEY") or os.getenv("DEEPSEEK_API_KEY")
+    else:
+        key = os.getenv("DEEPSEEK_API_KEY") or os.getenv("NVIDIA_API_KEY")
     if not key:
         raise RuntimeError(
-            "DEEPSEEK_API_KEY is not set. DeepSeek is the only configured LLM "
-            "backend for this project — see .env."
+            "No LLM API key found. Set NVIDIA_API_KEY (primary) or "
+            "DEEPSEEK_API_KEY (fallback) in .env."
         )
     return key
 
@@ -196,7 +199,8 @@ def run_prediction(target_tickers=None):
             model=DEFAULT_CONFIG["quick_think_llm"],
             base_url=DEFAULT_CONFIG["backend_url"],
             api_key=_resolve_llm_api_key(DEFAULT_CONFIG["backend_url"]),
-            temperature=0
+            temperature=0,
+            seed=int(DEFAULT_CONFIG.get("llm_seed", 42)),
         )
 
         price_table = "\n".join([
@@ -340,7 +344,8 @@ def analyze_ticker_for_api(ticker):
             model=DEFAULT_CONFIG["quick_think_llm"],
             base_url=DEFAULT_CONFIG["backend_url"],
             api_key=_resolve_llm_api_key(DEFAULT_CONFIG["backend_url"]),
-            temperature=0
+            temperature=0,
+            seed=int(DEFAULT_CONFIG.get("llm_seed", 42)),
         )
 
         price_table = "\n".join([
