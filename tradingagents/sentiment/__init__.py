@@ -26,6 +26,7 @@ from tradingagents.sentiment.contracts import (
     MacroDirection,
     MacroEvent,
     MacroMagnitude,
+    IndexSentiment,
     MacroSentiment,
     MarketRegime,
     MarketSentiment,
@@ -44,8 +45,13 @@ from tradingagents.sentiment.surfacing import (
     format_sentiment_for_cli,
 )
 from tradingagents.sentiment.taxonomy import (
+    IndexEnum,
     SectorEnum,
+    all_indices,
+    members_of_index,
+    primary_index,
     sector_aliases_ar,
+    ticker_to_indices,
     ticker_to_sector,
     to_fundamentals_sector,
 )
@@ -72,6 +78,7 @@ __all__ = [
     "MacroDirection",
     "MacroEvent",
     "MacroMagnitude",
+    "IndexSentiment",
     "MacroSentiment",
     "MarketRegime",
     "MarketSentiment",
@@ -83,7 +90,12 @@ __all__ = [
     "StockSentiment",
     "VolatilityMood",
     # taxonomy
+    "IndexEnum",
+    "all_indices",
+    "members_of_index",
+    "primary_index",
     "sector_aliases_ar",
+    "ticker_to_indices",
     "ticker_to_sector",
     "to_fundamentals_sector",
     # liquidity tiers

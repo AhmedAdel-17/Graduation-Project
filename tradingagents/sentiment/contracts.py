@@ -178,6 +178,23 @@ class SectorSentiment(_LayerBase):
     n_distinct_days: int = Field(default=0, ge=0)
 
 
+class IndexSentiment(_LayerBase):
+    """Sentiment for a whole EGX index basket (EGX30 / EGX70 / EGX100).
+
+    This is the market-level view: instead of trying to score a single thinly
+    discussed ticker, the engine rolls every ticker mention up into the indices
+    its issuer belongs to and aggregates at that level. ``regime`` mirrors
+    :class:`MarketSentiment` so the blender can treat an index signal exactly
+    like the overall-market signal.
+    """
+
+    index: str
+    regime: MarketRegime = MarketRegime.NO_SIGNAL
+    n_posts: int = Field(default=0, ge=0)
+    n_distinct_days: int = Field(default=0, ge=0)
+    n_distinct_sources: int = Field(default=0, ge=0)
+
+
 class StockSentiment(_LayerBase):
     ticker: str
     tier: str

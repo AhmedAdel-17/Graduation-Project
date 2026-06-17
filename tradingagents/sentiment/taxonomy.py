@@ -10,6 +10,7 @@ Migrating fundamentals to consume this module directly is a follow-up PR.
 """
 from __future__ import annotations
 
+import os
 from enum import Enum
 from typing import Iterable
 
@@ -148,3 +149,109 @@ def sectors_covered_by_egx_tickers() -> set[SectorEnum]:
         for t in EGX_TICKERS
         if ticker_to_sector(t) != SectorEnum.UNKNOWN
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EGX index membership (EGX30 / EGX70 / EGX100)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# The sentiment engine produces sentiment per *index* (the market-level view the
+# user asked for) by rolling ticker mentions up into the indices they belong to.
+# A blue-chip mention (e.g. COMI) feeds EGX30 *and* EGX100; a mid-cap feeds EGX70
+# *and* EGX100 (EGX100 = EGX30 ∪ EGX70 by construction of the EGX index family).
+#
+# These constituent lists are a curated, recent approximation — the real EGX30 /
+# EGX70 baskets are rebalanced semi-annually by the exchange. They are overridable
+# at runtime via the EGX30_CONSTITUENTS / EGX70_CONSTITUENTS env vars
+# (comma-separated bare symbols, no `.CA`) so an operator can pin the exact
+# review-period membership without a code change.
+
+
+class IndexEnum(str, Enum):
+    EGX30 = "EGX30"
+    EGX70 = "EGX70"
+    EGX100 = "EGX100"
+
+
+# Curated recent EGX30 large-cap membership (bare symbols) that exist in this
+# fork's issuer registry. ~30 names; revise on each exchange rebalance.
+_DEFAULT_EGX30: frozenset[str] = frozenset({
+    "COMI", "HRHO", "FWRY", "TMGH", "EAST", "ABUK", "MFPC", "ESRS", "SWDY",
+    "ETEL", "EFIH", "CIEB", "ADIB", "ORWE", "JUFO", "EFID", "BTFH", "MASR",
+    "SKPC", "AMOC", "HELI", "PHDC", "ORAS", "ISPH", "CLHO", "SUGR", "MTIE",
+    "QNBA", "CIRA", "TALM",
+})
+
+# EGX70 EWI approximation: the next tier of mid/small caps known to this fork
+# that are NOT in EGX30. The exchange's real EGX70 has exactly 70 names; this is
+# the subset we can map to issuers we track.
+_DEFAULT_EGX70: frozenset[str] = frozenset({
+    "OCDI", "EMFD", "ORHD", "EGTS", "GPPL", "SPHT", "GIHD", "MHOT", "MASR",
+    "EGAL", "EGCH", "EFIC", "ARCC", "MCQE", "SCEM", "MBSC", "IRON", "ATQA",
+    "ISMQ", "ELEC", "FERC", "RAYA", "EGSA", "SCTS", "VALU", "GBCO", "CCAP",
+    "BINV", "VLMR", "MOIN", "DOMT", "OLFI", "POUL", "IFAP", "PHAR", "MIPH",
+    "RMDA", "MPCI", "AMES", "NIPH", "ALCN", "CSAG", "MOIL", "TAQA", "OIH",
+    "BONY", "EXPA", "HDBK", "SAUD", "FAIT", "CANA", "UBEE", "EGBE", "QNBE",
+})
+
+
+def _parse_env_constituents(env_var: str, default: frozenset[str]) -> frozenset[str]:
+    raw = os.getenv(env_var)
+    if not raw:
+        return default
+    members = {
+        _normalize_ticker(tok) for tok in raw.split(",") if tok.strip()
+    }
+    return frozenset(members) or default
+
+
+_EGX30_MEMBERS: frozenset[str] = _parse_env_constituents("EGX30_CONSTITUENTS", _DEFAULT_EGX30)
+# A symbol can be in EGX30 OR EGX70, never both; drop any EGX30 overlap from EGX70.
+_EGX70_MEMBERS: frozenset[str] = (
+    _parse_env_constituents("EGX70_CONSTITUENTS", _DEFAULT_EGX70) - _EGX30_MEMBERS
+)
+_EGX100_MEMBERS: frozenset[str] = _EGX30_MEMBERS | _EGX70_MEMBERS
+
+_INDEX_MEMBERS: dict[IndexEnum, frozenset[str]] = {
+    IndexEnum.EGX30: _EGX30_MEMBERS,
+    IndexEnum.EGX70: _EGX70_MEMBERS,
+    IndexEnum.EGX100: _EGX100_MEMBERS,
+}
+
+
+def ticker_to_indices(ticker: str) -> frozenset[IndexEnum]:
+    """Return the set of EGX indices a ticker belongs to.
+
+    A blue chip resolves to ``{EGX30, EGX100}``; a mid-cap to ``{EGX70, EGX100}``;
+    an unknown/untracked ticker to ``frozenset()`` (no index contribution — the
+    engine abstains rather than guessing index membership).
+    """
+    sym = _normalize_ticker(ticker)
+    out: set[IndexEnum] = set()
+    if sym in _EGX30_MEMBERS:
+        out.add(IndexEnum.EGX30)
+    if sym in _EGX70_MEMBERS:
+        out.add(IndexEnum.EGX70)
+    if sym in _EGX100_MEMBERS:
+        out.add(IndexEnum.EGX100)
+    return frozenset(out)
+
+
+def primary_index(ticker: str) -> IndexEnum | None:
+    """The most specific index for a ticker: EGX30 if blue-chip, else EGX70,
+    else None. EGX100 is never the *primary* index because it is the union.
+    """
+    sym = _normalize_ticker(ticker)
+    if sym in _EGX30_MEMBERS:
+        return IndexEnum.EGX30
+    if sym in _EGX70_MEMBERS:
+        return IndexEnum.EGX70
+    return None
+
+
+def members_of_index(index: IndexEnum) -> frozenset[str]:
+    return _INDEX_MEMBERS.get(index, frozenset())
+
+
+def all_indices() -> Iterable[IndexEnum]:
+    return _INDEX_MEMBERS.keys()
