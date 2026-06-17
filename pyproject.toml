@@ -28,6 +28,10 @@ dependencies = [
     "langchain-openai>=0.3.23",
     "langgraph>=0.4.8",
     "pandas>=2.3.0",
+    # Imported directly by tradingagents/portfolio/schemas.py (and the wider
+    # agent schemas). Pinned explicitly so a langchain bump can't silently move
+    # the schema library out from under the contract layer.
+    "pydantic>=2.0",
     "python-dotenv>=1.0.0",
     "pytz>=2025.2",
     "questionary>=2.1.0",
@@ -52,7 +56,27 @@ postgres = [
     "pgvector>=0.3.0",
 ]
 
+# Portfolio Optimization Assistant subsystem (design v3). Numeric/solver stack
+# for the deterministic core (analytics + optimizer). Kept as an extra because
+# cvxpy is heavyweight and the optimizer fails closed to a scipy/heuristic path
+# when it is absent, so the base install never breaks on a cvxpy wheel issue.
+# scipy / scikit-learn are usually already present transitively; declared here so
+# the subsystem's requirements are explicit and self-contained.
+portfolio = [
+    "cvxpy>=1.5",
+    "scipy>=1.11",
+    "scikit-learn>=1.3",
+]
+
+# Tooling for the test suite (e.g. the P4 WebSocket smoke client, coverage runs).
+# Not required at runtime.
+dev = [
+    "websockets>=12.0",
+    "coverage>=7.0",
+]
+
 [tool.pytest.ini_options]
 markers = [
     "integration: marks tests that make real LLM API calls (deselect with '-m not integration')",
+    "live: marks optional tests that call live external providers (deselect with '-m not live')",
 ]

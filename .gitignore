@@ -48,3 +48,7 @@ dashboard/dist/
 
 # CSV data files
 *.csv
+
+# Playwright persistent session (live cookies/tokens) - never commit
+pipeline/user_session/
+user_session/
