@@ -220,3 +220,142 @@ CREATE INDEX IF NOT EXISTS social_v2_posts_ts_idx
 -- the signal_adapter archive-replay path.
 CREATE INDEX IF NOT EXISTS social_v2_posts_symbols_idx
     ON social_v2_posts USING GIN (symbols);
+
+-- =============================================================================
+-- 9. PORTFOLIO ASSISTANT  (Portfolio Optimization Assistant subsystem, design v3)
+-- =============================================================================
+-- Persistence for the conversational copilot (docs/PORTFOLIO_ASSISTANT_DESIGN.md
+-- §8). Tables are prefixed `pa_` and are self-contained: dropping the subsystem
+-- means dropping only these. All JSONB payloads mirror the Pydantic models in
+-- tradingagents/portfolio/schemas.py (the store round-trips through them, so the
+-- column shapes intentionally stay loose — JSONB, not normalized columns).
+--
+-- Audit doctrine (CLAUDE.md §11): snapshots / policies / scenarios / proposals
+-- are append-only and soft-deleted (status flags), NEVER hard-deleted, except
+-- via the ON DELETE CASCADE from a conversation the user explicitly removes.
+--
+-- REQUIREMENT: PostgreSQL >= 13 (for the core `gen_random_uuid()` used by
+-- pa_conversations). On Postgres < 13, first run `CREATE EXTENSION IF NOT EXISTS
+-- pgcrypto;` (needs appropriate privileges) to provide that function.
+-- =============================================================================
+
+-- 9.1 Conversations — one row per chat thread (1:1 with a workspace for now).
+-- `active_ref` is the workspace pointer: 'baseline' | str(scenario_id).
+CREATE TABLE IF NOT EXISTS pa_conversations (
+    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         TEXT,                   -- nullable until auth lands (MEMORY.md §B); 'local' in single-user demo
+    title           TEXT,
+    language        TEXT        DEFAULT 'auto',   -- 'en' | 'ar' | 'auto'
+    active_ref      TEXT        DEFAULT 'baseline',
+    last_proposal_id BIGINT,
+    archived        BOOLEAN     DEFAULT FALSE,    -- soft delete
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_pa_conversations_user
+    ON pa_conversations (user_id, updated_at DESC);
+
+-- 9.2 Messages — user/assistant/system turns with typed content blocks.
+-- `blocks` is the ChatBlock[] discriminated union (rendered client-side).
+-- `scenario_id` records which branch the message was about (nullable).
+CREATE TABLE IF NOT EXISTS pa_messages (
+    id              BIGSERIAL   PRIMARY KEY,
+    conversation_id UUID        NOT NULL REFERENCES pa_conversations(id) ON DELETE CASCADE,
+    role            TEXT        NOT NULL CHECK (role IN ('user','assistant','system')),
+    text_content    TEXT,
+    blocks          JSONB,                  -- list[ChatBlock]
+    scenario_id     BIGINT,                 -- soft ref to pa_scenarios.id (nullable)
+    created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_pa_messages_conv
+    ON pa_messages (conversation_id, id);
+
+-- 9.3 Portfolio snapshots — BASELINE versions only (scenarios store their own
+-- derived state in pa_scenarios). `positions` = list[PortfolioHolding].
+CREATE TABLE IF NOT EXISTS pa_portfolio_snapshots (
+    id                      BIGSERIAL   PRIMARY KEY,
+    conversation_id         UUID        NOT NULL REFERENCES pa_conversations(id) ON DELETE CASCADE,
+    version                 INTEGER     NOT NULL,
+    cash_egp                NUMERIC,
+    positions               JSONB       NOT NULL,   -- list[PortfolioHolding]
+    promoted_from_scenario  BIGINT,                 -- provenance when adopted from a what-if
+    confirmed_by_user       BOOLEAN     DEFAULT FALSE,
+    created_at              TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (conversation_id, version)
+);
+CREATE INDEX IF NOT EXISTS idx_pa_snapshots_conv
+    ON pa_portfolio_snapshots (conversation_id, version DESC);
+
+-- 9.4 Investment policy — versioned (Strategy Agent output). `policy` carries
+-- the full InvestmentPolicy incl. source_spans + inferred_fields; the compiled
+-- OptimizerParams snapshot is kept alongside for audit/explainability.
+CREATE TABLE IF NOT EXISTS pa_policies (
+    id                BIGSERIAL   PRIMARY KEY,
+    conversation_id   UUID        NOT NULL REFERENCES pa_conversations(id) ON DELETE CASCADE,
+    version           INTEGER     NOT NULL,
+    policy            JSONB       NOT NULL,   -- InvestmentPolicy
+    compiled_params   JSONB,                  -- OptimizerParams snapshot
+    compiler_version  TEXT,
+    source_message_id BIGINT,                 -- which message produced this policy
+    confirmed_by_user BOOLEAN     DEFAULT FALSE,
+    created_at        TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (conversation_id, version)
+);
+CREATE INDEX IF NOT EXISTS idx_pa_policies_conv
+    ON pa_policies (conversation_id, version DESC);
+
+-- 9.5 Scenario tree — git-like branches of hypotheticals (Enhancement 2).
+-- `parent_scenario_id` NULL = forked from baseline. `derived_positions` /
+-- `derived_policy` are the PINNED post-patch state; `input_set` pins the
+-- prices/signals/covariance the branch was computed against so diffs are honest.
+CREATE TABLE IF NOT EXISTS pa_scenarios (
+    id                  BIGSERIAL   PRIMARY KEY,
+    conversation_id     UUID        NOT NULL REFERENCES pa_conversations(id) ON DELETE CASCADE,
+    parent_scenario_id  BIGINT      REFERENCES pa_scenarios(id) ON DELETE CASCADE,
+    base_snapshot_id    BIGINT      REFERENCES pa_portfolio_snapshots(id),
+    patch               JSONB       NOT NULL,   -- ScenarioPatch
+    derived_positions   JSONB       NOT NULL,   -- pinned post-patch list[PortfolioHolding]
+    derived_policy      JSONB,                  -- pinned post-OVERRIDE_POLICY InvestmentPolicy
+    input_set           JSONB,                  -- PinnedInputSet (price asof, signal session ids, covariance hash)
+    proposal_id         BIGINT,
+    status              TEXT        DEFAULT 'active'
+                                    CHECK (status IN ('active','promoted','discarded')),
+    label               TEXT,
+    created_at          TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_pa_scenarios_conv
+    ON pa_scenarios (conversation_id, status);
+
+-- 9.6 Optimization proposals — full-audit, append-only (never deleted).
+-- Exactly one of snapshot_id / scenario_id identifies what was optimized
+-- (enforced in the application layer via OptimizationProposal's validator).
+CREATE TABLE IF NOT EXISTS pa_optimization_proposals (
+    id              BIGSERIAL   PRIMARY KEY,
+    conversation_id UUID        REFERENCES pa_conversations(id) ON DELETE CASCADE,
+    snapshot_id     BIGINT      REFERENCES pa_portfolio_snapshots(id),   -- baseline runs
+    scenario_id     BIGINT      REFERENCES pa_scenarios(id),             -- what-if runs
+    policy_id       BIGINT      REFERENCES pa_policies(id),
+    inputs          JSONB       NOT NULL,   -- prices, signals(+session ids, freshness), params, covariance hash
+    proposal        JSONB       NOT NULL,   -- OptimizationProposal (actions, before/after, metric deltas)
+    solver_status   TEXT,                   -- 'optimal' | 'infeasible_relaxed' | 'heuristic_fallback'
+    engine_version  TEXT,
+    created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_pa_proposals_conv
+    ON pa_optimization_proposals (conversation_id, created_at DESC);
+
+-- 9.7 Copilot domain events — trace stream for the admin Trace Inspector
+-- (pre-flight finding #1: agent_events has a hard FK to analysis_sessions and
+-- AgentEventPublisher is ticker-scoped, so copilot turns CANNOT reuse it). This
+-- table mirrors the agent_events SHAPE but keys on conversation_id, not session.
+CREATE TABLE IF NOT EXISTS pa_events (
+    id                BIGSERIAL   PRIMARY KEY,
+    conversation_id   UUID        NOT NULL REFERENCES pa_conversations(id) ON DELETE CASCADE,
+    message_id        BIGINT,                 -- the turn this event belongs to (nullable)
+    event_type        TEXT        NOT NULL,   -- e.g. pa.turn.start, pa.policy_compiled, pa.scenario_forked
+    stage             TEXT,                   -- extracting | signals | optimizing | ...
+    payload           JSONB,                  -- structured event detail
+    logged_at         TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_pa_events_conv
+    ON pa_events (conversation_id, id);

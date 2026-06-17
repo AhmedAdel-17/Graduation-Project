@@ -45,6 +45,14 @@ from tradingagents.dataflows.config import get_config, set_config
 from tradingagents.dataflows.interface import route_to_vendor, TOOLS_CATEGORIES, VENDOR_LIST
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 
+# Live broadcast hub — lets the admin dashboard watch ANY run (main dashboard or
+# admin) in real time. Best-effort; never affects a run.
+try:
+    from server.live_hub import live_hub
+except Exception:  # pragma: no cover
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from live_hub import live_hub  # type: ignore
+
 # Try importing EGX-specific tools
 try:
     from tradingagents.dataflows.local import (
@@ -618,6 +626,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Portfolio Assistant subsystem (P4). Mounted only when pa_enabled (env
+# PA_ENABLED, default 1); the default service injects the real GraphRunLauncher
+# so stale signals trigger a background TradingAgentsGraph refresh.
+if get_config().get("pa_enabled", True):
+    from server.portfolio_routes import router as portfolio_router
+    app.include_router(portfolio_router)
 
 
 # =============================================================================
@@ -1665,11 +1680,268 @@ async def get_diagnostics_fingerprints(
 
 
 # =============================================================================
+# Admin Monitoring Suite — read-only aggregation endpoints
+# =============================================================================
+# These power the dashboard's /admin Performance Analytics and Error Center.
+# They ONLY read existing audit tables (analysis_sessions, agent_events) — no
+# trading logic, no writes. They degrade to ``source: "none"`` when Postgres is
+# unavailable so the frontend can fall back to clearly-flagged sample data.
+
+
+def _admin_pg_ok() -> bool:
+    try:
+        from tradingagents.db import is_postgres_available
+        return is_postgres_available()
+    except Exception:
+        return False
+
+
+@app.get("/api/admin/metrics")
+async def get_admin_metrics(days: int = Query(default=30, ge=1, le=365)):
+    """Aggregate run + agent metrics over the last ``days`` days.
+
+    Real (from Postgres): daily run counts, decision mix (BUY/SELL/HOLD/OTHER),
+    per-agent execution counts + average confidence, overall averages. Token /
+    cost / per-agent latency are NOT persisted in ``agent_events`` yet, so the
+    dashboard layers a clearly-flagged estimate on top of this payload.
+    """
+    empty = {
+        "source": "none",
+        "reason": "postgres_unavailable",
+        "days": days,
+        "total_runs": 0,
+        "total_events": 0,
+        "avg_confidence": None,
+        "daily_runs": [],
+        "decision_counts": {},
+        "per_agent": [],
+    }
+    if not _admin_pg_ok():
+        return empty
+
+    from tradingagents.db.connection import cursor as db_cursor
+
+    daily_sql = (
+        "SELECT DATE(created_at) AS day, COUNT(*) AS runs "
+        "  FROM analysis_sessions "
+        " WHERE created_at >= NOW() - (%s || ' days')::interval "
+        " GROUP BY DATE(created_at) ORDER BY day ASC"
+    )
+    decision_sql = (
+        "SELECT CASE "
+        "         WHEN UPPER(final_decision) LIKE '%%BUY%%'  THEN 'BUY' "
+        "         WHEN UPPER(final_decision) LIKE '%%SELL%%' THEN 'SELL' "
+        "         WHEN UPPER(final_decision) LIKE '%%HOLD%%' THEN 'HOLD' "
+        "         ELSE 'OTHER' END AS bucket, COUNT(*) AS n "
+        "  FROM analysis_sessions "
+        " WHERE created_at >= NOW() - (%s || ' days')::interval "
+        " GROUP BY 1"
+    )
+    agent_sql = (
+        "SELECT agent_name, COUNT(*) AS executions, AVG(confidence_score) AS avg_conf, "
+        "       MAX(logged_at) AS last_seen "
+        "  FROM agent_events "
+        " WHERE logged_at >= NOW() - (%s || ' days')::interval "
+        "   AND agent_name IS NOT NULL "
+        " GROUP BY agent_name ORDER BY executions DESC"
+    )
+    summary_sql = (
+        "SELECT AVG(confidence_overall) AS avg_conf FROM analysis_sessions "
+        " WHERE created_at >= NOW() - (%s || ' days')::interval"
+    )
+
+    try:
+        daily: List[Dict[str, Any]] = []
+        decisions: Dict[str, int] = {}
+        per_agent: List[Dict[str, Any]] = []
+        avg_conf: Optional[float] = None
+        with db_cursor(dict_cursor=True) as cur:
+            cur.execute(daily_sql, (str(days),))
+            for row in cur.fetchall():
+                d = _trace_row_to_dict(row)
+                daily.append({"day": d.get("day"), "runs": int(d.get("runs") or 0)})
+
+            cur.execute(decision_sql, (str(days),))
+            for row in cur.fetchall():
+                d = _trace_row_to_dict(row)
+                decisions[str(d.get("bucket") or "OTHER")] = int(d.get("n") or 0)
+
+            cur.execute(agent_sql, (str(days),))
+            for row in cur.fetchall():
+                d = _trace_row_to_dict(row)
+                ac = d.get("avg_conf")
+                per_agent.append({
+                    "agent_name": d.get("agent_name"),
+                    "executions": int(d.get("executions") or 0),
+                    "avg_confidence": float(ac) if ac is not None else None,
+                    "last_seen": d.get("last_seen"),
+                })
+
+            cur.execute(summary_sql, (str(days),))
+            srow = cur.fetchone()
+            if srow is not None:
+                sd = _trace_row_to_dict(srow)
+                avg_conf = float(sd["avg_conf"]) if sd.get("avg_conf") is not None else None
+    except Exception as exc:
+        logger.warning("admin metrics query failed: %s", exc)
+        return {**empty, "reason": "query_failed"}
+
+    return {
+        "source": "postgres",
+        "days": days,
+        "total_runs": sum(x["runs"] for x in daily),
+        "total_events": sum(x["executions"] for x in per_agent),
+        "avg_confidence": avg_conf,
+        "daily_runs": daily,
+        "decision_counts": decisions,
+        "per_agent": per_agent,
+    }
+
+
+@app.get("/api/admin/errors")
+async def get_admin_errors(days: int = Query(default=30, ge=1, le=365)):
+    """Best-effort error feed over the last ``days`` days.
+
+    There is no dedicated error table, so this surfaces two honest signals from
+    the audit trail: (1) agent events whose type/summary looks like a failure,
+    and (2) risk vetoes (a notable, non-error outcome). When nothing is found
+    the dashboard falls back to clearly-flagged sample data so the screen still
+    demonstrates the workflow.
+    """
+    empty = {"source": "none", "reason": "postgres_unavailable", "days": days, "errors": [], "total": 0}
+    if not _admin_pg_ok():
+        return empty
+
+    from tradingagents.db.connection import cursor as db_cursor
+
+    err_sql = (
+        "SELECT e.logged_at, e.session_id, e.agent_name, e.event_type, "
+        "       e.opinion_summary, s.ticker "
+        "  FROM agent_events e "
+        "  LEFT JOIN analysis_sessions s ON s.session_id = e.session_id "
+        " WHERE e.logged_at >= NOW() - (%s || ' days')::interval "
+        "   AND ( e.event_type ILIKE '%%error%%' OR e.event_type ILIKE '%%fail%%' "
+        "      OR e.opinion_summary ILIKE '%%error%%' OR e.opinion_summary ILIKE '%%failed%%' "
+        "      OR e.opinion_summary ILIKE '%%exception%%' OR e.opinion_summary ILIKE '%%timeout%%' ) "
+        " ORDER BY e.logged_at DESC LIMIT 200"
+    )
+    veto_sql = (
+        "SELECT created_at, session_id, ticker, final_decision "
+        "  FROM analysis_sessions "
+        " WHERE created_at >= NOW() - (%s || ' days')::interval AND risk_veto = TRUE "
+        " ORDER BY created_at DESC LIMIT 100"
+    )
+
+    errors: List[Dict[str, Any]] = []
+    try:
+        with db_cursor(dict_cursor=True) as cur:
+            cur.execute(err_sql, (str(days),))
+            for row in cur.fetchall():
+                d = _trace_row_to_dict(row)
+                errors.append({
+                    "timestamp": d.get("logged_at"),
+                    "session_id": d.get("session_id"),
+                    "ticker": d.get("ticker"),
+                    "agent": d.get("agent_name"),
+                    "error_type": d.get("event_type") or "agent_error",
+                    "severity": "error",
+                    "category": "agent",
+                    "message": d.get("opinion_summary") or "(no detail recorded)",
+                })
+
+            cur.execute(veto_sql, (str(days),))
+            for row in cur.fetchall():
+                d = _trace_row_to_dict(row)
+                errors.append({
+                    "timestamp": d.get("created_at"),
+                    "session_id": d.get("session_id"),
+                    "ticker": d.get("ticker"),
+                    "agent": "Risk Judge",
+                    "error_type": "risk_veto",
+                    "severity": "warning",
+                    "category": "risk",
+                    "message": f"Risk veto applied (decision: {d.get('final_decision') or 'n/a'})",
+                })
+    except Exception as exc:
+        logger.warning("admin errors query failed: %s", exc)
+        return {**empty, "reason": "query_failed"}
+
+    errors.sort(key=lambda e: str(e.get("timestamp") or ""), reverse=True)
+    return {"source": "postgres", "days": days, "errors": errors, "total": len(errors)}
+
+
+# =============================================================================
 # WebSocket — Real-Time Analysis Streaming
 # =============================================================================
 
 # Active analysis tracking
 active_analyses: Dict[str, bool] = {}
+
+
+# ── Live broadcast helpers (shared by analyze_full + the analyze WS) ──────────
+
+def _hub_node_from_chunk(chunk: dict) -> tuple:
+    """Map a LangGraph updates-mode chunk to (node_name, status, changed_keys)."""
+    node_keys = [k for k in chunk.keys() if k != "messages"]
+    if len(node_keys) == 1:
+        node = node_keys[0]
+        delta = chunk[node] if isinstance(chunk[node], dict) else {}
+        return node, "completed", list(delta.keys()) if isinstance(delta, dict) else []
+    if "market_report" in chunk:
+        return "Market Analyst", "completed", node_keys
+    if "sentiment_report" in chunk:
+        return "Social Analyst", "completed", node_keys
+    if "news_report" in chunk:
+        return "News Analyst", "completed", node_keys
+    if "fundamentals_report" in chunk:
+        return "Fundamentals Analyst", "completed", node_keys
+    if "trader_investment_plan" in chunk:
+        return "Trader", "completed", node_keys
+    if "final_trade_decision" in chunk:
+        return "Risk Judge", "completed", node_keys
+    return "System", "in_progress", node_keys
+
+
+def _hub_publish(run_id, ticker, trade_date, source, *, ftype, node, status,
+                 state_keys=None, data=None) -> None:
+    """Best-effort publish of one live frame to the broadcast hub."""
+    try:
+        live_hub.publish({
+            "run_id": run_id,
+            "ticker": ticker,
+            "trade_date": trade_date,
+            "source": source,
+            "type": ftype,
+            "node": node,
+            "status": status,
+            "state_keys": state_keys or [],
+            "data": data or {},
+            "timestamp": datetime.now().isoformat(),
+        })
+    except Exception:  # pragma: no cover
+        pass
+
+
+@app.websocket("/api/admin/live")
+async def admin_live_feed(websocket: WebSocket):
+    """Read-only admin feed: broadcasts frames from EVERY run (main dashboard or
+    admin), so an analysis started anywhere is visible live here. The client
+    sends nothing; it just receives a connect-time snapshot then live frames."""
+    await websocket.accept()
+    live_hub.set_loop(asyncio.get_running_loop())
+    queue = live_hub.subscribe()
+    try:
+        # Replay buffered frames for active/recent runs so a late client catches up.
+        await websocket.send_json({"type": "snapshot", "runs": live_hub.snapshot()})
+        while True:
+            frame = await queue.get()
+            await websocket.send_json(frame)
+    except WebSocketDisconnect:
+        pass
+    except Exception as exc:  # pragma: no cover
+        logger.debug("admin live feed closed: %s", exc)
+    finally:
+        live_hub.unsubscribe(queue)
 
 # =============================================================================
 # Backtesting Endpoints
@@ -2122,6 +2394,15 @@ async def _run_streaming_analysis(
 
     config = get_config()
 
+    # Also broadcast this run to the admin live feed (so another admin tab / the
+    # Agent Monitor can watch it). Best-effort.
+    from uuid import uuid4
+    _run_id = uuid4().hex
+    live_hub.set_loop(asyncio.get_running_loop())
+    _hub_publish(_run_id, ticker, trade_date, "admin", ftype="run_started",
+                 node="System", status="in_progress",
+                 data={"selected_analysts": selected_analysts})
+
     # In `stream_mode="updates"` each chunk has the shape
     #   { "<Node Name>": <state delta dict>, ... }
     # so the node name is literally the key. We still fall back to the old
@@ -2280,6 +2561,8 @@ async def _run_streaming_analysis(
                 "data": data,
                 "timestamp": datetime.now().isoformat(),
             })
+            _hub_publish(_run_id, ticker, trade_date, "admin", ftype="agent_update",
+                         node=node, status=status, state_keys=keys, data={})
     finally:
         await executor_future  # ensure thread is fully done
 
@@ -2296,6 +2579,9 @@ async def _run_streaming_analysis(
         },
         "timestamp": datetime.now().isoformat(),
     })
+    _hub_publish(_run_id, ticker, trade_date, "admin", ftype="complete",
+                 node="Final Recommendation", status="completed",
+                 data={"final_trade_decision": str(final_state.get("final_trade_decision", ""))[:300]})
 
 
 # =============================================================================
@@ -2486,6 +2772,17 @@ async def analyze_full(req: FullAnalyzeRequest):
     selected_analysts = req.selected_analysts or ["market", "social", "news", "fundamentals"]
     trade_date = datetime.now().strftime("%Y-%m-%d")
 
+    # Live broadcast — make this run visible in the admin dashboard in real time.
+    from uuid import uuid4
+    run_id = uuid4().hex
+    live_hub.set_loop(asyncio.get_running_loop())
+    _hub_publish(
+        run_id, ticker, trade_date, "main",
+        ftype="run_started", node="System", status="in_progress",
+        data={"message": f"Full pipeline started for {ticker}",
+              "selected_analysts": selected_analysts},
+    )
+
     # Step 1: pull price/indicators/price_history (cheap; reuses existing helper).
     # The quick-LLM recommendation it returns is discarded — we overwrite it
     # below with the full multi-agent graph output.
@@ -2511,12 +2808,22 @@ async def analyze_full(req: FullAnalyzeRequest):
         graph.ticker = ticker
         init_state = graph.propagator.create_initial_state(ticker, trade_date)
         args = graph.propagator.get_graph_args()
+        # updates-mode so each node emits its own chunk → live per-agent frames.
+        args["stream_mode"] = "updates"
         final_state: dict = {}
         for chunk in graph.graph.stream(init_state, **args):
             if isinstance(chunk, dict):
                 for _node, delta in chunk.items():
                     if isinstance(delta, dict):
                         final_state.update(delta)
+                if any(k != "messages" for k in chunk.keys()):
+                    try:
+                        node, status, keys = _hub_node_from_chunk(chunk)
+                        _hub_publish(run_id, ticker, trade_date, "main",
+                                     ftype="agent_update", node=node, status=status,
+                                     state_keys=keys, data={})
+                    except Exception:
+                        pass
         return final_state
 
     try:
@@ -2528,11 +2835,19 @@ async def analyze_full(req: FullAnalyzeRequest):
         import traceback as _tb
         print(f"\n[/api/analyze-full] FULL PIPELINE FAILED for {ticker}:", flush=True)
         print(_tb.format_exc(), flush=True)
+        _hub_publish(run_id, ticker, trade_date, "main", ftype="error",
+                     node="System", status="error", data={"message": str(exc)})
         return {
             **base,
             "llm_error": f"Full pipeline failed: {exc}",
             "status": "degraded",
         }
+
+    _hub_publish(
+        run_id, ticker, trade_date, "main",
+        ftype="complete", node="Final Recommendation", status="completed",
+        data={"final_trade_decision": str(final_state.get("final_trade_decision", ""))[:300]},
+    )
 
     # Step 3: map final_state -> Recommendation shape the UI already consumes.
     debate = final_state.get("investment_debate_state") or {}
