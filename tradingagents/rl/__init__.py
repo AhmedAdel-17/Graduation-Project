@@ -18,6 +18,12 @@ from tradingagents.rl.feature_extractor import (
     extract_state_features_dict,
     feature_vector_size,
 )
+from tradingagents.rl.online import (
+    DEFAULT_ONLINE_CONFIG,
+    OnlineConfig,
+    OnlineRLTrainer,
+    OnlineUpdateResult,
+)
 
 __all__ = [
     "FEATURE_NAMES",
@@ -25,4 +31,9 @@ __all__ = [
     "extract_state_features",
     "extract_state_features_dict",
     "feature_vector_size",
+    # Online / incremental RL
+    "OnlineRLTrainer",
+    "OnlineConfig",
+    "OnlineUpdateResult",
+    "DEFAULT_ONLINE_CONFIG",
 ]
