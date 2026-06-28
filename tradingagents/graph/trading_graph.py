@@ -22,7 +22,7 @@ from tradingagents.agents.utils.agent_states import (
     RiskDebateState,
 )
 from tradingagents.sentiment.surfacing import extract_sentiment_audit_record
-from tradingagents.dataflows.config import set_config
+from tradingagents.dataflows.config import set_config, get_config
 
 # Import the new abstract tool methods from agent_utils
 from tradingagents.agents.utils.agent_utils import (
@@ -108,26 +108,15 @@ class TradingAgentsGraph:
 
         # Initialize LLMs
         if self.config["llm_provider"].lower() == "openai" or self.config["llm_provider"] == "ollama" or self.config["llm_provider"] == "openrouter":
-            # Resolve the API key by backend URL so the right credential is used
-            # regardless of which provider is active.
-            # Priority: NVIDIA Build > DeepSeek direct > generic OPENAI_API_KEY.
-            # OPENAI_API_KEY is intentionally last — it maps to Groq in this repo's
-            # .env and would be silently sent to the wrong backend (see feedback_chatopenai_api_key.md).
-            backend_url = self.config.get("backend_url", "")
-            if "nvidia" in backend_url:
-                api_key = os.getenv("NVIDIA_API_KEY") or os.getenv("DEEPSEEK_API_KEY")
-            else:
-                api_key = os.getenv("DEEPSEEK_API_KEY") or os.getenv("NVIDIA_API_KEY")
-            if not api_key:
-                raise RuntimeError(
-                    "No LLM API key found. Set NVIDIA_API_KEY (primary) or "
-                    "DEEPSEEK_API_KEY (fallback) in .env."
-                )
-            # seed is pinned for reproducibility — DeepSeek (OpenAI-compatible)
-            # honours the OpenAI `seed` parameter. See default_config "llm_seed".
+            # Multi-provider failover: NVIDIA (primary) -> Gemini -> Groq, per
+            # config["llm_failover_priority"]. ReliableChatModel auto-rotates to
+            # the next provider on rate-limit (429) / overload (503/504), so a
+            # flaky primary endpoint no longer fails a whole run. This is the
+            # SHARED path — live AND backtest both benefit. See llm_failover.py.
             _seed = int(self.config.get("llm_seed", 42))
-            self.deep_thinking_llm = ChatOpenAI(model=self.config["deep_think_llm"], base_url=self.config["backend_url"], temperature=0, seed=_seed, api_key=api_key, max_retries=3)
-            self.quick_thinking_llm = ChatOpenAI(model=self.config["quick_think_llm"], base_url=self.config["backend_url"], temperature=0, seed=_seed, api_key=api_key, max_retries=3)
+            from tradingagents.agents.utils.llm_failover import build_resilient_llm
+            self.deep_thinking_llm = build_resilient_llm(self.config, role="deep", seed=_seed)
+            self.quick_thinking_llm = build_resilient_llm(self.config, role="quick", seed=_seed)
         elif self.config["llm_provider"].lower() == "anthropic":
             # ChatAnthropic has no seed parameter; temperature=0 is the only knob.
             self.deep_thinking_llm = ChatAnthropic(model=self.config["deep_think_llm"], base_url=self.config["backend_url"], temperature=0)
@@ -221,7 +210,8 @@ class TradingAgentsGraph:
             ),
         }
 
-    def propagate(self, company_name, trade_date, *, user_id: Optional[str] = None):
+    def propagate(self, company_name, trade_date, *, user_id: Optional[str] = None,
+                  run_type: str = "live"):
         """Run the trading agents graph for a company on a specific date.
 
         Args:
@@ -230,6 +220,9 @@ class TradingAgentsGraph:
             user_id: optional user identifier for the audit row. NULL until
                 auth lands (MEMORY.md §E); the analysis_sessions.user_id
                 column accepts NULL.
+            run_type: ``'live'`` for a user-triggered analysis, ``'backtest'``
+                for the per-interval analyses the backtester emits. The
+                dashboard history shows only ``'live'`` rows.
         """
         import uuid
 
@@ -246,6 +239,21 @@ class TradingAgentsGraph:
                 fetch_and_refresh_egx_data(trade_date)
 
         self.ticker = company_name
+
+        # Look-ahead clamp — BACKTEST ONLY. Every data tool guards with
+        #   _trade_date = get_config().get("trade_date")
+        #   if _trade_date and end_date > _trade_date: end_date = _trade_date
+        # In a backtest we pin config["trade_date"] to the historical date so no
+        # tool can fetch future data. LIVE runs are left untouched (no clamp) so
+        # the live data path behaves exactly as before — keeping backtest concerns
+        # out of the live path (separation of backtest vs live).
+        if self.config.get("backtest_mode", False):
+            set_config({"trade_date": trade_date})
+        else:
+            # Defensive: clear any stale trade_date a prior backtest left in the
+            # process-global config, so a live run never inherits a past clamp.
+            if get_config().get("trade_date"):
+                set_config({"trade_date": None})
 
         # Initialize state
         init_agent_state = self.propagator.create_initial_state(
@@ -328,6 +336,7 @@ class TradingAgentsGraph:
                 final_state=final_state,
                 model_fingerprint=fingerprint,
                 user_id=user_id,
+                run_type=run_type,
             )
             audit_writer.write_agent_events(
                 session_id=session_id,

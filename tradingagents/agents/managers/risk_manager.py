@@ -37,6 +37,12 @@ from typing import List, Tuple, Optional
 
 from tradingagents.dataflows.config import get_config
 from tradingagents.agents.risk_mgmt.risk_scorer import EGX_FOREIGN_RESTRICTED
+from tradingagents.dataflows.egx_costs import round_trip_cost_pct
+from tradingagents.agents.utils.temporal import point_in_time_notice
+from tradingagents.agents.utils.agent_context import (
+    build_macro_section,
+    format_past_memories,
+)
 
 
 # =============================================================================
@@ -91,10 +97,58 @@ Evaluate this trade against each clause. Reference clause numbers in your respon
 # Final Deterministic Gate
 # =============================================================================
 
+def _cost_hurdle_note(
+    decision: str,
+    bull_thesis: Optional[dict],
+    low_liquidity: bool,
+    min_edge_multiple: float,
+) -> Optional[str]:
+    """Return a downgrade note if a BUY's expected upside fails the cost hurdle.
+
+    A BUY only earns its keep if the bull-case base upside clears
+    ``min_edge_multiple × round-trip cost``. The upside is an LLM estimate (so this
+    is a sanity floor, not a calibrated filter), but it catches the egregious case
+    where the thesis itself implies an edge too small to overcome EGX trading costs.
+
+    Returns ``None`` (no downgrade) when the gate is disabled, the decision is not
+    BUY, or the upside estimate is missing/unparseable (fail-open — we cannot
+    assess, and the prompt-level cash-default already covers no-conviction cases).
+    """
+    if decision != "BUY" or min_edge_multiple <= 0:
+        return None
+    if not isinstance(bull_thesis, dict):
+        return None
+    upside = bull_thesis.get("upside_scenario")
+    if not isinstance(upside, dict):
+        return None
+    raw = upside.get("base_case_upside_pct")
+    if raw is None:
+        return None
+    try:
+        base_up_pct = float(raw)
+    except (TypeError, ValueError):
+        return None
+
+    rt_cost_pct = round_trip_cost_pct(low_liquidity) * 100.0  # fraction → percent
+    hurdle_pct = min_edge_multiple * rt_cost_pct
+    if base_up_pct < hurdle_pct:
+        return (
+            f"Cost-hurdle override: bull-case base upside {base_up_pct:.2f}% does not clear "
+            f"{min_edge_multiple:g}× round-trip cost "
+            f"({rt_cost_pct:.2f}% → hurdle {hurdle_pct:.2f}%) for a "
+            f"{'low-liquidity' if low_liquidity else 'normal-liquidity'} name. "
+            "Expected edge is too small to overcome EGX trading costs; downgrading BUY to HOLD."
+        )
+    return None
+
+
 def _final_gate(
     decision: str,
     exec_plan: dict,
     current_position: dict,
+    bull_thesis: Optional[dict] = None,
+    low_liquidity: bool = False,
+    min_edge_multiple: float = 0.0,
 ) -> Tuple[str, List[str]]:
     """
     Lightweight sanity checks AFTER the LLM decision.
@@ -123,7 +177,15 @@ def _final_gate(
         )
         return "HOLD", issues
 
-    # Gate 3: LLM action contradicts execution_plan direction (flag, no override)
+    # Gate 3: cost hurdle — BUY whose expected upside cannot clear round-trip cost
+    cost_note = _cost_hurdle_note(
+        decision, bull_thesis, low_liquidity, min_edge_multiple
+    )
+    if cost_note:
+        issues.append(cost_note)
+        return "HOLD", issues
+
+    # Gate 4: LLM action contradicts execution_plan direction (flag, no override)
     plan_decision = (exec_plan.get("decision") or "").strip().upper()
     if plan_decision and decision not in ("HOLD",) and decision != plan_decision:
         issues.append(
@@ -191,28 +253,13 @@ def create_risk_manager(llm, memory):
             )
 
         # ── Memory context ────────────────────────────────────────────────────
-        market_report = state.get("market_report", "")
-        news_report = state.get("news_report", "")
-        fundamentals_report = state.get("fundamentals_report", "")
-        sentiment_report = state.get("sentiment_report", "")
-        curr_situation = (
-            f"{market_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}"
-        )
         from tradingagents.default_config import DEFAULT_CONFIG
-        ticker = state.get("company_of_interest", "")
-        memory_where = {"ticker": ticker} if ticker else None
         memory_threshold = float(
             state.get("memory_min_similarity")
             or DEFAULT_CONFIG.get("memory_min_similarity", 0.30)
         )
-        past_memories = memory.get_memories(
-            curr_situation,
-            n_matches=2,
-            where=memory_where,
-            min_similarity=memory_threshold,
-        )
-        past_memory_str = "".join(
-            rec["recommendation"] + "\n\n" for rec in past_memories
+        past_memory_str = format_past_memories(
+            state, memory, min_similarity=memory_threshold
         )
 
         # ── Build scorer context section ──────────────────────────────────────
@@ -249,15 +296,12 @@ Risk Action: **{risk_action}**
         )
 
         # Macro overlay: deterministic EGX macro context for veto reasoning.
-        try:
-            from tradingagents.dataflows.macro_provider import format_macro_context_for_prompt
-            macro_section = format_macro_context_for_prompt(state.get("macro_context"))
-        except Exception:
-            macro_section = ""
+        macro_section = build_macro_section(state)
 
         # ── Full prompt ───────────────────────────────────────────────────────
         prompt = f"""You are the Constitutional Risk Manager for {company_name} on {"EGX" if is_egx else "the market"}.
 
+{point_in_time_notice(state.get("trade_date", ""))}
 {macro_section}
 
 {constitution_section}
@@ -351,8 +395,16 @@ Replace BUY with SELL or HOLD. Confidence: 0.0 (low) to 1.0 (high).
             final_trade_decision = response.content
 
         # ── Final deterministic gate ──────────────────────────────────────────
+        bull_thesis = (state.get("investment_debate_state") or {}).get("bull_thesis")
+        low_liquidity = bool(state.get("low_liquidity", False))
+        min_edge_multiple = float(config.get("min_edge_cost_multiple", 0.0) or 0.0)
         final_trade_decision, gate_issues = _final_gate(
-            final_trade_decision, exec_plan, current_position
+            final_trade_decision,
+            exec_plan,
+            current_position,
+            bull_thesis=bull_thesis,
+            low_liquidity=low_liquidity,
+            min_edge_multiple=min_edge_multiple,
         )
         if gate_issues:
             risk_assessment = {**risk_assessment, "final_gate_notes": gate_issues}

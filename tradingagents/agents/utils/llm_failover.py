@@ -277,21 +277,33 @@ def build_resilient_llm(
     for p_name in priority:
         try:
             if p_name == "nvidia":
-                # NVIDIA Build — DeepSeek-V4-Pro (primary)
-                api_key = config.get("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY")
-                if not api_key:
+                # NVIDIA Build — DeepSeek-V4-Pro. Primary key first, then the
+                # secondary key (NVIDIA_API_KEY_2) as the FIRST fallback: same
+                # endpoint + same model, just a different key, so when the primary
+                # key hits its rate/quota limit the rotation stays on DeepSeek-V4-Pro
+                # before degrading to other providers.
+                from langchain_openai import ChatOpenAI
+                nvidia_keys = [
+                    config.get("NVIDIA_API_KEY") or os.getenv("NVIDIA_API_KEY"),
+                    config.get("NVIDIA_API_KEY_2") or os.getenv("NVIDIA_API_KEY_2"),
+                ]
+                added_nvidia = 0
+                for ki, nv_key in enumerate(nvidia_keys):
+                    if not nv_key:
+                        continue
+                    providers.append(ChatOpenAI(
+                        model=model_name,
+                        base_url="https://integrate.api.nvidia.com/v1",
+                        api_key=nv_key,
+                        temperature=0,
+                        seed=seed,
+                        max_retries=max_retries_per_provider,
+                        max_tokens=max_tokens,
+                    ))
+                    added_nvidia += 1
+                if added_nvidia == 0:
                     logger.debug("build_resilient_llm: skipping nvidia — no NVIDIA_API_KEY")
                     continue
-                from langchain_openai import ChatOpenAI
-                providers.append(ChatOpenAI(
-                    model=model_name,
-                    base_url="https://integrate.api.nvidia.com/v1",
-                    api_key=api_key,
-                    temperature=0,
-                    seed=seed,
-                    max_retries=max_retries_per_provider,
-                    max_tokens=max_tokens,
-                ))
 
             elif p_name in ("primary", "deepseek"):
                 # DeepSeek direct (fallback #1)
@@ -311,7 +323,8 @@ def build_resilient_llm(
                 ))
 
             elif p_name == "openrouter":
-                api_key = config.get("OPENROUTER_API_KEY") or config.get("openrouter_api_key")
+                api_key = (config.get("OPENROUTER_API_KEY") or config.get("openrouter_api_key")
+                           or os.getenv("OPENROUTER_API_KEY"))
                 if not api_key:
                     logger.debug("build_resilient_llm: skipping openrouter — no API key")
                     continue
@@ -327,7 +340,8 @@ def build_resilient_llm(
                 ))
 
             elif p_name == "groq":
-                api_key = config.get("GROQ_API_KEY") or config.get("groq_api_key")
+                api_key = (config.get("GROQ_API_KEY") or config.get("groq_api_key")
+                           or os.getenv("GROQ_API_KEY"))
                 if not api_key:
                     logger.debug("build_resilient_llm: skipping groq — no API key")
                     continue
@@ -342,7 +356,8 @@ def build_resilient_llm(
                 ))
 
             elif p_name == "google":
-                api_key = config.get("GOOGLE_API_KEY") or config.get("google_api_key")
+                api_key = (config.get("GOOGLE_API_KEY") or config.get("google_api_key")
+                           or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"))
                 if not api_key:
                     logger.debug("build_resilient_llm: skipping google — no API key")
                     continue
@@ -413,16 +428,20 @@ def build_conversational_llm(
         if not api_key:
             raise ValueError("build_conversational_llm: NVIDIA_API_KEY is not set")
         from langchain_openai import ChatOpenAI
+        nvidia_keys = [k for k in (
+            api_key,
+            config.get("NVIDIA_API_KEY_2") or os.getenv("NVIDIA_API_KEY_2"),
+        ) if k]
         return ReliableChatModel(providers=[ChatOpenAI(
             model=conversational_model,
             base_url=backend_url or "https://integrate.api.nvidia.com/v1",
-            api_key=api_key,
+            api_key=k,
             temperature=0,
             seed=seed_value,
             max_retries=max_retries_per_provider,
             max_tokens=max_tokens,
             **reasoning_kwargs,
-        )])
+        ) for k in nvidia_keys])
     elif provider == "deepseek":
         conv_config["llm_failover_priority"] = ["deepseek"]
     elif provider == "google":

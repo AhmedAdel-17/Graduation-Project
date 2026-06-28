@@ -3,6 +3,12 @@ import time
 import json
 import re
 from tradingagents.dataflows.config import get_config
+from tradingagents.dataflows.egx_costs import round_trip_cost_pct
+from tradingagents.agents.utils.temporal import point_in_time_notice
+from tradingagents.agents.utils.agent_context import (
+    build_macro_section,
+    format_past_memories,
+)
 
 # =============================================================================
 # Institutional Trader Agent for EGX Market
@@ -118,22 +124,10 @@ def create_trader(llm, memory):
 - Only BUY or HOLD are actionable
 """
 
-        curr_situation = f"{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}"
-        memory_where = {"ticker": ticker} if ticker else None
         memory_threshold = float(config.get("memory_min_similarity", 0.30))
-        past_memories = memory.get_memories(
-            curr_situation,
-            n_matches=2,
-            where=memory_where,
-            min_similarity=memory_threshold,
-        )
-
-        past_memory_str = ""
-        if past_memories:
-            for i, rec in enumerate(past_memories, 1):
-                past_memory_str += rec["recommendation"] + "\n\n"
-        else:
-            past_memory_str = "No past memories found."
+        past_memory_str = format_past_memories(
+            state, memory, min_similarity=memory_threshold
+        ) or "No past memories found."
 
         # ── Phase 2f: Pre-compute position limits ────────────────────────────
         # Inject validated, deterministic limits into the prompt so the LLM
@@ -178,18 +172,35 @@ def create_trader(llm, memory):
 
 ### Liquidity Status for {ticker}
 {"⚠️ LOW LIQUIDITY - Limits already halved above" if low_liquidity else "Normal liquidity - standard limits apply"}
+
+### Trading-Cost Hurdle
+- Round-trip cost (commission + slippage, both sides): ~{round_trip_cost_pct(low_liquidity) * 100.0:.2f}% of notional
+- Take-profit targets and entry zones MUST leave room to clear this cost — a target
+  only a fraction above entry is net-negative after costs. Size take-profits so the
+  net (post-cost) move is worthwhile.
 """
 
 
         # Macro overlay: deterministic EGX macro context.
-        try:
-            from tradingagents.dataflows.macro_provider import format_macro_context_for_prompt
-            macro_section = format_macro_context_for_prompt(state.get("macro_context"))
-        except Exception:
-            macro_section = ""
+        macro_section = build_macro_section(state)
+
+        # Long-only rule for the per-style block: SELL is only available when the
+        # portfolio actually holds shares. (Precomputed to avoid nested-quote
+        # f-string expressions, which are a SyntaxError on Python < 3.12.)
+        if current_position.get("shares", 0) > 0:
+            style_sell_rule = (
+                "This portfolio currently HOLDS shares, so SELL (exit/trim) is available."
+            )
+        else:
+            style_sell_rule = (
+                "This portfolio holds NO shares and EGX is long-only — you must NOT "
+                "output SELL for any style. Use NO TRADE when there is no setup, or "
+                "BUY/HOLD/ACCUMULATE."
+            )
 
         prompt_context = f"""You are an Institutional Trader generating a detailed EXECUTION PLAN for {company_name}.
 
+{point_in_time_notice(state.get("trade_date", ""))}
 {macro_section}
 
 {egx_constraints}
@@ -218,6 +229,29 @@ Based on the investment thesis and analyst reports, create a comprehensive execu
 
 ## Lessons from Past Trades
 {past_memory_str}
+
+## TRADING-STYLE RECOMMENDATIONS (MANDATORY)
+Beyond the single execution plan above, you MUST also produce a SEPARATE, INDEPENDENT
+recommendation for EACH of the following trading styles, so a user can see how this
+SAME stock fits their own horizon. The three styles may legitimately DISAGREE with each
+other and with the headline decision — that is expected and useful.
+
+- **Swing Trader** — horizon ~days to a few weeks. Driven mainly by the TECHNICAL
+  picture (trend, RSI/MACD, support/resistance) and near-term catalysts.
+- **Position Trader** — horizon ~2-6 months. Balances technicals with the fundamental
+  thesis and medium-term catalysts.
+- **Long-Term Investor** — horizon 1+ years. Driven mainly by FUNDAMENTALS, valuation,
+  and structural growth; technicals only inform the accumulation zone.
+
+Rules for EACH style:
+- Pick one Recommendation: BUY, HOLD, SELL, or NO TRADE.
+- {style_sell_rule}
+- If there is genuinely no edge for that horizon, return **NO TRADE** — do NOT force a BUY/SELL.
+- Give an entry zone, an exit (target/take-profit and stop-loss where applicable), an
+  expected holding period, a confidence (high|moderate|low), a risk level (LOW|MEDIUM|HIGH),
+  and a one-line reasoning grounded in the analyst evidence above.
+- All prices are in EGP. Entry/target/stop are STRINGS so they can be ranges
+  (e.g. "144 - 146") or instructions (e.g. "Wait for 140-142"); use "N/A" when not applicable.
 
 ## REQUIRED OUTPUT FORMAT
 You MUST end your analysis with a structured execution plan in this exact JSON format:
@@ -271,6 +305,41 @@ You MUST end your analysis with a structured execution plan in this exact JSON f
             "condition 2"
         ]
     }},
+    "styled_recommendations": {{
+        "swing": {{
+            "style": "Swing Trader",
+            "recommendation": "BUY|HOLD|SELL|NO TRADE",
+            "entry_zone": "e.g. 144 - 146",
+            "target": "e.g. 152",
+            "stop_loss": "e.g. 141",
+            "holding_period": "e.g. 2-3 weeks",
+            "confidence": "high|moderate|low",
+            "risk_level": "LOW|MEDIUM|HIGH",
+            "reasoning": "one line grounded in the evidence"
+        }},
+        "position": {{
+            "style": "Position Trader",
+            "recommendation": "BUY|HOLD|SELL|NO TRADE",
+            "entry_zone": "e.g. Wait for 140-142",
+            "target": "e.g. 160",
+            "stop_loss": "e.g. 135 or N/A",
+            "holding_period": "e.g. 2-6 months",
+            "confidence": "high|moderate|low",
+            "risk_level": "LOW|MEDIUM|HIGH",
+            "reasoning": "one line grounded in the evidence"
+        }},
+        "long_term": {{
+            "style": "Long-Term Investor",
+            "recommendation": "BUY|HOLD|SELL|NO TRADE",
+            "entry_zone": "accumulation range, e.g. 138 - 145",
+            "target": "e.g. long-term appreciation",
+            "stop_loss": "e.g. N/A",
+            "holding_period": "e.g. 1+ years",
+            "confidence": "high|moderate|low",
+            "risk_level": "LOW|MEDIUM|HIGH",
+            "reasoning": "investment thesis in one line"
+        }}
+    }},
     "final_recommendation": "FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**"
 }}
 ```
@@ -300,7 +369,7 @@ Always conclude with: FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**"""
         ]
 
         result = llm.invoke(messages)
-        
+
         # Try to extract structured execution plan
         execution_plan = None
         try:
@@ -320,10 +389,31 @@ Always conclude with: FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**"""
                 "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
             }
 
+        # Extract the per-trading-style recommendations (Swing / Position /
+        # Long-Term). These live at the top level of the same JSON object so the
+        # single LLM call covers them. Surfaced for the dashboard only — they do
+        # NOT feed the live BUY/HOLD/SELL decision path (that stays execution_plan
+        # → risk gate). Long-only is enforced post-hoc below for cash portfolios.
+        styled_recommendations = None
+        if isinstance(execution_plan, dict):
+            styled_recommendations = execution_plan.get("styled_recommendations")
+        if isinstance(styled_recommendations, dict) and current_position.get("shares", 0) == 0:
+            for _style in styled_recommendations.values():
+                if isinstance(_style, dict):
+                    rec = str(_style.get("recommendation") or "").strip().upper()
+                    if rec == "SELL":
+                        # No shares + EGX long-only → SELL is not actionable.
+                        _style["recommendation"] = "NO TRADE"
+                        _style["reasoning"] = (
+                            "Long-only / no open position — SELL not actionable; "
+                            + str(_style.get("reasoning") or "")
+                        ).strip()
+
         return {
             "messages": [result],
             "trader_investment_plan": result.content,
             "execution_plan": execution_plan,
+            "styled_recommendations": styled_recommendations,
             "sender": name,
         }
 

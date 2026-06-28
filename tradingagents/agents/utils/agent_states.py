@@ -99,6 +99,7 @@ class AgentState(MessagesState):
     data_quality: Annotated[Optional[Dict], "Data quality indicators for EGX analysis"]
     confidence_scores: Annotated[Optional[Dict], "Per-analyst confidence scores"]
     technical_analysis: Annotated[Optional[Dict], "Structured output from Market/Technical Analyst"]
+    technical_panel: Annotated[Optional[Dict], _keep_last]  # Full Investing-style technical panel (technical_panel.get_live_panel)
     fundamental_analysis: Annotated[Optional[Dict], "Structured output from Fundamentals Analyst"]
     sentiment_analysis: Annotated[Optional[Dict], "Structured output from News Analyst"]
 
@@ -116,6 +117,11 @@ class AgentState(MessagesState):
     # to the same key in the same super-step as INVALID_CONCURRENT_GRAPH_UPDATE
     # unless a reducer is declared. `_keep_last` makes the resolution explicit.
     execution_plan: Annotated[Optional[Dict], _keep_last]
+
+    # Per-trading-style recommendations (Swing / Position / Long-Term) written by
+    # the Trader. Dashboard-only — NOT on the live decision path. Single writer,
+    # but declare a reducer for super-step write safety.
+    styled_recommendations: Annotated[Optional[Dict], _keep_last]
 
     # Risk assessment: written by Risk Scorer (deterministic checks) and then
     # again by Risk Judge (LLM-augmented). Same reasoning — declare a reducer.

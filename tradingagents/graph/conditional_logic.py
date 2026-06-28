@@ -15,7 +15,17 @@ from tradingagents.dataflows.config import get_config
 
 
 class ConditionalLogic:
-    """Handles conditional logic for determining graph flow."""
+    """Handles conditional logic for determining graph flow.
+
+    DEAD-CODE NOTE (verified 2026-06-18): only the four ``should_continue_<analyst>``
+    tool-loop routers are wired into the compiled graph (``graph/setup.py`` /
+    ``ablation/runner.py``). The debate/risk-routing helpers below
+    (``should_continue_debate``, ``should_continue_risk_analysis``,
+    ``should_execute_after_risk``, ``calculate_conviction_strength``,
+    ``apply_confidence_adjustments``) have **no runtime callers** — the debate is now
+    a linear ``Bull → Bear → Research Manager`` chain and the risk stage uses the
+    deterministic scorer + merged debator. They are retained for reference / external
+    callers only. Do not assume they affect graph behaviour."""
 
     def __init__(self, max_debate_rounds=1, max_risk_discuss_rounds=1):
         """Initialize with configuration parameters."""
@@ -57,6 +67,8 @@ class ConditionalLogic:
     def should_continue_debate(self, state: AgentState) -> str:
         """Determine if debate should continue.
 
+        DEPRECATED — no runtime callers (see class docstring).
+
         NOTE: as of the MEMORY §AA fix the debate is wired as a strict linear
         chain (Bull → Bear → Research Manager) in both ``graph/setup.py`` and
         ``ablation/runner.py``, so this method is no longer used for routing.
@@ -71,7 +83,12 @@ class ConditionalLogic:
         return "Bull Researcher"
 
     def should_continue_risk_analysis(self, state: AgentState) -> str:
-        """Determine if risk analysis should continue."""
+        """Determine if risk analysis should continue.
+
+        DEPRECATED — no runtime callers (see class docstring). The 3-agent
+        Risky/Safe/Neutral round-robin was replaced by the deterministic Risk
+        Scorer + single Merged Risk Debate node.
+        """
         if (
             state["risk_debate_state"]["count"] >= 3 * self.max_risk_discuss_rounds
         ):  # rounds of back-and-forth between 3 agents
@@ -86,6 +103,8 @@ class ConditionalLogic:
         """
         Determine if trade should execute after risk assessment.
         Risk VETO stops execution - this is explicit, not silent.
+
+        DEPRECATED — no runtime callers (see class docstring).
 
         NOTE: This method is available to wire as a conditional edge after
         "Risk Judge" if a post-risk execution node is added to the graph.
@@ -121,7 +140,9 @@ class ConditionalLogic:
         """
         Calculate overall conviction strength from all signals.
         Partial conviction propagates correctly.
-        
+
+        DEPRECATED — no runtime callers (see class docstring).
+
         Returns:
             "high", "moderate", or "low"
         """
@@ -170,6 +191,8 @@ class ConditionalLogic:
         Apply confidence adjustments based on data quality.
         Weak data in ANY analyst reduces downstream confidence.
         This method modifies state in place.
+
+        DEPRECATED — no runtime callers (see class docstring).
         """
         if not self.is_egx:
             return

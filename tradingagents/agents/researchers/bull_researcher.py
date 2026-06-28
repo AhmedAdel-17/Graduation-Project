@@ -1,55 +1,12 @@
 import json
-import re
-from typing import Any, Dict, Optional
 from tradingagents.dataflows.config import get_config
-
-# ---------------------------------------------------------------------------
-# Phase 3 helpers
-# ---------------------------------------------------------------------------
-
-_NO_SIGNAL_PHRASES = (
-    "insufficient data — excluded",
-    "social sentiment: insufficient",
-    "layer_c_status: no_signal",
+from tradingagents.dataflows.social_v2.entities import ticker_display_name
+from tradingagents.agents.utils.temporal import point_in_time_notice
+from tradingagents.agents.utils.agent_context import (
+    format_past_memories,
+    format_sentiment_section,
+    parse_fenced_json,
 )
-
-
-def _format_sentiment_section(
-    sentiment_report: str,
-    blend_result: Optional[Dict[str, Any]],
-) -> str:
-    """Return a researcher-safe sentiment context string.
-
-    If the social analyst excluded sentiment (NO_SIGNAL), returns an instruction
-    to the LLM to omit social sentiment from its thesis entirely.
-    Otherwise, surfaces the blend modifiers (confidence/size multipliers) so
-    the researcher can mention them in execution context — but explicitly states
-    these do NOT change the directional thesis.
-    """
-    report_lower = (sentiment_report or "").lower()
-    is_no_signal = any(phrase in report_lower for phrase in _NO_SIGNAL_PHRASES)
-
-    if is_no_signal:
-        return (
-            "EXCLUDED — insufficient social data. "
-            "Do NOT reference, speculate about, or include social sentiment in your thesis."
-        )
-
-    # Show the narrative and the blend modifiers
-    conf_mult = 1.0
-    size_mult = 1.0
-    blend_audit = "no_blend"
-    if isinstance(blend_result, dict):
-        conf_mult  = float(blend_result.get("confidence_multiplier",  1.0))
-        size_mult  = float(blend_result.get("position_size_multiplier", 1.0))
-        blend_audit = str(blend_result.get("audit", "no_blend"))
-
-    return (
-        f"{sentiment_report or 'No social sentiment data.'}\n\n"
-        f"Sentiment context modifiers (execution only — do NOT use to change thesis direction):\n"
-        f"  confidence×{conf_mult:.2f}  |  position-size×{size_mult:.2f}\n"
-        f"  [{blend_audit}]"
-    )
 
 
 # =============================================================================
@@ -97,32 +54,26 @@ def create_bull_researcher(llm, memory):
         low_liquidity = state.get("low_liquidity", False)
         ticker = state.get("company_of_interest", "")
 
-        curr_situation = f"{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}"
-        memory_where = {"ticker": ticker} if ticker else None
         memory_threshold = float(config.get("memory_min_similarity", 0.30))
-        past_memories = memory.get_memories(
-            curr_situation,
-            n_matches=2,
-            where=memory_where,
-            min_similarity=memory_threshold,
+        past_memory_str = format_past_memories(
+            state, memory, min_similarity=memory_threshold
         )
-
-        past_memory_str = ""
-        for i, rec in enumerate(past_memories, 1):
-            past_memory_str += rec["recommendation"] + "\n\n"
 
         # ── Phase 3 (PR 8): NO_SIGNAL guard ──────────────────────────────────
         # If social sentiment was excluded, replace the raw template with a
         # clear instruction so the LLM does not speculate about social signals.
-        sentiment_section = _format_sentiment_section(
+        sentiment_section = format_sentiment_section(
             sentiment_report, state.get("sentiment_blend_result")
         )
+
+        company_label = ticker_display_name(ticker) if is_egx else ticker
 
         # EGX-specific prompt
         egx_context = ""
         if is_egx:
             egx_context = f"""
 ## EGX Market Context (CRITICAL)
+- Company: {company_label}
 - Market: Egyptian Exchange (EGX)
 - Currency: Egyptian Pound (EGP)
 - Daily price limit: ±10% (circuit breaker)
@@ -138,8 +89,10 @@ def create_bull_researcher(llm, memory):
 - Time required to accumulate/exit position
 """
 
-        prompt = f"""You are a Bull Researcher building an institutional-grade investment thesis advocating for investing in the stock.
+        as_of = state.get("trade_date", "")
+        prompt = f"""You are a Bull Researcher building an institutional-grade investment thesis advocating for investing in {company_label}.
 
+{point_in_time_notice(as_of)}
 {egx_context}
 
 ## Your Task
@@ -158,8 +111,10 @@ You have access to analyst signals — use JSON when available (more token-effic
 ### Fundamental Analysis (Accountant):
 {json.dumps(fundamental_analysis, indent=2) if fundamental_analysis else fundamentals_report}
 
-### News & Sentiment Analysis (Journalist):
+### News Analysis (Journalist) — a DIRECTIONAL input, weigh it explicitly:
 {json.dumps(sentiment_analysis, indent=2) if sentiment_analysis else news_report}
+> In your thesis you MUST explicitly reference the most material news catalyst or
+> risk above (or state that news coverage was silent/low-confidence). Do not ignore it.
 
 ### Social Sentiment (Phase 3 — context modifier, NOT directional input):
 {sentiment_section}
@@ -220,15 +175,9 @@ Now present your compelling bull argument, counter the bear's concerns, and prov
         response = llm.invoke(prompt)
 
         argument = f"Bull Analyst: {response.content}"
-        
+
         # Try to extract structured thesis
-        bull_thesis = None
-        try:
-            json_match = re.search(r'```json\s*(.*?)\s*```', response.content, re.DOTALL)
-            if json_match:
-                bull_thesis = json.loads(json_match.group(1))
-        except (json.JSONDecodeError, AttributeError):
-            bull_thesis = None
+        bull_thesis = parse_fenced_json(response.content)
 
         new_investment_debate_state = {
             "history": history + "\n" + argument,
