@@ -51,6 +51,7 @@ function MainApp() {
         <Routes>
           <Route path="/" element={<Navigate to="/predict" replace />} />
           <Route path="/predict" element={<HomeScreen />} />
+          <Route path="/prediction/:sessionId" element={<HomeScreen />} />
           <Route path="/portfolio" element={<AssistantPage />} />
           <Route path="/portfolio/__blocks" element={<BlocksDevPage />} />
           <Route path="/backtest" element={<BacktestScreen />} />

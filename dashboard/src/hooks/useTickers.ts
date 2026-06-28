@@ -2,12 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { endpoints } from "../services/api";
 import type { Ticker } from "../services/api/types";
 
+// EGX-30 universe — mirrors tradingagents/default_config.EGX_TICKERS. Used only when
+// the /api/test/egx-tickers call fails; names are resolved from egxTickerMeta.ts.
 const FALLBACK_TICKERS: Ticker[] = [
-  "COMI", "EAST", "FWRY", "TMGH", "HRHO", "ETEL",
-  "ABUK", "ADIB", "EFIH", "EGAL", "MFPC", "CCAP",
-  "SKPC", "AMOC", "ESRS", "ORWE", "HELI", "GBCO",
-  "SWDY", "ORAS", "PHDC", "CIEB", "ISPH", "DSCW",
-  "RMDA", "ARCC", "BTFH", "JUFO", "ORHD", "RAYA", "VLMR",
+  "COMI", "ADIB",
+  "TMGH", "HELI", "PHDC", "ORAS", "EMFD", "ORHD",
+  "ABUK", "EAST", "EGAL", "EGCH", "ORWE", "AMOC",
+  "MCQE", "ARCC", "ISPH", "RMDA", "GBCO",
+  "ETEL", "FWRY", "EFIH", "RAYA", "OIH",
+  "HRHO", "BTFH", "CCAP", "VLMR",
+  "JUFO", "EFID",
 ].map((t) => ({ ticker: `${t}.CA`, name: t }));
 
 export function useTickers() {

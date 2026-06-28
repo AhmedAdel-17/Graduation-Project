@@ -13,6 +13,7 @@ import type {
   MemorySearchResponse,
   PredictionResult,
   PromptsResponse,
+  TechnicalPanel,
   ReflectionsResponse,
   ResultsListResponse,
   RlDecisionsResponse,
@@ -45,6 +46,17 @@ export const endpoints = {
   // Full multi-agent pipeline (TradingAgentsGraph end-to-end, 3-8 min)
   runFullPipeline: (ticker: string) =>
     api.post<PredictionResult>("/analyze-full", { ticker }),
+
+  // Reconstructs a PredictionResult for a past session from the audit logs
+  getPastPrediction: (sessionId: string) =>
+    api.get<PredictionResult>(`/prediction/session/${sessionId}`),
+
+  // Full Investing-style technical panel (12 indicators + verdicts + MA grid +
+  // summaries + 5 pivot systems), computed from OHLCV. Optional as_of date.
+  technicalPanel: (ticker: string, asOf?: string) =>
+    api.get<TechnicalPanel>(
+      `/technical-panel/${encodeURIComponent(ticker)}${asOf ? `?as_of=${asOf}` : ""}`
+    ),
 
   // Historical OHLCV
   stockData: (

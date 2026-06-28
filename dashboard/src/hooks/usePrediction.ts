@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { endpoints } from "../services/api";
 import type { PredictionResult } from "../services/api/types";
 
@@ -11,5 +11,13 @@ export function useRunPrediction() {
 export function useRunFullPipeline() {
   return useMutation<PredictionResult, Error, string>({
     mutationFn: (ticker) => endpoints.runFullPipeline(ticker),
+  });
+}
+
+export function usePastPrediction(sessionId?: string) {
+  return useQuery<PredictionResult, Error>({
+    queryKey: ["prediction", sessionId],
+    queryFn: () => endpoints.getPastPrediction(sessionId!),
+    enabled: !!sessionId,
   });
 }

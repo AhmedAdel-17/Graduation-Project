@@ -1,26 +1,37 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowDownRight,
+  ArrowLeft,
   ArrowRight,
   ArrowUpRight,
   Calendar,
+  Check,
   Clock,
   Database,
   FileSearch,
   Inbox,
   Minus,
   Search,
+  Target,
+  X,
 } from "lucide-react";
 import { endpoints } from "../../services/api";
 import type {
+  BacktestDetail,
+  BacktestPrediction,
   BacktestSession,
+  DecisionQualityHorizon,
   ResultSessionSummary,
+  ScenarioComparison,
   SessionTraceEvent,
 } from "../../services/api/types";
 import { useSessionTrace } from "../../hooks/useSessionTrace";
 import { useBacktestDetail } from "../../hooks/useBacktest";
+import { EquityCurve } from "../../components/charts";
 import { cn, formatNumber, formatPercent } from "../../lib/utils";
+import { Markdown } from "../../components/ui/Markdown";
 
 type Tab = "analyses" | "backtests";
 
@@ -29,6 +40,7 @@ export function HistoryScreen() {
   const [query, setQuery] = useState("");
   const [selectedAnalysis, setSelectedAnalysis] = useState<string | null>(null);
   const [selectedBacktest, setSelectedBacktest] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const analysesQ = useQuery({
     queryKey: ["history-results"],
@@ -139,7 +151,7 @@ export function HistoryScreen() {
                 key={s.session_id}
                 row={s}
                 active={selectedAnalysis === s.session_id}
-                onClick={() => setSelectedAnalysis(s.session_id)}
+                onClick={() => navigate(`/prediction/${s.session_id}`)}
               />
             ))}
 
@@ -252,6 +264,14 @@ function AnalysisRow({
             <span className="text-[11.5px] text-stone-500">
               · {row.market}
             </span>
+            <span className={cn(
+              "text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border",
+              row.run_type === "backtest"
+                ? "bg-amber-50 text-amber-700 border-amber-100"
+                : "bg-indigo-50 text-indigo-600 border-indigo-100"
+            )}>
+              {row.run_type === "backtest" ? "Backtest" : "Live"}
+            </span>
           </div>
           <div className="mt-1 flex items-center gap-3 text-[11.5px] text-stone-500">
             <span className="flex items-center gap-1">
@@ -267,12 +287,23 @@ function AnalysisRow({
             </span>
           </div>
         </div>
-        <ArrowRight
-          className={cn(
-            "h-4 w-4 shrink-0 transition-colors",
-            active ? "text-ink" : "text-stone-300"
-          )}
-        />
+        {row.final_decision ? (
+          <span
+            className={cn(
+              "inline-flex items-center px-2.5 py-1 rounded-full border text-[11px] font-semibold uppercase tracking-wider mono shrink-0",
+              verdictChip(row.final_decision)
+            )}
+          >
+            {row.final_decision}
+          </span>
+        ) : (
+          <ArrowRight
+            className={cn(
+              "h-4 w-4 shrink-0 transition-colors",
+              active ? "text-ink" : "text-stone-300"
+            )}
+          />
+        )}
       </div>
     </button>
   );
@@ -320,8 +351,23 @@ function BacktestRow({
             <span className="text-[11.5px] text-stone-500">
               · {row.engine === "llm_multi_agent" ? "LLM multi-agent" : "Classical"}
             </span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-100">
+              Backtest
+            </span>
           </div>
           <div className="mt-1 flex items-center gap-3 text-[11.5px] text-stone-500">
+            {row.start_date && row.end_date && (
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {row.start_date} → {row.end_date}
+              </span>
+            )}
+            {row.ran_at && (
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                ran {formatRelativeTs(row.ran_at)}
+              </span>
+            )}
             <span>{row.total_trades} trades</span>
             {typeof row.metrics?.sharpe_ratio === "number" && (
               <span>Sharpe {formatNumber(row.metrics.sharpe_ratio)}</span>
@@ -418,8 +464,19 @@ function AnalysisDetail({ sessionId }: { sessionId: string }) {
               </span>
             )}
           </div>
-          <div className="mt-6 mono text-[11px] text-stone-500 truncate">
-            session · {s.session_id}
+          <div className="mt-6 flex flex-col gap-3">
+            <div className="mono text-[11px] text-stone-500 truncate">
+              session · {s.session_id}
+            </div>
+            <div>
+              <button
+                onClick={() => window.open(`/prediction/${s.session_id}`, '_blank')}
+                className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-stone-900 text-white text-[13px] font-medium transition-colors hover:bg-stone-800"
+              >
+                View Full Prediction
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -454,8 +511,8 @@ function AnalysisDetail({ sessionId }: { sessionId: string }) {
                       )}
                     </div>
                     {e.opinion_summary && (
-                      <div className="mt-1.5 text-[13.5px] text-ink-2 leading-relaxed whitespace-pre-wrap">
-                        {e.opinion_summary}
+                      <div className="mt-1.5">
+                        <Markdown variant="paper">{e.opinion_summary}</Markdown>
                       </div>
                     )}
                   </div>
@@ -471,6 +528,10 @@ function AnalysisDetail({ sessionId }: { sessionId: string }) {
 
 function BacktestDetailPanel({ sessionId }: { sessionId: string }) {
   const { data, isLoading } = useBacktestDetail(sessionId);
+  // When a single prediction is opened, we show its full reasoning trace
+  // (the SAME component used for live runs) with a back button.
+  const [openPrediction, setOpenPrediction] = useState<string | null>(null);
+
   if (isLoading) return <DetailSkeleton />;
   if (!data) {
     return (
@@ -480,6 +541,22 @@ function BacktestDetailPanel({ sessionId }: { sessionId: string }) {
       />
     );
   }
+
+  if (openPrediction) {
+    return (
+      <div className="space-y-4 anim-fade-up">
+        <button
+          onClick={() => setOpenPrediction(null)}
+          className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-stone-600 hover:text-ink"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to backtest
+        </button>
+        {/* Full live-style reasoning trace for this single backtest prediction. */}
+        <AnalysisDetail sessionId={openPrediction} />
+      </div>
+    );
+  }
+
   const m = data.metrics ?? {};
   const ret = m.total_return_pct as number | undefined;
   const profit = typeof ret === "number" ? ret >= 0 : null;
@@ -495,6 +572,14 @@ function BacktestDetailPanel({ sessionId }: { sessionId: string }) {
   const retClass =
     profit === true ? "text-emerald-700" : profit === false ? "text-rose-700" : "text-ink";
 
+  const profile = data.run_config?.decision_profile;
+  const equity = (data.daily_portfolio ?? [])
+    .map((p) => ({ date: p.date, value: Number(p.equity ?? p.value ?? 0) }))
+    .filter((p) => p.date && Number.isFinite(p.value) && p.value > 0);
+  const bench = (data.benchmark_history ?? [])
+    .map((p) => ({ date: p.date, value: Number(p.equity ?? p.value ?? 0) }))
+    .filter((p) => p.date && Number.isFinite(p.value) && p.value > 0);
+
   return (
     <div className="space-y-5 anim-fade-up">
       <div className="relative overflow-hidden card-elevated grain">
@@ -503,6 +588,23 @@ function BacktestDetailPanel({ sessionId }: { sessionId: string }) {
         <div className="relative p-7">
           <div className="flex items-center gap-2 text-[10.5px] tracking-[0.18em] uppercase text-stone-500">
             <Database className="h-3 w-3" /> Backtest replay
+            {profile && (
+              <span
+                className={cn(
+                  "ml-1 normal-case tracking-normal px-1.5 py-0.5 rounded text-[10px] font-semibold border",
+                  profile === "tuned"
+                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                    : "bg-stone-100 text-stone-600 border-stone-200"
+                )}
+                title={
+                  profile === "tuned"
+                    ? "Disclosed sensitivity config: lower required-return assumption in the decision context only (Sharpe/metrics risk-free rate unchanged)."
+                    : "Untouched live decision logic."
+                }
+              >
+                {profile === "tuned" ? "tuned profile" : "live-faithful"}
+              </span>
+            )}
           </div>
           <div className="mt-4 flex items-baseline gap-3 flex-wrap">
             <div className="display text-[28px] font-semibold tracking-tight text-ink">
@@ -523,16 +625,377 @@ function BacktestDetailPanel({ sessionId }: { sessionId: string }) {
           </div>
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-px bg-stone-200 rounded-2xl overflow-hidden border border-stone-200">
             <MiniTile label="Sharpe" value={typeof m.sharpe_ratio === "number" ? formatNumber(m.sharpe_ratio) : "—"} />
+            <MiniTile label="Sortino" value={typeof m.sortino_ratio === "number" ? formatNumber(m.sortino_ratio) : "—"} />
             <MiniTile label="Max DD" value={typeof m.max_drawdown_pct === "number" ? formatPercent(m.max_drawdown_pct, 2, false) : "—"} valueClass="text-rose-700" />
-            <MiniTile label="Win rate" value={typeof m.win_rate === "number" ? formatPercent(m.win_rate, 1, false) : "—"} valueClass="text-emerald-700" />
+            <MiniTile label="vs EGX30 α" value={typeof m.alpha_pct === "number" ? formatPercent(m.alpha_pct, 2) : "—"} />
             <MiniTile label="Trades" value={typeof m.total_trades === "number" ? String(Math.round(m.total_trades)) : "—"} />
             <MiniTile label="Final equity" value={typeof m.final_equity === "number" ? formatNumber(m.final_equity) : "—"} />
-            <MiniTile label="Initial" value={typeof m.initial_capital === "number" ? formatNumber(m.initial_capital) : "—"} />
           </div>
           <div className="mt-5 mono text-[11px] text-stone-500 truncate">
             session · {data.session_id}
           </div>
         </div>
+      </div>
+
+      {/* Two-scenario comparison (Follow the AI vs EGX30) */}
+      {data.scenario_comparison && (
+        <ScenarioComparisonCard sc={data.scenario_comparison} />
+      )}
+
+      {/* Equity curve vs EGX30 benchmark */}
+      {equity.length > 1 && (
+        <div className="card overflow-hidden">
+          <div className="px-5 py-3 border-b border-stone-100 flex items-center justify-between">
+            <div className="display text-[14px] font-semibold text-ink">Equity curve</div>
+            <span className="text-[11px] text-stone-500">
+              strategy <span className="text-emerald-600">━</span>
+              {bench.length > 1 && <> · EGX30 <span className="text-stone-400">┄</span></>}
+            </span>
+          </div>
+          <div className="p-3">
+            <EquityCurve equity={equity} benchmark={bench.length > 1 ? bench : undefined} height={240} />
+          </div>
+        </div>
+      )}
+
+      {/* Decision-quality summary (the "skillful, not random" evidence) */}
+      <DecisionQualityCard detail={data} />
+
+      {/* Per-prediction list — click to open the full reasoning trace */}
+      <PredictionsList
+        predictions={data.predictions ?? []}
+        onOpen={(sid) => sid && setOpenPrediction(sid)}
+      />
+    </div>
+  );
+}
+
+/* ── Scenario comparison (Follow the AI vs EGX30) ───────────────────────── */
+
+function ScenarioComparisonCard({ sc }: { sc: ScenarioComparison }) {
+  const follow = sc.follow_return_pct ?? 0;
+  const index = sc.index_return_pct ?? null;
+  const beat = sc.followed_beat_index;
+  return (
+    <div className="card overflow-hidden">
+      <div className="px-5 py-3 border-b border-stone-100 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Target className="h-3.5 w-3.5 text-stone-500" />
+          <div className="display text-[14px] font-semibold text-ink">
+            Follow the AI vs. buy the index
+          </div>
+        </div>
+        {beat != null && (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-semibold",
+              beat
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : "bg-rose-50 text-rose-700 border-rose-200"
+            )}
+          >
+            {beat ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+            {beat ? "AI beat the index" : "Index won"}
+          </span>
+        )}
+      </div>
+      <div className="p-5 space-y-4">
+        <div className="text-[12.5px] text-ink-2">
+          On <span className="mono">{sc.start}</span> the system predicted{" "}
+          <span
+            className={cn(
+              "inline-flex items-center px-1.5 py-0.5 rounded border text-[11px] font-semibold uppercase mono",
+              verdictChip(sc.predicted_direction || sc.decision)
+            )}
+          >
+            {sc.predicted_direction || sc.decision}
+          </span>{" "}
+          — you {sc.action_taken}. Outcome by <span className="mono">{sc.end}</span>:
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <ScenarioTile
+            label="Follow the AI"
+            value={follow}
+            sub={
+              sc.decision === "BUY"
+                ? `${sc.ticker} ${fmtPct(sc.stock_return_pct)} − costs`
+                : "stayed in cash (0%)"
+            }
+            highlight
+          />
+          <ScenarioTile
+            label="Buy EGX30 index"
+            value={index}
+            sub="market benchmark"
+          />
+        </div>
+        {sc.outperformance_pct != null && (
+          <div className="text-[12px] text-stone-600">
+            Outperformance:{" "}
+            <span
+              className={cn(
+                "font-semibold mono",
+                sc.outperformance_pct >= 0 ? "text-emerald-700" : "text-rose-700"
+              )}
+            >
+              {sc.outperformance_pct >= 0 ? "+" : ""}
+              {sc.outperformance_pct.toFixed(2)}%
+            </span>
+          </div>
+        )}
+        {sc.rationale && (
+          <p className="text-[12px] text-ink-3 leading-relaxed border-l-2 border-stone-200 pl-3">
+            {sc.rationale}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ScenarioTile({
+  label,
+  value,
+  sub,
+  highlight,
+}: {
+  label: string;
+  value: number | null;
+  sub?: string;
+  highlight?: boolean;
+}) {
+  const v = value;
+  const cls = v == null ? "text-stone-400" : v >= 0 ? "text-emerald-700" : "text-rose-700";
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border p-4",
+        highlight ? "border-stone-900/15 bg-stone-50" : "border-stone-200 bg-white"
+      )}
+    >
+      <div className="eyebrow text-stone-500">{label}</div>
+      <div className={cn("display-num text-[28px] font-semibold leading-none mt-1.5", cls)}>
+        {v == null ? "—" : `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`}
+      </div>
+      {sub && <div className="text-[11px] text-stone-500 mt-1.5">{sub}</div>}
+    </div>
+  );
+}
+
+function fmtPct(v?: number): string {
+  return v == null ? "—" : `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
+}
+
+/* ── Decision-quality + predictions ────────────────────────────────────── */
+
+function DecisionQualityCard({ detail }: { detail: BacktestDetail }) {
+  const dq = detail.decision_quality;
+  const primary = dq?.primary_horizon_days ?? 10;
+  const h: DecisionQualityHorizon | undefined = dq?.horizons?.[String(primary)];
+  if (!dq || !h || !h.n_evaluated) {
+    return (
+      <div className="card p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <Target className="h-3.5 w-3.5 text-stone-500" />
+          <div className="display text-[14px] font-semibold text-ink">Decision quality</div>
+        </div>
+        <p className="text-[12.5px] text-stone-500">
+          No scoreable decisions yet (forward returns unavailable for this window).
+        </p>
+      </div>
+    );
+  }
+  const hit = h.actionable_hit_rate;
+  const random = h.baseline_random?.mean;
+  const p = h.actionable_binomial_p_vs_50pct;
+  const ci =
+    h.actionable_ci_lo != null && h.actionable_ci_hi != null
+      ? `${(h.actionable_ci_lo * 100).toFixed(0)}–${(h.actionable_ci_hi * 100).toFixed(0)}%`
+      : null;
+  const dist = dq.action_distribution ?? {};
+
+  return (
+    <div className="card overflow-hidden">
+      <div className="px-5 py-3 border-b border-stone-100 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Target className="h-3.5 w-3.5 text-stone-500" />
+          <div className="display text-[14px] font-semibold text-ink">
+            Decision quality · {primary}-day horizon
+          </div>
+        </div>
+        <span className="mono text-[11px] text-stone-500">{h.n_evaluated} scored</span>
+      </div>
+      <div className="p-5 space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-stone-200 rounded-xl overflow-hidden border border-stone-200">
+          <MiniTile
+            label="Actionable hit-rate"
+            value={hit != null ? `${(hit * 100).toFixed(0)}%` : "—"}
+            valueClass="text-emerald-700"
+          />
+          <MiniTile label="95% CI" value={ci ?? "—"} />
+          <MiniTile
+            label="Info. Coeff."
+            value={h.information_coefficient != null ? h.information_coefficient.toFixed(2) : "—"}
+          />
+          <MiniTile
+            label="vs random"
+            value={random != null ? `${(random * 100).toFixed(0)}%` : "—"}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2 text-[11.5px]">
+          {p != null && (
+            <span
+              className={cn(
+                "px-2 py-1 rounded-full border",
+                p < 0.05
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-stone-50 text-stone-600 border-stone-200"
+              )}
+            >
+              binomial p {p < 0.001 ? "< 0.001" : `= ${p.toFixed(3)}`} vs coin-flip
+            </span>
+          )}
+          <span className="px-2 py-1 rounded-full border border-stone-200 bg-stone-50 text-stone-600">
+            BUY {dist.BUY ?? 0} · HOLD {dist.HOLD ?? 0} · SELL {dist.SELL ?? 0}
+          </span>
+        </div>
+        {h.confusion_matrix && (
+          <ConfusionMini cm={h.confusion_matrix} />
+        )}
+        <p className="text-[11px] text-stone-400 leading-relaxed">
+          Forward returns computed post-hoc from realized prices (leak-safe; never
+          fed back to the agents). "vs random" is a Monte-Carlo agent drawing the
+          same action mix.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ConfusionMini({
+  cm,
+}: {
+  cm: Record<string, { UP: number; FLAT: number; DOWN: number }>;
+}) {
+  const rows = ["BUY", "HOLD", "SELL"];
+  const cols: ("UP" | "FLAT" | "DOWN")[] = ["UP", "FLAT", "DOWN"];
+  return (
+    <div>
+      <div className="eyebrow text-stone-500 mb-1.5">Confusion (decision × realized move)</div>
+      <table className="w-full text-[11.5px] mono border border-stone-200 rounded-lg overflow-hidden">
+        <thead>
+          <tr className="bg-stone-50 text-stone-500">
+            <th className="text-left px-2 py-1 font-medium"> </th>
+            {cols.map((c) => (
+              <th key={c} className="px-2 py-1 text-right font-medium">{c}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r} className="border-t border-stone-100">
+              <td className="px-2 py-1 text-stone-600 font-semibold">{r}</td>
+              {cols.map((c) => {
+                // Diagonal = correct: BUY→UP, HOLD→FLAT, SELL→DOWN.
+                const correct =
+                  (r === "BUY" && c === "UP") ||
+                  (r === "HOLD" && c === "FLAT") ||
+                  (r === "SELL" && c === "DOWN");
+                const v = cm[r]?.[c] ?? 0;
+                return (
+                  <td
+                    key={c}
+                    className={cn(
+                      "px-2 py-1 text-right",
+                      v > 0 && correct
+                        ? "bg-emerald-50 text-emerald-700 font-semibold"
+                        : v > 0
+                        ? "text-stone-600"
+                        : "text-stone-300"
+                    )}
+                  >
+                    {v}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PredictionsList({
+  predictions,
+  onOpen,
+}: {
+  predictions: BacktestPrediction[];
+  onOpen: (sessionId: string | null | undefined) => void;
+}) {
+  if (!predictions.length) return null;
+  return (
+    <div className="card overflow-hidden">
+      <div className="px-5 py-3 border-b border-stone-100 flex items-center justify-between">
+        <div className="display text-[14px] font-semibold text-ink">
+          Predictions ({predictions.length})
+        </div>
+        <span className="text-[11px] text-stone-500">click to inspect the full reasoning</span>
+      </div>
+      <div className="divide-y divide-stone-100">
+        {predictions.map((p, i) => {
+          const fwd = p.forward_return_10d ?? p.forward_return_5d ?? p.forward_return_20d;
+          const clickable = Boolean(p.session_id);
+          return (
+            <button
+              key={`${p.date}-${i}`}
+              disabled={!clickable}
+              onClick={() => onOpen(p.session_id)}
+              className={cn(
+                "w-full text-left px-5 py-3 flex items-center gap-3 transition-colors",
+                clickable ? "hover:bg-stone-50 cursor-pointer" : "cursor-default opacity-80"
+              )}
+            >
+              <span className="mono text-[12px] text-stone-500 w-[88px] shrink-0">{p.date}</span>
+              <span
+                className={cn(
+                  "inline-flex items-center px-2 py-0.5 rounded-full border text-[10.5px] font-semibold uppercase tracking-wider mono shrink-0",
+                  verdictChip(p.decision)
+                )}
+              >
+                {p.decision}
+              </span>
+              {p.correct != null && (
+                <span
+                  className={cn(
+                    "inline-flex items-center justify-center h-4 w-4 rounded-full shrink-0",
+                    p.correct ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                  )}
+                  title={p.correct ? "Call matched the realized move" : "Call missed the realized move"}
+                >
+                  {p.correct ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                </span>
+              )}
+              <span className="flex-1" />
+              {typeof fwd === "number" && (
+                <span
+                  className={cn(
+                    "mono text-[11.5px]",
+                    fwd > 0 ? "text-emerald-600" : fwd < 0 ? "text-rose-600" : "text-stone-500"
+                  )}
+                  title="Realized forward return at the primary horizon"
+                >
+                  {fwd > 0 ? "+" : ""}{fwd.toFixed(2)}%
+                </span>
+              )}
+              {clickable ? (
+                <ArrowRight className="h-3.5 w-3.5 text-stone-300 shrink-0" />
+              ) : (
+                <span className="text-[10px] text-stone-400 shrink-0">no trace</span>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -618,6 +1081,15 @@ function groupEvents(events: SessionTraceEvent[]) {
     agent,
     events: evs,
   }));
+}
+
+function verdictChip(decision: string) {
+  const d = decision.toUpperCase();
+  if (d === "BUY" || d === "STRONG_BUY")
+    return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (d === "SELL" || d === "STRONG_SELL")
+    return "bg-rose-50 text-rose-700 border-rose-200";
+  return "bg-stone-100 text-stone-600 border-stone-200";
 }
 
 function prettyAgent(name: string) {

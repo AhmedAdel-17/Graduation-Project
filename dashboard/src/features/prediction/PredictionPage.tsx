@@ -13,6 +13,7 @@ import { useRunPrediction } from "../../hooks/usePrediction";
 import { useStockData } from "../../hooks/useStockData";
 import { PredictionCard } from "./PredictionCard";
 import { ThesisPanel } from "./ThesisPanel";
+import { TechnicalPanelSection } from "./TechnicalPanelSection";
 
 export function PredictionPage() {
   const ticker = useAppStore((s) => s.selectedTicker);
@@ -142,6 +143,7 @@ export function PredictionPage() {
           ) : result && !result.error ? (
             <>
               <PredictionCard result={result} />
+              <TechnicalPanelSection data={result.technical_panel} />
               {rec && <ThesisPanel rec={rec} />}
             </>
           ) : (

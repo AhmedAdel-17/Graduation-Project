@@ -80,10 +80,33 @@ export interface StockDataResponse {
 export type Signal = "BUY" | "SELL" | "HOLD" | "STRONG_BUY" | "STRONG_SELL" | string;
 export type Confidence = "HIGH" | "MEDIUM" | "LOW" | string;
 
+// One trading-style-specific recommendation produced by the Trader / Portfolio
+// Manager. Prices are strings so they can be ranges ("144 - 146") or
+// instructions ("Wait for 140-142"). Mirrors trader.py styled_recommendations.
+export interface StyledRecommendation {
+  style?: string;
+  recommendation?: string; // BUY | HOLD | SELL | NO TRADE
+  entry_zone?: string;
+  target?: string;
+  stop_loss?: string;
+  holding_period?: string;
+  confidence?: string;
+  risk_level?: string;
+  reasoning?: string;
+}
+
+export interface StyledRecommendations {
+  swing?: StyledRecommendation;
+  position?: StyledRecommendation;
+  long_term?: StyledRecommendation;
+  [k: string]: StyledRecommendation | undefined;
+}
+
 export interface Recommendation {
   signal?: Signal;
   confidence?: Confidence;
   risk?: string;
+  time_horizon?: string | null;
   target_price?: number | null;
   stop_loss?: number | null;
   bull_case?: string;
@@ -91,6 +114,7 @@ export interface Recommendation {
   neutral_case?: string;
   rationale?: string;
   recommendation?: string;
+  styled_recommendations?: StyledRecommendations | null;
 }
 
 export interface PriceBlock {
@@ -107,6 +131,19 @@ export interface IndicatorsBlock {
   trend?: string;
 }
 
+/** Flat technical-panel row (values + verdicts + MA grid + summaries + pivot levels).
+ *  Keys e.g. rsi_14, rsi_signal, stoch_k_9_6, sma_50, sma_50_signal, ind_summary,
+ *  overall_summary, pivot_classic_P … See data/egx30_signals/README.md. */
+export type TechnicalPanelData = Record<string, number | string | null>;
+
+export interface TechnicalPanel {
+  ticker?: string;
+  as_of?: string;
+  bars?: number;
+  error?: string | null;
+  panel?: TechnicalPanelData | null;
+}
+
 export interface PredictionResult {
   error?: string;
   session_id?: string;
@@ -116,6 +153,7 @@ export interface PredictionResult {
   indicators?: IndicatorsBlock;
   recommendation?: Recommendation;
   price_history?: StockBar[];
+  technical_panel?: TechnicalPanel | null;
   llm_error?: string | null;
   status?: string;
   // Allow arbitrary extra keys
@@ -166,6 +204,20 @@ export interface BenchmarkBlock {
   [k: string]: unknown;
 }
 
+// Post-hoc directional accuracy ("was each call right?"). Computed AFTER the
+// backtest from realized forward moves; reporting-only, never fed to the agents
+// (leak-safe). See scripts/backtester.py::_calculate_directional_accuracy.
+export interface DirectionalAccuracy {
+  horizon?: string;
+  hold_band_pct?: number;
+  evaluated_decisions?: number;
+  overall_hit_rate?: number | null;
+  actionable_hit_rate?: number | null;
+  by_decision?: Record<string, { n: number; correct: number }>;
+  note?: string;
+  detail?: unknown[];
+}
+
 // Trader's structured exit plan attached to each BUY (and passed through
 // on SELL). Shape mirrors execution_plan.exit_logic from the agent graph.
 export interface ExitPlan {
@@ -194,6 +246,11 @@ export interface BacktestAuditEntry {
   date?: string;
   price?: number;
   parsed_decision?: string;
+  /** "agent_error" / "data_fetch_failed" / etc. when the evaluation did NOT
+   *  complete — such rows carry a placeholder HOLD and are not real verdicts. */
+  decision_status?: string;
+  error_class?: string;
+  error_message?: string;
   decision_path?: string;
   confidence?: number;
   risk_action?: string;
@@ -256,6 +313,11 @@ export interface BacktestSession {
   engine: "llm_multi_agent" | "classical_technical";
   metrics: BacktestMetrics;
   total_trades: number;
+  /** Backtest window (first/last equity-curve bar). */
+  start_date?: string | null;
+  end_date?: string | null;
+  /** When the user ran this backtest (parsed from the report filename). */
+  ran_at?: string | null;
 }
 
 export interface BacktestListResponse {
@@ -345,10 +407,98 @@ export interface ResultSessionSummary {
   trade_date: string;
   market: string;
   timestamp: string;
+  /** 'live' | 'backtest' — history lists only live runs. */
+  run_type?: string | null;
+  /** Final verdict token (BUY / HOLD / SELL), when available. */
+  final_decision?: string | null;
+  confidence_overall?: number | null;
+  risk_veto?: boolean | null;
 }
 
 export interface ResultsListResponse {
   sessions: ResultSessionSummary[];
+}
+
+// ── Decision-quality evaluation (thesis "skillful, not random") ────────────
+// Emitted by tradingagents/backtest/decision_metrics.compute_decision_quality.
+// Forward returns are computed post-hoc from the price series — leak-safe.
+export interface DecisionQualityHorizon {
+  horizon_days: number;
+  n_evaluated: number;
+  overall_hit_rate?: number | null;
+  actionable_n: number;
+  actionable_hit_rate?: number | null;
+  actionable_ci_lo?: number | null;
+  actionable_ci_hi?: number | null;
+  actionable_binomial_p_vs_50pct?: number | null;
+  information_coefficient?: number | null;
+  ic_p_value?: number | null;
+  by_decision?: Record<string, { n: number; correct: number; hit_rate?: number | null }>;
+  confusion_matrix?: Record<string, { UP: number; FLAT: number; DOWN: number }>;
+  base_rate_up?: number | null;
+  baseline_always_buy_hit_rate?: number | null;
+  baseline_random?: { mean: number; std: number; p95: number };
+}
+
+export interface DecisionQuality {
+  method?: string;
+  hold_band_pct?: number;
+  primary_horizon_days?: number;
+  n_decisions?: number;
+  action_distribution?: Record<string, number>;
+  horizons?: Record<string, DecisionQualityHorizon>;
+  calibration_primary_horizon?: { bucket: string; n: number; hit_rate?: number | null }[];
+  note?: string;
+}
+
+// One scored prediction (per evaluation date). session_id links to the full
+// reasoning trace (/api/sessions/{session_id}/trace) — the dashboard opens it
+// in the same live-style detail screen.
+export interface BacktestPrediction {
+  date: string;
+  session_id?: string | null;
+  decision: string;
+  confidence?: number | null;
+  correct?: boolean | null;
+  realized_direction?: string | null;
+  primary_horizon_days?: number;
+  forward_return_5d?: number | null;
+  forward_return_10d?: number | null;
+  forward_return_20d?: number | null;
+  [k: string]: unknown;
+}
+
+// Single-decision event study: Follow-the-AI vs EGX30 index over a window.
+// Emitted by scripts/scenario_backtest.py.
+export interface ScenarioComparison {
+  ticker: string;
+  start: string;
+  end: string;
+  decision: string;
+  /** Raw directional view (BUY/SELL/HOLD) before EGX long-only rewrote SELL→HOLD. */
+  predicted_direction?: string;
+  session_id?: string | null;
+  confidence?: number | null;
+  rationale?: string | null;
+  action_taken?: string;
+  price_start?: number;
+  price_end?: number;
+  stock_return_pct?: number;
+  follow_return_pct?: number;
+  index_return_pct?: number | null;
+  outperformance_pct?: number | null;
+  followed_beat_index?: boolean | null;
+  round_trip_cost_pct?: number;
+}
+
+// Disclosed run configuration (live_faithful vs tuned sensitivity profile).
+export interface BacktestRunConfig {
+  decision_profile?: string;
+  decision_rfr_override?: number | null;
+  initial_capital?: number;
+  start_date?: string | null;
+  end_date?: string | null;
+  analysts?: string[] | null;
 }
 
 // ── /api/backtests/{session_id} (PR7) ──────────────────────────────────────
@@ -368,6 +518,13 @@ export interface BacktestDetail {
   buyhold_history?: EquityPoint[];
   // Structured EGX30 alignment block (see BenchmarkBlock).
   benchmark?: BenchmarkBlock;
+  // Post-hoc directional hit-rate ("was each call right?"); leak-safe.
+  directional_accuracy?: DirectionalAccuracy;
+  // Decision-quality block + per-prediction drill-down rows (thesis evidence).
+  decision_quality?: DecisionQuality | null;
+  predictions?: BacktestPrediction[];
+  run_config?: BacktestRunConfig | null;
+  scenario_comparison?: ScenarioComparison | null;
   audit_log?: unknown[];
   cost_model?: Record<string, unknown>;
   [k: string]: unknown;

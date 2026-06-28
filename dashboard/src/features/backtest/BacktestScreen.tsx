@@ -24,6 +24,7 @@ import type {
   BacktestSession,
   BacktestTrade,
   BenchmarkBlock,
+  DirectionalAccuracy,
   ExitPlan,
   ThesisSummary,
 } from "../../services/api/types";
@@ -32,7 +33,10 @@ import { TickerPicker } from "../shared/TickerPicker";
 import { DatePicker } from "../shared/DatePicker";
 import { cn, formatNumber, formatPercent } from "../../lib/utils";
 
-const DEFAULT_ANALYSTS = ["market", "fundamentals", "news", "social"];
+// Backtests run market + fundamentals only — there is no historical EGX news
+// archive and the social pipeline returns NO_SIGNAL for past dates, so those
+// analysts add cost without signal. The backend enforces this regardless.
+const DEFAULT_ANALYSTS = ["market", "fundamentals"];
 
 function todayIso() {
   const t = new Date();
@@ -142,7 +146,6 @@ export function BacktestScreen() {
         start_date: startDate,
         end_date: endDate,
         initial_capital: budget,
-        interval: 20,
         selected_analysts: DEFAULT_ANALYSTS,
       });
       startedAtRef.current = Date.now();
@@ -184,9 +187,10 @@ export function BacktestScreen() {
           <span className="italic">live-fire</span> against history.
         </h1>
         <p className="text-[14px] text-ink-3 mt-3 max-w-xl leading-relaxed">
-          Pick a window and a starting budget. The same multi-agent pipeline
-          runs across every interval, executes inside EGX limits, and reports a
-          full attribution.
+          Pick a ticker and a date window. On the start date the multi-agent
+          pipeline runs once (market + fundamentals, local data only). At the
+          end date we score the prediction against what actually happened and
+          against the EGX30 index.
         </p>
       </header>
 
@@ -357,8 +361,69 @@ export function BacktestScreen() {
             benchmarkReturnPct={metrics.benchmark_return_pct as number | undefined}
             benchmarkBlock={detail?.benchmark}
           />
+
+          {detail?.directional_accuracy &&
+            (detail.directional_accuracy.evaluated_decisions ?? 0) > 0 && (
+              <>
+                <SectionLabel index="05" label="Prediction accuracy" />
+                <DirectionalAccuracyCard data={detail.directional_accuracy} />
+              </>
+            )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Post-hoc directional hit-rate: "was each BUY/SELL/HOLD call right?" Computed
+ *  after the run from realized forward moves — never fed back to the agents. */
+function DirectionalAccuracyCard({ data }: { data: DirectionalAccuracy }) {
+  const pct = (v?: number | null) =>
+    typeof v === "number" ? `${(v * 100).toFixed(1)}%` : "—";
+  const byDec = data.by_decision || {};
+  const rows = (["BUY", "SELL", "HOLD"] as const)
+    .map((k) => ({ k, ...(byDec[k] || { n: 0, correct: 0 }) }))
+    .filter((r) => r.n > 0);
+
+  return (
+    <section className="card overflow-hidden anim-fade-up">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-stone-200/80 dark:bg-[var(--hairline)]">
+        <Stat label="Overall hit-rate" value={pct(data.overall_hit_rate)} />
+        <Stat
+          label="Actionable (BUY/SELL)"
+          value={pct(data.actionable_hit_rate)}
+        />
+        <Stat label="Decisions scored" value={String(data.evaluated_decisions ?? 0)} />
+        <Stat label="HOLD band" value={`±${data.hold_band_pct ?? 0}%`} />
+      </div>
+      <div className="divide-y divide-stone-100 dark:divide-[var(--hairline)]">
+        {rows.map((r) => (
+          <div key={r.k} className="flex items-center gap-3 px-5 py-2.5 text-[13px]">
+            <span className="font-semibold w-14">{r.k}</span>
+            <span className="text-ink-3">
+              {r.correct}/{r.n} correct
+            </span>
+            <span className="ml-auto mono font-semibold">
+              {r.n > 0 ? `${((r.correct / r.n) * 100).toFixed(0)}%` : "—"}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="px-5 py-2.5 border-t border-stone-200/80 dark:border-[var(--hairline)] text-[11px] text-ink-3">
+        Forward move to the next evaluation date. Computed after the run for
+        reporting only — never seen by the agents (no look-ahead).
+      </div>
+    </section>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-white dark:bg-[var(--paper)] p-4">
+      <div className="eyebrow text-stone-500">{label}</div>
+      <div className="display-num text-[20px] font-semibold mt-1.5 text-ink">
+        {value}
+      </div>
     </div>
   );
 }
@@ -466,11 +531,12 @@ function ConfigPanel({
       )}
 
       <div className="mt-6 pt-5 border-t border-stone-100 flex items-center justify-between gap-4 flex-wrap">
-        <div className="text-[12px] text-stone-500 flex items-center gap-2">
+        <div className="text-[12px] text-stone-500 flex items-center gap-2 flex-wrap">
           <Hash className="h-3.5 w-3.5" />
           Analysts:{" "}
-          <span className="text-ink-2 font-medium">
-            market · fundamentals · news · social
+          <span className="text-ink-2 font-medium">market · fundamentals</span>
+          <span className="text-stone-400">
+            · news &amp; social disabled for backtests (no historical archive)
           </span>
         </div>
         <button
@@ -1012,6 +1078,9 @@ interface DecisionRow {
   decision: string;
   confidence: number | null;
   reasoning: string | null;
+  /** True when the agent run errored (e.g. LLM rate-limit) — the "HOLD" is a
+   *  placeholder, not a real verdict. */
+  failed?: boolean;
 }
 
 interface DecisionSummary {
@@ -1019,6 +1088,7 @@ interface DecisionSummary {
   holdCount: number;
   buyCount: number;
   sellCount: number;
+  failedCount: number;
   total: number;
 }
 
@@ -1030,6 +1100,8 @@ function decisionBadgeClass(decision: string): string {
       return "bg-red-100 text-red-800 border-red-200";
     case "HOLD":
       return "bg-amber-100 text-amber-800 border-amber-200";
+    case "FAILED":
+      return "bg-stone-800 text-white border-stone-800";
     default:
       return "bg-stone-100 text-stone-700 border-stone-200";
   }
@@ -1042,8 +1114,10 @@ function decisionBadgeClass(decision: string): string {
  * row of zeros.
  */
 function DecisionTimeline({ decisions }: { decisions: DecisionSummary }) {
-  const { timeline, holdCount, buyCount, sellCount, total } = decisions;
-  const allHold = total > 0 && holdCount === total;
+  const { timeline, holdCount, buyCount, sellCount, failedCount, total } = decisions;
+  const completed = total - failedCount;
+  const allHold = completed > 0 && holdCount === completed && failedCount === 0;
+  const mostlyFailed = failedCount > 0 && failedCount >= total * 0.5;
   return (
     <div className="rounded-lg border border-stone-200 bg-white p-4">
       <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -1075,8 +1149,27 @@ function DecisionTimeline({ decisions }: { decisions: DecisionSummary }) {
         >
           {sellCount} SELL
         </span>
+        {failedCount > 0 ? (
+          <span
+            className={cn(
+              "rounded-full border px-2 py-0.5 text-[11.5px] font-medium",
+              decisionBadgeClass("FAILED")
+            )}
+          >
+            {failedCount} FAILED
+          </span>
+        ) : null}
       </div>
-      {allHold ? (
+      {mostlyFailed ? (
+        <div className="mb-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-[12.5px] text-rose-800 leading-relaxed">
+          <strong>This run is unreliable.</strong> {failedCount} of {total}{" "}
+          evaluations failed before the agents reached a verdict (typically an
+          LLM rate-limit/timeout) and were recorded as placeholder HOLDs — not
+          real decisions. The 0-trade / flat-return result reflects the failure,
+          not the strategy. Re-run with <code>--resume</code> or a less throttled
+          LLM endpoint.
+        </div>
+      ) : allHold ? (
         <div className="mb-3 text-[12.5px] text-ink-2 leading-relaxed">
           The agents reached a <strong>HOLD</strong> verdict at every
           checkpoint — a deliberate decision to stay in cash, not a missing
@@ -1606,23 +1699,42 @@ function deriveAgentInsights(
   // A HOLD is a real, reasoned verdict — capture every evaluation so the UI
   // never renders an unexplained row of zeros.
   const decisions = auditLog
-    .map((a) => ({
-      date: typeof a.date === "string" ? a.date : "",
-      decision: (String(a.parsed_decision || "").toUpperCase() || "—") as string,
-      confidence: typeof a.confidence === "number" ? a.confidence : null,
-      reasoning:
-        meaningfulReason(a.judge_rationale) ?? meaningfulReason(a.reasoning),
-    }))
+    .map((a) => {
+      // A run that errored out (e.g. LLM rate-limit) carries a placeholder
+      // "HOLD" with a decision_status — surface it as FAILED, not a verdict.
+      const failed =
+        typeof a.decision_status === "string" &&
+        a.decision_status !== "ok" &&
+        a.decision_status.length > 0;
+      return {
+        date: typeof a.date === "string" ? a.date : "",
+        decision: failed
+          ? "FAILED"
+          : ((String(a.parsed_decision || "").toUpperCase() || "—") as string),
+        confidence: typeof a.confidence === "number" ? a.confidence : null,
+        reasoning: failed
+          ? `Evaluation did not complete${
+              a.error_class ? ` (${a.error_class})` : ""
+            } — recorded as a placeholder, not a real decision.${
+              a.error_message ? ` ${String(a.error_message)}` : ""
+            }`
+          : meaningfulReason(a.judge_rationale) ?? meaningfulReason(a.reasoning),
+        failed,
+      };
+    })
     .filter((d) => d.date);
   const holdCount = decisions.filter((d) => d.decision === "HOLD").length;
   const buyDecisions = decisions.filter((d) => d.decision === "BUY").length;
   const sellDecisions = decisions.filter((d) => d.decision === "SELL").length;
+  const failedCount = decisions.filter((d) => d.failed).length;
   const latestJudgeRationale =
     [...decisions].reverse().find((d) => d.reasoning)?.reasoning ?? null;
 
   // ── Judge ────────────────────────────────────────────────────────────
   const judgeSummary =
-    trades.length > 0
+    failedCount > 0 && failedCount >= decisions.length * 0.5
+      ? `${failedCount} of ${decisions.length} evaluations FAILED before reaching a verdict (most commonly an LLM rate-limit/timeout). These were recorded as placeholder HOLDs — they are NOT deliberate decisions. Re-run (use --resume, or a less throttled LLM endpoint); treat this run's verdicts and returns as unreliable.`
+      : trades.length > 0
       ? `Approved ${trades.length} executed ${plural(trades.length, "decision", "decisions")} (${buys.length} buy / ${sells.length} sell) at mean conviction ${formatNumber(
           allConf * 100,
           1
@@ -1715,6 +1827,7 @@ function deriveAgentInsights(
       holdCount,
       buyCount: buyDecisions,
       sellCount: sellDecisions,
+      failedCount,
       total: decisions.length,
     },
   };

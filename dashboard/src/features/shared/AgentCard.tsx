@@ -133,8 +133,8 @@ export function AgentCard({
           )}
         </div>
 
-        {/* Body */}
-        <div className="mt-4 text-[14px] leading-[1.65] text-ink-2 whitespace-pre-wrap">
+        {/* Body — children may be rendered markdown (agent prose) or rich JSX */}
+        <div className="mt-4 text-[14px] leading-[1.65] text-ink-2">
           {children}
         </div>
 

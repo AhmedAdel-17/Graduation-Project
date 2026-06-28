@@ -15,9 +15,9 @@ import {
   Target,
   TrendingDown,
   TrendingUp,
-  Zap,
 } from "lucide-react";
-import { useRunPrediction, useRunFullPipeline } from "../../hooks/usePrediction";
+import { useParams } from "react-router-dom";
+import { useRunPrediction, useRunFullPipeline, usePastPrediction } from "../../hooks/usePrediction";
 import { AgentCard, AgentCardSkeleton } from "../shared/AgentCard";
 import { TickerPicker } from "../shared/TickerPicker";
 import { PriceChart } from "../../components/charts/PriceChart";
@@ -26,7 +26,28 @@ import { getTickerMeta } from "../../data/egxTickerMeta";
 import { TickerLogo } from "../../components/ui/TickerLogo";
 import { MarketIndicesBar } from "./MarketIndicesBar";
 import { PivotLevels } from "./PivotLevels";
-import type { StockBar } from "../../services/api/types";
+import { TechnicalPanelSection } from "../prediction/TechnicalPanelSection";
+import { Markdown } from "../../components/ui/Markdown";
+import type {
+  StockBar,
+  StyledRecommendations as StyledRecs,
+  StyledRecommendation,
+} from "../../services/api/types";
+
+// Strip LLM noise from agent prose before rendering as markdown:
+//  - Trailing ```json ... ``` blocks (structured thesis echo the LLM appends)
+//  - "Bull Analyst: " / "Bear Analyst: " prefix the researchers prepend
+//  - Leading "# TICKER — ..." H1 (redundant — the card header already names the agent)
+function cleanAgentText(raw: string): string {
+  let s = raw;
+  // Remove trailing fenced JSON/code blocks (greedy from last ``` pair)
+  s = s.replace(/\n*```(?:json)?\s*\n[\s\S]*?```\s*$/i, "").trimEnd();
+  // Strip "Bull Analyst: " / "Bear Analyst: " prefix
+  s = s.replace(/^(?:Bull|Bear)\s+Analyst:\s*/i, "");
+  // Strip leading H1 line ("# TICKER — ...") — the card header is enough
+  s = s.replace(/^#\s+.+\n+/, "");
+  return s.trim();
+}
 
 type Dir = "up" | "down" | "flat";
 
@@ -43,17 +64,29 @@ function toNum(v: unknown): number | undefined {
 }
 
 export function HomeScreen() {
+  const { sessionId } = useParams<{ sessionId: string }>();
   const [ticker, setTicker] = useState("COMI.CA");
   const runPrediction = useRunPrediction();
   const runFullPipeline = useRunFullPipeline();
+  const pastPrediction = usePastPrediction(sessionId);
 
-  // Show whichever result is most recent (full vs quick).
+  // Sync the picker to the historical session's ticker when loaded
+  useEffect(() => {
+    if (pastPrediction.data?.ticker && pastPrediction.data.ticker !== ticker) {
+      setTicker(pastPrediction.data.ticker);
+    }
+  }, [pastPrediction.data?.ticker]);
+
+  // Show whichever result is most recent (full vs quick), or the past prediction if loading a specific session.
   const quickSubmittedAt = runPrediction.submittedAt ?? 0;
   const fullSubmittedAt = runFullPipeline.submittedAt ?? 0;
-  const result =
+  
+  const liveResult =
     fullSubmittedAt >= quickSubmittedAt
       ? runFullPipeline.data ?? runPrediction.data
       : runPrediction.data ?? runFullPipeline.data;
+      
+  const result = pastPrediction.data || liveResult;
 
   const rec = result?.recommendation;
   const price = result?.price;
@@ -88,25 +121,13 @@ export function HomeScreen() {
   const confidence = (rec?.confidence || "").toUpperCase();
   const isQuickLoading = runPrediction.isPending;
   const isFullLoading = runFullPipeline.isPending;
-  const isLoading = isQuickLoading || isFullLoading;
+  const isPastLoading = pastPrediction.isLoading;
+  const isLoading = isQuickLoading || isFullLoading || isPastLoading;
   const hasResult = !!result && !result.error;
-
-  async function handleRun() {
-    try {
-      const res = await runPrediction.mutateAsync(ticker);
-      if (res?.error) {
-        toast.error(res.error);
-        return;
-      }
-      toast.success(`Analysis complete · ${res?.recommendation?.signal ?? "—"}`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Analysis failed");
-    }
-  }
 
   async function handleRunFull() {
     try {
-      toast.info("Full pipeline started — this takes 3-8 minutes");
+      toast.info("Pipeline started — four agents are now debating");
       const res = await runFullPipeline.mutateAsync(ticker);
       if (res?.error) {
         toast.error(res.error);
@@ -120,6 +141,189 @@ export function HomeScreen() {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Full pipeline failed");
     }
+  }
+
+  if (sessionId) {
+    return (
+      <div className="space-y-6">
+        <header className="flex items-end justify-between gap-6 flex-wrap">
+          <div>
+            <div className="eyebrow mb-3">Historical Record · Postgres</div>
+            <h1 className="display text-[32px] md:text-[36px] font-semibold leading-none text-ink">
+              Past Prediction
+            </h1>
+            <p className="text-[14px] text-ink-3 mt-3 max-w-xl leading-relaxed">
+              Viewing an archived analysis session. This is a read-only snapshot.
+            </p>
+          </div>
+          <button
+            onClick={() => window.history.back()}
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-stone-200 text-[13px] font-medium hover:bg-stone-50"
+          >
+            &larr; Back
+          </button>
+        </header>
+
+        {isPastLoading ? (
+          <div className="py-24 flex flex-col items-center justify-center text-stone-500">
+            <Loader2 className="h-6 w-6 animate-spin mb-4" />
+            Loading historical run...
+          </div>
+        ) : !hasResult ? (
+          <div className="py-24 flex flex-col items-center justify-center text-stone-500">
+            Run not found or failed to load.
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <QuoteHeader
+              ticker={result?.ticker || ticker}
+              name={(result?.name as string | undefined) || ticker}
+              current={current}
+              dailyChange={toNum(price?.daily_change)}
+              weeklyChange={toNum(price?.weekly_change)}
+              signal={signal}
+            />
+
+            {/* Chart + verdict — the trading-terminal core */}
+            <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+              <ChartPanel
+                bars={history}
+                current={current}
+                target={target}
+                stop={stop}
+              />
+              <VerdictPanel
+                signal={signal}
+                confidence={confidence}
+                current={current}
+                target={target}
+                stop={stop}
+                upside={upside}
+                downside={downside}
+                risk={rec?.risk as string | undefined}
+                timeHorizon={rec?.time_horizon as string | undefined}
+              />
+            </div>
+
+            {/* Key levels — quote stats strip */}
+            <KeyStats
+              current={current}
+              target={target}
+              stop={stop}
+              upside={upside}
+              downside={downside}
+              riskReward={riskReward}
+              rsi={toNum(indicators?.rsi)}
+              trend={indicators?.trend}
+              timeHorizon={rec?.time_horizon as string | undefined}
+            />
+
+            {/* Support & resistance pivots */}
+            <PivotLevels bars={history} current={current} />
+
+            {/* Bull + Bear */}
+            <SectionLabel index="01" label="Adversarial research" />
+            <div className="grid gap-5 md:grid-cols-2">
+              <AgentCard
+                tone="bull"
+                icon={TrendingUp}
+                agent="Bull researcher"
+                role="The constructive case"
+                chip="Long thesis"
+                meta={
+                  target && current
+                    ? [
+                        { label: "Implied upside", value: formatPercent(upside ?? 0) },
+                        { label: "Target", value: `${formatNumber(target)} EGP` },
+                      ]
+                    : undefined
+                }
+              >
+                {rec?.bull_case ? (
+                  <Markdown variant="paper">{cleanAgentText(rec.bull_case)}</Markdown>
+                ) : (
+                  "No bullish thesis was returned for this run."
+                )}
+              </AgentCard>
+              <AgentCard
+                tone="bear"
+                icon={TrendingDown}
+                agent="Bear researcher"
+                role="The cautionary case"
+                chip="Risk-off thesis"
+                meta={
+                  stop && current
+                    ? [
+                        {
+                          label: "Downside to stop",
+                          value: formatPercent(downside ?? 0),
+                        },
+                        { label: "Stop", value: `${formatNumber(stop)} EGP` },
+                      ]
+                    : undefined
+                }
+              >
+                {rec?.bear_case ? (
+                  <Markdown variant="paper">{cleanAgentText(rec.bear_case)}</Markdown>
+                ) : (
+                  "No bearish thesis was returned for this run."
+                )}
+              </AgentCard>
+            </div>
+
+            {/* Judge */}
+            <SectionLabel index="02" label="Debate resolution" />
+            <AgentCard
+              tone="judge"
+              icon={Gavel}
+              agent="Debate judge"
+              role="Research manager verdict"
+              chip={signal ? `Verdict: ${signal}` : "Verdict"}
+              meta={[
+                { label: "Signal", value: signal || "—" },
+                { label: "Confidence", value: confidence || "—" },
+                {
+                  label: "Risk profile",
+                  value: (rec?.risk as string | undefined) || "—",
+                },
+              ]}
+            >
+              {rec?.neutral_case || rec?.rationale ? (
+                <Markdown variant="paper">
+                  {cleanAgentText((rec?.neutral_case || rec?.rationale) as string)}
+                </Markdown>
+              ) : (
+                "No reconciled verdict was returned for this run."
+              )}
+            </AgentCard>
+
+            {/* Portfolio manager */}
+            <SectionLabel index="03" label="Execution plan" />
+            <AgentCard
+              tone="manager"
+              icon={Briefcase}
+              agent="Portfolio manager"
+              role="Trade construction"
+              chip={confidence ? `${confidence} conviction` : "Trade plan"}
+            >
+              <ExecutionPlan
+                signal={signal}
+                current={current}
+                target={target}
+                stop={stop}
+                risk={rec?.risk}
+                rationale={rec?.recommendation || rec?.rationale}
+              />
+              <StyledRecommendations styled={rec?.styled_recommendations} />
+            </AgentCard>
+
+            {/* Technical panel */}
+            <SectionLabel index="04" label="Technical reference" />
+            <TechnicalPanelSection data={result?.technical_panel} />
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -151,64 +355,32 @@ export function HomeScreen() {
             <TickerPicker value={ticker} onChange={setTicker} />
           </div>
           <button
-            onClick={handleRun}
-            disabled={isLoading}
-            className={cn(
-              "shrink-0 inline-flex items-center gap-2 h-12 px-5 rounded-xl",
-              "bg-white text-ink border border-stone-200 hover:bg-stone-50 text-[14px] font-medium",
-              "dark:bg-[var(--paper)] dark:border-[var(--hairline)] dark:hover:bg-white/5",
-              "transition-all duration-200",
-              "disabled:opacity-60 disabled:cursor-not-allowed"
-            )}
-          >
-            {isQuickLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Quick…
-              </>
-            ) : (
-              <>
-                <Zap className="h-4 w-4" />
-                Quick analysis
-              </>
-            )}
-          </button>
-          <button
             onClick={handleRunFull}
             disabled={isLoading}
             className={cn(
-              "shrink-0 inline-flex items-center gap-2 h-12 px-5 rounded-xl",
+              "shrink-0 inline-flex items-center gap-2 h-12 px-6 rounded-xl",
               "bg-stone-900 hover:bg-stone-800 text-white text-[14px] font-medium",
               "transition-all duration-200 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.18)]",
               "disabled:opacity-60 disabled:cursor-not-allowed"
             )}
           >
-            {isFullLoading ? (
+            {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Running full pipeline…
+                Agents deliberating…
               </>
             ) : (
               <>
-                Run full pipeline
-                <ArrowRight className="h-4 w-4" />
+                <Sparkles className="h-4 w-4" />
+                Analyze
+                <ArrowRight className="h-4 w-4 ml-1" />
               </>
             )}
           </button>
         </div>
-        {/* Visible mode legend — replaces hover-only tooltips */}
-        <div className="mt-2.5 flex flex-wrap items-center gap-x-6 gap-y-1.5 px-1.5 text-[12px] text-ink-3">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-stone-300" />
-            <strong className="font-medium text-ink-2">Quick analysis</strong>
-            <span>— single-LLM read, ready in ~30 seconds</span>
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-stone-900" />
-            <strong className="font-medium text-ink-2">Run full pipeline</strong>
-            <span>— four-agent debate, 3–8 minutes</span>
-          </span>
-        </div>
+        <p className="mt-2 px-1.5 text-[12px] text-ink-3 italic">
+          Four agents will debate, challenge each other, and converge on a single thesis — expect ~20 minutes of deep thinking.
+        </p>
       </div>
 
       {/* ─── Empty ───────────────────────────────────────────────── */}
@@ -246,6 +418,7 @@ export function HomeScreen() {
               upside={upside}
               downside={downside}
               risk={rec?.risk as string | undefined}
+              timeHorizon={rec?.time_horizon as string | undefined}
             />
           </div>
 
@@ -259,6 +432,7 @@ export function HomeScreen() {
             riskReward={riskReward}
             rsi={toNum(indicators?.rsi)}
             trend={indicators?.trend}
+            timeHorizon={rec?.time_horizon as string | undefined}
           />
 
           {/* Support & resistance pivots */}
@@ -282,7 +456,11 @@ export function HomeScreen() {
                   : undefined
               }
             >
-              {rec?.bull_case || "No bullish thesis was returned for this run."}
+              {rec?.bull_case ? (
+                <Markdown variant="paper">{cleanAgentText(rec.bull_case)}</Markdown>
+              ) : (
+                "No bullish thesis was returned for this run."
+              )}
             </AgentCard>
             <AgentCard
               tone="bear"
@@ -302,7 +480,11 @@ export function HomeScreen() {
                   : undefined
               }
             >
-              {rec?.bear_case || "No bearish thesis was returned for this run."}
+              {rec?.bear_case ? (
+                <Markdown variant="paper">{cleanAgentText(rec.bear_case)}</Markdown>
+              ) : (
+                "No bearish thesis was returned for this run."
+              )}
             </AgentCard>
           </div>
 
@@ -323,9 +505,13 @@ export function HomeScreen() {
               },
             ]}
           >
-            {rec?.neutral_case ||
-              rec?.rationale ||
-              "No reconciled verdict was returned for this run."}
+            {rec?.neutral_case || rec?.rationale ? (
+              <Markdown variant="paper">
+                {cleanAgentText((rec?.neutral_case || rec?.rationale) as string)}
+              </Markdown>
+            ) : (
+              "No reconciled verdict was returned for this run."
+            )}
           </AgentCard>
 
           {/* Portfolio manager */}
@@ -345,7 +531,15 @@ export function HomeScreen() {
               risk={rec?.risk}
               rationale={rec?.recommendation || rec?.rationale}
             />
+            <StyledRecommendations styled={rec?.styled_recommendations} />
           </AgentCard>
+
+          {/* Full Investing-style technical panel (12 indicators + verdicts +
+              SMA/EMA grid + 5 pivot systems) — the same engine output that is
+              fed to the market analyst agent. Renders nothing if unavailable.
+              Placed last: it's reference detail, not part of the decision flow. */}
+          <SectionLabel index="04" label="Technical reference" />
+          <TechnicalPanelSection data={result?.technical_panel} />
         </div>
       )}
     </div>
@@ -513,12 +707,18 @@ function ChartPanel({
             <span className="inline-flex items-center gap-1.5">
               <span className="h-0 w-3.5 border-t-2 border-dashed border-emerald-600" />
               Target
+              <span className="mono font-semibold text-emerald-700">
+                {formatNumber(target)}
+              </span>
             </span>
           )}
           {typeof stop === "number" && (
             <span className="inline-flex items-center gap-1.5">
               <span className="h-0 w-3.5 border-t-2 border-dashed border-rose-600" />
               Stop
+              <span className="mono font-semibold text-rose-700">
+                {formatNumber(stop)}
+              </span>
             </span>
           )}
         </div>
@@ -564,6 +764,7 @@ function VerdictPanel({
   upside,
   downside,
   risk,
+  timeHorizon,
 }: {
   signal: string;
   confidence: string;
@@ -573,6 +774,7 @@ function VerdictPanel({
   upside?: number;
   downside?: number;
   risk?: string;
+  timeHorizon?: string;
 }) {
   const dir = dirOf(signal);
   const head =
@@ -634,9 +836,11 @@ function VerdictPanel({
             {risk || "—"}
           </span>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="eyebrow text-stone-500">Time horizon</span>
-          <span className="text-[13px] font-medium text-ink">2 – 4 weeks</span>
+        <div className="flex items-center justify-between gap-3">
+          <span className="eyebrow text-stone-500 shrink-0">Time horizon</span>
+          <span className="text-[13px] font-medium text-ink text-right">
+            {timeHorizon || "—"}
+          </span>
         </div>
       </div>
     </section>
@@ -689,6 +893,7 @@ function KeyStats({
   riskReward,
   rsi,
   trend,
+  timeHorizon,
 }: {
   current?: number;
   target?: number;
@@ -698,6 +903,7 @@ function KeyStats({
   riskReward?: number;
   rsi?: number;
   trend?: string;
+  timeHorizon?: string;
 }) {
   const rsiZone =
     rsi === undefined
@@ -765,8 +971,8 @@ function KeyStats({
     },
     {
       label: "Time horizon",
-      value: "2 – 4 wk",
-      hint: "≈ 14 sessions",
+      value: timeHorizon || "—",
+      hint: "thesis time-stop",
     },
   ];
 
@@ -875,10 +1081,95 @@ function ExecutionPlan({
         ))}
       </div>
       {rationale && (
-        <p className="text-[14px] text-ink-2 leading-[1.65] whitespace-pre-wrap pt-1">
-          {rationale}
+        <div className="pt-1">
+          <Markdown variant="paper">{cleanAgentText(rationale)}</Markdown>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Per-trading-style recommendations (Swing / Position / Long-Term)
+   ════════════════════════════════════════════════════════════════════════════ */
+
+function recAccent(rec?: string) {
+  const r = (rec || "").toUpperCase();
+  if (r === "BUY" || r === "STRONG_BUY" || r === "ACCUMULATE")
+    return "text-emerald-700 bg-emerald-50 border-emerald-200";
+  if (r === "SELL" || r === "STRONG_SELL")
+    return "text-rose-700 bg-rose-50 border-rose-200";
+  return "text-stone-700 bg-stone-50 border-stone-200"; // HOLD / NO TRADE
+}
+
+function StyleCard({ rec }: { rec: StyledRecommendation }) {
+  const rows: { label: string; value?: string }[] = [
+    { label: "Entry", value: rec.entry_zone },
+    { label: "Target", value: rec.target },
+    { label: "Stop loss", value: rec.stop_loss },
+    { label: "Holding period", value: rec.holding_period },
+    { label: "Confidence", value: rec.confidence },
+    { label: "Risk level", value: rec.risk_level },
+  ].filter((r) => r.value && r.value.toUpperCase() !== "N/A");
+
+  return (
+    <div className="rounded-xl border border-stone-200 bg-white p-4 dark:border-[var(--hairline)] dark:bg-[var(--paper)]">
+      <div className="flex items-center justify-between gap-2">
+        <div className="display text-[15px] font-semibold text-ink">
+          {rec.style || "—"}
+        </div>
+        <span
+          className={cn(
+            "px-2 py-1 rounded-md border text-[12px] mono font-semibold",
+            recAccent(rec.recommendation)
+          )}
+        >
+          {(rec.recommendation || "—").toUpperCase()}
+        </span>
+      </div>
+      <div className="mt-3 space-y-1.5">
+        {rows.map((r) => (
+          <div key={r.label} className="flex items-baseline justify-between gap-3">
+            <span className="eyebrow text-stone-500">{r.label}</span>
+            <span className="mono text-[13px] text-ink text-right">{r.value}</span>
+          </div>
+        ))}
+      </div>
+      {rec.reasoning && (
+        <p className="mt-3 text-[13px] leading-relaxed text-ink-3">
+          {rec.reasoning}
         </p>
       )}
+    </div>
+  );
+}
+
+function StyledRecommendations({ styled }: { styled?: StyledRecs | null }) {
+  if (!styled) return null;
+  // Fixed display order; only render styles the agent actually returned.
+  const order: { key: string; fallback: string }[] = [
+    { key: "swing", fallback: "Swing Trader" },
+    { key: "position", fallback: "Position Trader" },
+    { key: "long_term", fallback: "Long-Term Investor" },
+  ];
+  const cards = order
+    .map(({ key, fallback }) => {
+      const rec = styled[key];
+      if (!rec) return null;
+      return { ...rec, style: rec.style || fallback };
+    })
+    .filter(Boolean) as StyledRecommendation[];
+
+  if (cards.length === 0) return null;
+
+  return (
+    <div className="mt-6">
+      <div className="eyebrow text-stone-500 mb-3">By trading style</div>
+      <div className="grid gap-3 md:grid-cols-3">
+        {cards.map((rec) => (
+          <StyleCard key={rec.style} rec={rec} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -890,7 +1181,7 @@ function ExecutionPlan({
 function EmptyHero() {
   return (
     <div className="card overflow-hidden grain">
-      <div className="px-10 py-12 text-center">
+      <div className="px-10 py-14 text-center">
         <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-700 mb-5
           dark:border-[var(--hairline)] dark:bg-[var(--bg)] dark:text-[var(--ink-2)]">
           <Sparkles className="h-[18px] w-[18px]" />
@@ -898,32 +1189,11 @@ function EmptyHero() {
         <h3 className="display text-[22px] font-semibold text-ink">
           Ready when you are.
         </h3>
-        <p className="text-[14px] text-ink-3 mt-2 max-w-md mx-auto leading-relaxed">
-          Pick a ticker above, then choose how deep to go. Results appear here
-          the moment they're ready.
+        <p className="text-[14px] text-ink-3 mt-3 max-w-lg mx-auto leading-relaxed">
+          Pick a ticker above and hit <strong className="text-ink-2">Analyze</strong>. A bull, a bear,
+          a judge, and a portfolio manager will argue over the data and hand you
+          one unified thesis — typically around 20 minutes of deep deliberation.
         </p>
-        <div className="mt-7 grid gap-3 sm:grid-cols-2 max-w-xl mx-auto text-left">
-          <div className="rounded-xl border border-stone-200 bg-white p-4 dark:border-[var(--hairline)] dark:bg-[var(--bg)]">
-            <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-stone-500" />
-              <span className="text-[13px] font-semibold text-ink">Quick analysis</span>
-            </div>
-            <p className="text-[12px] text-ink-3 mt-1.5 leading-relaxed">
-              A single-LLM snapshot — a fast bull/bear/neutral read in about 30
-              seconds. Best for a first look.
-            </p>
-          </div>
-          <div className="rounded-xl border border-stone-200 bg-white p-4 dark:border-[var(--hairline)] dark:bg-[var(--bg)]">
-            <div className="flex items-center gap-2">
-              <Gavel className="h-4 w-4 text-stone-500" />
-              <span className="text-[13px] font-semibold text-ink">Full pipeline</span>
-            </div>
-            <p className="text-[12px] text-ink-3 mt-1.5 leading-relaxed">
-              The complete four-agent debate with risk-sized execution plan.
-              Takes 3–8 minutes — the deeper, traceable thesis.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -942,7 +1212,7 @@ const PIPELINE_STAGES = [
   "Portfolio manager sizes & risk-checks the trade",
 ];
 
-function LoadingHero({ mode }: { mode: "quick" | "full" }) {
+function LoadingHero({ mode: _mode }: { mode: "quick" | "full" }) {
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
@@ -950,17 +1220,16 @@ function LoadingHero({ mode }: { mode: "quick" | "full" }) {
     return () => clearInterval(id);
   }, []);
 
-  const isFull = mode === "full";
   // Rough stage estimate so the wait feels alive — not a real progress signal.
-  const activeStage = !isFull
-    ? 0
-    : elapsed < 75
-    ? 0
-    : elapsed < 165
-    ? 1
-    : elapsed < 240
-    ? 2
-    : 3;
+  // Tuned for ~20 min full runs.
+  const activeStage =
+    elapsed < 180
+      ? 0
+      : elapsed < 600
+      ? 1
+      : elapsed < 900
+      ? 2
+      : 3;
 
   return (
     <div className="space-y-6">
@@ -970,14 +1239,12 @@ function LoadingHero({ mode }: { mode: "quick" | "full" }) {
             <Loader2 className="h-5 w-5 mt-0.5 animate-spin text-stone-500" />
             <div>
               <div className="text-[15px] font-semibold text-ink">
-                {isFull
-                  ? "Running the full multi-agent pipeline"
-                  : "Running a quick analysis"}
+                Four agents are deliberating
               </div>
               <p className="text-[12.5px] text-ink-3 mt-1 max-w-md leading-relaxed">
-                {isFull
-                  ? "Four agents are debating this ticker. This usually takes 3–8 minutes — you can leave this tab open and check back."
-                  : "A single-LLM read of this ticker — usually ready in under a minute."}
+                A bull, a bear, a judge, and a portfolio manager are debating this
+                ticker. This usually takes around 20 minutes — you can leave this tab
+                open and check back.
               </p>
             </div>
           </div>
@@ -989,8 +1256,7 @@ function LoadingHero({ mode }: { mode: "quick" | "full" }) {
           </div>
         </div>
 
-        {isFull && (
-          <ol className="mt-5 space-y-3 border-t border-stone-200 pt-5 dark:border-[var(--hairline)]">
+        <ol className="mt-5 space-y-3 border-t border-stone-200 pt-5 dark:border-[var(--hairline)]">
             {PIPELINE_STAGES.map((stage, i) => {
               const state =
                 i < activeStage
@@ -1028,7 +1294,6 @@ function LoadingHero({ mode }: { mode: "quick" | "full" }) {
               );
             })}
           </ol>
-        )}
       </div>
 
       <div className="rounded-2xl skeleton h-[260px] border border-stone-200" />
@@ -1036,12 +1301,8 @@ function LoadingHero({ mode }: { mode: "quick" | "full" }) {
         <AgentCardSkeleton tone="bull" />
         <AgentCardSkeleton tone="bear" />
       </div>
-      {isFull && (
-        <>
-          <AgentCardSkeleton tone="judge" />
-          <AgentCardSkeleton tone="manager" />
-        </>
-      )}
+      <AgentCardSkeleton tone="judge" />
+      <AgentCardSkeleton tone="manager" />
     </div>
   );
 }
