@@ -29,6 +29,7 @@ from tradingagents.agents.utils.social_media_tools import (
     get_social_sentiment,
 )
 from tradingagents.dataflows.config import get_config
+from tradingagents.agents.utils.temporal import point_in_time_notice
 
 logger = logging.getLogger("tradingagents.social_media_analyst")
 
@@ -431,6 +432,7 @@ def create_social_media_analyst(llm):
                 f"{prefetched_sentiment or 'No structured sentiment data available.'}\n\n"
                 f"### Social Media Posts\n"
                 f"{prefetched_posts or 'No posts retrieved.'}\n\n"
+                f"{point_in_time_notice(current_date)}\n"
                 f"## {_LLM_ROLE_INSTRUCTION}\n\n"
                 f"Analyze the above data and produce only the JSON block shown.\n"
                 f"Your narrative must describe: (1) key retail discussion themes, "

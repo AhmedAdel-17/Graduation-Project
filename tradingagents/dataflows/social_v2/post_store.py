@@ -59,13 +59,64 @@ CREATE TABLE IF NOT EXISTS social_v2_posts (
     intents         TEXT[],
     content_label   TEXT,
     sentiment_score REAL,
-    sentiment_label TEXT
+    sentiment_label TEXT,
+    sectors         TEXT[],
+    indices         TEXT[]
 );
+-- Additive, idempotent: bring older deployments up to the tagged schema.
+ALTER TABLE social_v2_posts ADD COLUMN IF NOT EXISTS sectors TEXT[];
+ALTER TABLE social_v2_posts ADD COLUMN IF NOT EXISTS indices TEXT[];
 CREATE INDEX IF NOT EXISTS social_v2_posts_ts_idx
     ON social_v2_posts (post_timestamp);
 CREATE INDEX IF NOT EXISTS social_v2_posts_symbols_idx
     ON social_v2_posts USING GIN (symbols);
+CREATE INDEX IF NOT EXISTS social_v2_posts_sectors_idx
+    ON social_v2_posts USING GIN (sectors);
+CREATE INDEX IF NOT EXISTS social_v2_posts_indices_idx
+    ON social_v2_posts USING GIN (indices);
 """
+
+
+def _derive_tags(symbols, sector_mentions):
+    """Roll ticker mentions up to EGX sector + index tags via the taxonomy.
+
+    Returns (sectors, indices) as deduped string lists. Best-effort: any import
+    or lookup failure yields whatever was resolved so far. This is what lets the
+    weekly archive be filtered directly by sector/index without re-deriving at
+    read time.
+    """
+    sectors: set = set()
+    indices: set = set()
+    # sector_mentions may already carry explicit sector tags (strings or objects).
+    # Normalise to lower-case so keyword-detected tags (BANKS) and ticker-rollup
+    # tags (banks) collapse to one canonical value for consistent filtering.
+    for sm in sector_mentions or []:
+        name = getattr(sm, "sector", None) or getattr(sm, "value", None) or (
+            sm if isinstance(sm, str) else None
+        )
+        if name:
+            sectors.add(str(name).lower())
+    try:
+        from tradingagents.sentiment.taxonomy import (
+            SectorEnum,
+            ticker_to_indices,
+            ticker_to_sector,
+        )
+        for sym in symbols or []:
+            try:
+                sec = ticker_to_sector(sym)
+                if sec is not None and sec != SectorEnum.UNKNOWN:
+                    sectors.add(str(sec.value).lower())
+            except Exception:
+                pass
+            try:
+                for idx in ticker_to_indices(sym):
+                    indices.add(idx.value)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return sorted(sectors), sorted(indices)
 
 _DISABLED = False
 _CONN = None
@@ -138,6 +189,7 @@ def archive(enriched_records: Iterable[dict]) -> int:
         symbols = [m.symbol for m in record.get("mentions", []) or []]
         intents = list(record.get("intent", {}).get("intents") or [])
         sentiment = record.get("sentiment") or {}
+        sectors, indices = _derive_tags(symbols, record.get("sector_mentions"))
         rows.append((
             _post_hash(platform, url, text, ts_raw),
             platform,
@@ -152,6 +204,8 @@ def archive(enriched_records: Iterable[dict]) -> int:
             record.get("content", {}).get("label"),
             float(sentiment.get("score", 0.0)) if sentiment else None,
             sentiment.get("label"),
+            sectors or None,
+            indices or None,
         ))
 
     if not rows:
@@ -164,8 +218,9 @@ def archive(enriched_records: Iterable[dict]) -> int:
                 INSERT INTO social_v2_posts (
                     post_hash, platform, source, url, username,
                     post_timestamp, text, engagement, symbols,
-                    intents, content_label, sentiment_score, sentiment_label
-                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    intents, content_label, sentiment_score, sentiment_label,
+                    sectors, indices
+                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 ON CONFLICT (post_hash) DO NOTHING
                 """,
                 rows,

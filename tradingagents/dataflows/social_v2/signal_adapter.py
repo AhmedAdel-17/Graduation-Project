@@ -537,6 +537,28 @@ def fetch_v2_signal(
         v2_cache.signal_set(cache_key, payload)
         return payload
 
+    # ── LIVE path ────────────────────────────────────────────────────────────
+    # To save Apify quota / tokens / runtime, the heavy SCRAPE is done OUT-OF-BAND
+    # by the weekly producer (scripts/social_weekly_fetch.py), which archives ~1000
+    # tagged posts into social_v2_posts. Each agent run reads that fresh archive and
+    # only re-aggregates (cheap; no Apify, no LLM, sentiment already stored). We only
+    # fall through to a live Apify scrape when the archive is stale/empty.
+    if os.getenv("SOCIAL_LIVE_PREFER_ARCHIVE", "1") != "0":
+        fresh_window = int(os.getenv("SOCIAL_LIVE_ARCHIVE_LOOKBACK_DAYS", "8"))
+        replay = _try_archive_replay(ticker, curr_date, fresh_window)
+        if replay is not None:
+            replay = {**replay, "source": "weekly_archive"}
+            v2_cache.signal_set(cache_key, replay)
+            log.info(
+                "fetch_v2_signal: served %s from weekly archive (<= %dd) — no Apify call",
+                ticker, fresh_window,
+            )
+            return replay
+        log.info(
+            "fetch_v2_signal: archive empty/stale for %s — running live pipeline (refreshes archive)",
+            ticker,
+        )
+
     try:
         pipeline_output = run_pipeline()
     except Exception as exc:

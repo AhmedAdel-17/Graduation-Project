@@ -378,6 +378,17 @@ def _canonical(ticker: str) -> str | None:
     return None
 
 
+def ticker_display_name(ticker: str) -> str:
+    """Return 'Company Name (TICKER.CA)' for prompt injection, e.g.
+    'Talaat Moustafa Group Holding (TMGH.CA)'. Falls back to the raw
+    ticker if the symbol isn't in the registry."""
+    symbol = ticker.upper().replace(".CA", "")
+    name = EGX_COMPANIES.get(symbol)
+    if name:
+        return f"{name} ({symbol}.CA)"
+    return ticker
+
+
 def has_finance_context(text: str) -> bool:
     normalized = _normalize_entity_text(text)
     if not normalized:

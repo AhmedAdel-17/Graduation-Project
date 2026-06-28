@@ -44,9 +44,13 @@ from ..models import Post
 log = logging.getLogger("tradingagents.social_v2.facebook_apify")
 
 ACTOR_ID = "2chN8UQcH1CfxLRNE"
-APIFY_RUN_URL = (
-    f"https://api.apify.com/v2/acts/{ACTOR_ID}/run-sync-get-dataset-items"
-)
+APIFY_BASE = "https://api.apify.com/v2"
+# Synchronous endpoint (kept for reference) blocks until the actor finishes and is
+# capped at ~300s server-side, so large Facebook scrapes always read-time-out. The
+# code below uses the ASYNC pattern instead: start a run, poll its status cheaply,
+# then fetch the dataset — decoupling our HTTP timeouts from the actor's runtime.
+APIFY_RUN_URL = f"{APIFY_BASE}/acts/{ACTOR_ID}/run-sync-get-dataset-items"
+APIFY_ACTOR_RUNS_URL = f"{APIFY_BASE}/acts/{ACTOR_ID}/runs"
 
 # User-confirmed EGX Arabic Facebook groups (2026-05).
 DEFAULT_GROUP_URLS = [
@@ -200,7 +204,16 @@ def _fetch_group_items(
     results_per_group: int,
     timeout: int,
 ) -> tuple[List[dict], str]:
-    """Return (items, source_tag) where source_tag is 'fresh', 'cached', or 'failed'."""
+    """Return (items, source_tag) where source_tag is 'fresh', 'cached', or 'failed'.
+
+    Uses the async run pattern: POST a run, poll its status with short per-request
+    timeouts until it finishes, then GET the dataset items. ``timeout`` is the
+    OVERALL per-group budget (seconds) for the actor to finish; it no longer caps a
+    single blocking read, so a slow Facebook scrape succeeds instead of timing out.
+    On any failure/timeout we fall back to the most recent cached payload.
+    """
+    import time
+
     cache_key = _cache_key(group_url, results_per_group)
 
     payload = {
@@ -208,44 +221,84 @@ def _fetch_group_items(
         "resultsLimit": results_per_group,
         "sort": "newest",
     }
+
+    def _cache_fallback(reason: str) -> tuple[List[dict], str]:
+        log.warning("Apify %s for %s — trying cache fallback", reason, group_url)
+        cached = v2_cache.apify_get(cache_key)
+        return (cached, "cached") if cached else ([], "failed")
+
+    # ── 1. Start the actor run (returns immediately with a run id) ──────────────
     try:
-        response = requests.post(
-            APIFY_RUN_URL,
+        start = requests.post(
+            APIFY_ACTOR_RUNS_URL,
             params={"token": token},
             json=payload,
-            timeout=timeout,
+            timeout=30,
         )
     except Exception as exc:
-        log.warning("Apify network error for %s: %s — trying cache fallback", group_url, exc)
-        cached = v2_cache.apify_get(cache_key)
-        return (cached, "cached") if cached else ([], "failed")
+        return _cache_fallback(f"start network error: {exc}")
 
-    if response.status_code in _FALLBACK_HTTP_CODES:
-        log.warning(
-            "Apify HTTP %s for %s (likely quota/rate) — trying cache fallback",
-            response.status_code,
-            group_url,
-        )
-        cached = v2_cache.apify_get(cache_key)
-        return (cached, "cached") if cached else ([], "failed")
-
-    if response.status_code >= 300:
-        log.error(
-            "Apify HTTP %s for %s: %s",
-            response.status_code,
-            group_url,
-            response.text[:300],
-        )
+    if start.status_code in _FALLBACK_HTTP_CODES:
+        return _cache_fallback(f"HTTP {start.status_code} on start (likely quota/rate)")
+    if start.status_code >= 300:
+        log.error("Apify start HTTP %s for %s: %s", start.status_code, group_url, start.text[:300])
         return [], "failed"
 
     try:
-        items = response.json()
+        run = start.json().get("data", {}) or {}
     except Exception as exc:
-        log.error("Apify response not JSON for %s: %s", group_url, exc)
+        return _cache_fallback(f"start response not JSON: {exc}")
+
+    run_id = run.get("id")
+    dataset_id = run.get("defaultDatasetId")
+    status = run.get("status", "READY")
+    if not run_id:
+        return _cache_fallback("start returned no run id")
+
+    # ── 2. Poll the run status until it terminates or the budget runs out ──────
+    deadline = time.time() + max(int(timeout), 60)
+    while status in ("READY", "RUNNING") and time.time() < deadline:
+        time.sleep(5)
+        try:
+            st = requests.get(
+                f"{APIFY_BASE}/actor-runs/{run_id}",
+                params={"token": token},
+                timeout=30,
+            )
+            data = st.json().get("data", {}) or {}
+            status = data.get("status", status)
+            dataset_id = data.get("defaultDatasetId", dataset_id)
+        except Exception as exc:
+            log.debug("Apify poll hiccup for %s: %s", group_url, exc)
+            continue
+
+    if status != "SUCCEEDED":
+        return _cache_fallback(f"run status={status} (not SUCCEEDED within {timeout}s budget)")
+    if not dataset_id:
+        return _cache_fallback("run succeeded but no dataset id")
+
+    # ── 3. Fetch the dataset items ─────────────────────────────────────────────
+    try:
+        items_resp = requests.get(
+            f"{APIFY_BASE}/datasets/{dataset_id}/items",
+            params={"token": token, "clean": "true"},
+            timeout=60,
+        )
+    except Exception as exc:
+        return _cache_fallback(f"dataset fetch network error: {exc}")
+
+    if items_resp.status_code >= 300:
+        log.error("Apify dataset HTTP %s for %s", items_resp.status_code, group_url)
+        return [], "failed"
+
+    try:
+        items = items_resp.json()
+    except Exception as exc:
+        log.error("Apify dataset not JSON for %s: %s", group_url, exc)
         return [], "failed"
 
     if not isinstance(items, list):
-        log.error("Apify returned non-list payload for %s", group_url)
+        log.error("Apify returned non-list dataset for %s", group_url)
         return [], "failed"
 
     for item in items:
@@ -258,6 +311,10 @@ def _fetch_group_items(
 
 
 def scrape(results_per_group: int = 200, timeout: int = 300) -> List[Post]:
+    # Per-group HTTP read timeout. Apify's actor run can be slow/unreachable; a long
+    # default blocks the whole weekly producer for minutes per group. Override with
+    # APIFY_TIMEOUT_SECONDS to fail fast and let the free news sources carry the run.
+    timeout = int(os.getenv("APIFY_TIMEOUT_SECONDS", str(timeout)))
     token = os.getenv("APIFY_API_TOKEN")
     if not token:
         log.warning("Facebook (Apify) SKIPPED — APIFY_API_TOKEN not set in env")
