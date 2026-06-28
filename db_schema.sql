@@ -14,7 +14,12 @@
 -- CREATE EXTENSION IF NOT EXISTS vector;  -- Uncomment after installing pgvector on Windows
 
 -- =============================================================================
--- 1. AGENT MEMORIES  (replaces in-memory ChromaDB)
+-- 1. AGENT MEMORIES  (OPTIONAL — opt-in Postgres/pgvector memory backend only)
+-- =============================================================================
+-- Default agent memory is ChromaDB (TRADINGAGENTS_MEMORY_BACKEND=chroma).
+-- This table is used ONLY when TRADINGAGENTS_MEMORY_BACKEND=postgres AND pgvector
+-- is installed. It is NOT part of the core thesis audit schema; exclude from the
+-- thesis ERD. See agent_docs/db_infrastructure.md §1.
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS agent_memories (
     id              SERIAL PRIMARY KEY,
@@ -210,16 +215,26 @@ CREATE TABLE IF NOT EXISTS social_v2_posts (
     intents         TEXT[],
     content_label   TEXT,
     sentiment_score REAL,
-    sentiment_label TEXT
+    sentiment_label TEXT,
+    sectors         TEXT[],   -- EGX sectors rolled up from symbols (taxonomy)
+    indices         TEXT[]    -- EGX30/70/100 membership rolled up from symbols
 );
+
+-- Additive migration for deployments created before the tag columns existed.
+ALTER TABLE social_v2_posts ADD COLUMN IF NOT EXISTS sectors TEXT[];
+ALTER TABLE social_v2_posts ADD COLUMN IF NOT EXISTS indices TEXT[];
 
 CREATE INDEX IF NOT EXISTS social_v2_posts_ts_idx
     ON social_v2_posts (post_timestamp);
 
--- GIN index supports the `WHERE %s = ANY(symbols)` style lookups used by
--- the signal_adapter archive-replay path.
+-- GIN indexes support the `WHERE %s = ANY(symbols/sectors/indices)` lookups used
+-- by the signal_adapter archive-replay path (select a stock's own / sector / index posts).
 CREATE INDEX IF NOT EXISTS social_v2_posts_symbols_idx
     ON social_v2_posts USING GIN (symbols);
+CREATE INDEX IF NOT EXISTS social_v2_posts_sectors_idx
+    ON social_v2_posts USING GIN (sectors);
+CREATE INDEX IF NOT EXISTS social_v2_posts_indices_idx
+    ON social_v2_posts USING GIN (indices);
 
 -- =============================================================================
 -- 9. PORTFOLIO ASSISTANT  (Portfolio Optimization Assistant subsystem, design v3)

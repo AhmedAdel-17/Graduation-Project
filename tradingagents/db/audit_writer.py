@@ -124,8 +124,15 @@ def write_analysis_session(
     final_state: Dict[str, Any],
     model_fingerprint: Optional[Dict[str, Any]] = None,
     user_id: Optional[str] = None,
+    run_type: str = "live",
 ) -> bool:
     """Insert one row into ``analysis_sessions``. Returns True on success.
+
+    ``run_type`` is ``'live'`` for a genuine user-triggered analysis or
+    ``'backtest'`` for the per-interval analyses the backtester emits. The
+    dashboard history lists only ``'live'`` rows, so backtest internals never
+    pollute "My Analyses". (Requires the ``run_type`` column from
+    ``scripts/db/apply_schema_v3.sql``.)
 
     Never raises into the caller. If Postgres is unavailable or the write
     fails, a warning is logged and ``False`` returned.
@@ -155,12 +162,12 @@ def write_analysis_session(
                     final_decision, risk_veto, confidence_overall,
                     confidence_scores, execution_plan, risk_assessment,
                     data_quality, full_state,
-                    user_id, model_fingerprint
+                    user_id, model_fingerprint, run_type
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s,
                         %s::jsonb, %s::jsonb, %s::jsonb,
                         %s::jsonb, %s::jsonb,
-                        %s, %s::jsonb)
+                        %s, %s::jsonb, %s)
                 ON CONFLICT (session_id) DO NOTHING
                 """,
                 (
@@ -178,6 +185,7 @@ def write_analysis_session(
                     _to_jsonb(final_state),
                     user_id,
                     _to_jsonb(model_fingerprint),
+                    run_type if run_type in ("live", "backtest") else "live",
                 ),
             )
         logger.debug("audit: analysis_sessions row written for %s", session_id)
