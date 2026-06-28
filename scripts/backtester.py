@@ -52,17 +52,20 @@ logger = logging.getLogger("Backtester")
 # =============================================================================
 # EGX Market Cost Model Constants
 # =============================================================================
-# Sources: EGX fee schedule + FRA regulatory requirements
-EGX_BROKERAGE_RATE  = 0.00175   # 0.175% institutional brokerage fee
-EGX_STAMP_DUTY      = 0.00005   # 0.005% stamp duty (applied on both sides)
-EGX_FRA_FEE         = 0.00009   # 0.009% FRA (Financial Regulatory Authority) levy
-EGX_TOTAL_COST_SIDE = EGX_BROKERAGE_RATE + EGX_STAMP_DUTY + EGX_FRA_FEE  # ~0.189% per side
-
-EGX_SLIPPAGE_NORMAL  = 0.001    # 0.1%  — normal liquidity stocks
-EGX_SLIPPAGE_LOW_LIQ = 0.005    # 0.5%  — low-liquidity stocks (wider spreads)
-
-EGX_CIRCUIT_BREAKER  = 0.10     # ±10% daily price move halts trading on EGX
-EGX_SETTLEMENT_DAYS  = 2        # T+2: cash from a SELL settles after 2 business days
+# Single source of truth lives in tradingagents/dataflows/egx_costs.py so the
+# backtester, the RL reward shaping, and the cost-aware decision logic cannot
+# drift apart. Re-exported here by name for backward compatibility.
+from tradingagents.dataflows.egx_costs import (  # noqa: E402
+    EGX_BROKERAGE_RATE,
+    EGX_STAMP_DUTY,
+    EGX_FRA_FEE,
+    EGX_TOTAL_COST_SIDE,
+    EGX_SLIPPAGE_NORMAL,
+    EGX_SLIPPAGE_LOW_LIQ,
+    EGX_CIRCUIT_BREAKER,
+    EGX_SETTLEMENT_DAYS,
+    apply_execution_costs as _shared_apply_execution_costs,
+)
 
 
 def _summarize_thesis(thesis: dict) -> Optional[dict]:
@@ -128,7 +131,21 @@ class BacktestingEngine:
         initial_capital: float = 1_000_000.0,
         target_market: str = "EGX",
         benchmark_ticker: Optional[str] = "^EGX30",
+        decision_profile: str = "live_faithful",
+        decision_rfr_override: Optional[float] = None,
     ):
+        # decision_profile: "live_faithful" (default; untouched decision logic) or
+        # "tuned" (disclosed sensitivity — lowers the required-return the
+        # fundamentals analyst compares earnings yield against, so the system
+        # expresses more directional conviction). The tuned profile ONLY changes
+        # the decision context; the Sharpe/metrics risk-free rate below is always
+        # the true CBE proxy. See rate_lookup.get_egx_risk_free_rate_as_of Tier 0.
+        self.decision_profile = decision_profile
+        if decision_profile == "tuned" and decision_rfr_override is None:
+            decision_rfr_override = float(os.getenv("BACKTEST_DECISION_RFR", "0.12"))
+        self.decision_rfr_override = (
+            decision_rfr_override if decision_profile == "tuned" else None
+        )
         self.initial_capital = initial_capital
         self.cash = initial_capital
         self.portfolio_value = initial_capital
@@ -156,12 +173,43 @@ class BacktestingEngine:
         self.audit_log: List[Dict] = []
 
         # Configure system
-        set_config({
+        _bt_config = {
             "target_market": target_market,
             "trading_currency": "EGP" if target_market == "EGX" else "USD",
             "project_dir": os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
             "backtest_mode": True,
-        })
+        }
+        # Tuned-profile decision lever (disclosed). Unset for live_faithful so the
+        # decision path is bit-for-bit identical to the live system.
+        if self.decision_rfr_override is not None:
+            _bt_config["decision_rfr_override"] = float(self.decision_rfr_override)
+            logger.info(
+                "[Backtest] TUNED profile: decision_rfr_override=%.4f (decision "
+                "context only; Sharpe/metrics risk-free rate unchanged).",
+                self.decision_rfr_override,
+            )
+
+        # ── Backtest LLM endpoint preference ───────────────────────────────────
+        # Backtests are BURST-heavy (~6-10 LLM calls/date). On the supplied free
+        # keys the NVIDIA endpoint 429/504s under that burst — and each NVIDIA 504
+        # costs ~5 MINUTES of timeout before the failover even fires, so making it
+        # primary makes every date crawl. DeepSeek-direct (deepseek-chat) is the
+        # only supplied key that sustains the burst (verified 6/6 rapid calls), so
+        # when it is available we put it FIRST for backtests only. Live runs are
+        # untouched (they keep NVIDIA DeepSeek-V4-Pro primary). Respect an explicit
+        # LLM_FAILOVER_PRIORITY env override if the operator set one.
+        if not os.getenv("LLM_FAILOVER_PRIORITY") and os.getenv("DEEPSEEK_API_KEY"):
+            _bt_config["llm_failover_priority"] = ["deepseek", "nvidia", "google", "groq"]
+            _bt_config["deep_think_llm"] = os.getenv("BACKTEST_DEEP_THINK_LLM", "deepseek-chat")
+            _bt_config["quick_think_llm"] = os.getenv("BACKTEST_QUICK_THINK_LLM", "deepseek-chat")
+            _bt_config["backend_url"] = "https://api.deepseek.com"
+            logger.info(
+                "[Backtest] DeepSeek-direct set as primary LLM (deepseek-chat) — "
+                "the only supplied free key that sustains the per-date burst. "
+                "Live runs are unaffected. Override with LLM_FAILOVER_PRIORITY."
+            )
+
+        set_config(_bt_config)
         config = get_config()
         self.config = config
         self.gateway = DataGateway(config)
@@ -318,15 +366,10 @@ class BacktestingEngine:
         Returns:
             (exec_price, total_commission_egp)
         """
-        slippage = EGX_SLIPPAGE_LOW_LIQ if low_liquidity else EGX_SLIPPAGE_NORMAL
-
-        if action == "BUY":
-            exec_price = close_price * (1.0 + slippage)
-        else:
-            exec_price = close_price * (1.0 - slippage)
-
-        total_commission = shares * exec_price * EGX_TOTAL_COST_SIDE
-        return exec_price, total_commission
+        # Delegate to the shared single-source cost model (egx_costs.py).
+        return _shared_apply_execution_costs(
+            action, shares, close_price, low_liquidity
+        )
 
     # =========================================================================
     # EGX30 CSV Benchmark Loader
@@ -709,6 +752,17 @@ class BacktestingEngine:
         std_ret = df["returns"].std()
         sharpe = (mean_ret * 252 - self.risk_free_rate) / (std_ret * np.sqrt(252)) if std_ret > 0 else 0.0
 
+        # Sortino Ratio — same numerator as Sharpe but penalises only DOWNSIDE
+        # volatility (the deviation of negative daily returns). Reported because
+        # an upside-heavy strategy is unfairly punished by Sharpe's total-vol
+        # denominator. Uses the same annualization (×252 / ×√252) convention.
+        downside = df["returns"][df["returns"] < 0]
+        downside_dev = downside.std()
+        sortino = (
+            (mean_ret * 252 - self.risk_free_rate) / (downside_dev * np.sqrt(252))
+            if downside_dev and downside_dev > 0 else 0.0
+        )
+
         # Calmar Ratio (annualized return / max drawdown magnitude)
         n_days = len(df)
         ann_return = (1 + total_return) ** (252 / max(n_days, 1)) - 1
@@ -762,6 +816,7 @@ class BacktestingEngine:
             "Closed Trades":        total_closed,
             "Max Drawdown":         f"{max_drawdown:.2%}",
             "Sharpe Ratio":         f"{sharpe:.2f}",
+            "Sortino Ratio":        f"{sortino:.2f}",
             "Calmar Ratio":         f"{calmar:.2f}",
             "Total Trades":         len(self.trade_history),
             "Total Commissions":    f"{total_commissions:,.2f} EGP",
@@ -774,7 +829,255 @@ class BacktestingEngine:
         if has_buyhold_data:
             out["Buy&Hold Return"] = f"{buyhold_return:.2%}"
             out["Strategy Alpha"] = f"{strategy_alpha:.2%}"
+
+        # Honesty: how many evaluation dates FAILED in the agent pipeline (LLM
+        # rate-limit / 5xx) and were recorded as placeholder HOLDs. Computed from
+        # the audit log so it lands in BOTH the run log and the saved report.
+        n_agent_err = sum(
+            1 for a in self.audit_log if a.get("decision_status") == "agent_error"
+        )
+        n_eval_dates = sum(1 for a in self.audit_log if a.get("date"))
+        out["Agent Errors"] = f"{n_agent_err}/{n_eval_dates}"
         return out
+
+    def _calculate_directional_accuracy(self, hold_band_pct: float = 0.01) -> Dict[str, Any]:
+        """Post-hoc directional hit-rate — REPORTING ONLY, leak-safe.
+
+        For each evaluation date's decision, compare it to the realized forward
+        move to the NEXT evaluation date. Every price used is <= end_date and was
+        already collected during the walk-forward loop; this runs AFTER the loop
+        and is NEVER fed back to the agents or reflection memory (feeding forward
+        returns back into memory was the look-ahead bug deleted in MEMORY §C1).
+        It answers the user's question directly: "was each call right?"
+
+            BUY  correct if forward return >  +band
+            SELL correct if forward return <  -band
+            HOLD correct if |forward return| <= band
+        """
+        price_by_date = {
+            h["date"]: h["price"]
+            for h in self.buyhold_history
+            if h.get("price")
+        }
+        # One decision per date (keep last), chronological. Exclude dates whose
+        # agent run errored out (decision_status="agent_error") — those carry a
+        # placeholder "HOLD" but are NOT a real decision, so scoring them would
+        # be measuring infra failures, not the strategy.
+        by_date = {
+            a["date"]: str(a.get("parsed_decision") or "HOLD").upper()
+            for a in self.audit_log
+            if a.get("date") in price_by_date
+            and a.get("parsed_decision")
+            and a.get("decision_status") != "agent_error"
+        }
+        ordered = sorted(by_date)
+
+        per_class = {k: {"n": 0, "correct": 0} for k in ("BUY", "SELL", "HOLD")}
+        details: List[Dict[str, Any]] = []
+        evaluated = correct = 0
+
+        for i in range(len(ordered) - 1):   # last date has no forward point in-window
+            d, d_next = ordered[i], ordered[i + 1]
+            p0, p1 = price_by_date[d], price_by_date[d_next]
+            if not p0 or p0 <= 0:
+                continue
+            fwd = (p1 - p0) / p0
+            dec = by_date[d]
+            if dec == "BUY":
+                ok = fwd > hold_band_pct
+            elif dec == "SELL":
+                ok = fwd < -hold_band_pct
+            else:
+                ok = abs(fwd) <= hold_band_pct
+            evaluated += 1
+            correct += int(ok)
+            if dec in per_class:
+                per_class[dec]["n"] += 1
+                per_class[dec]["correct"] += int(ok)
+            details.append({
+                "date": d, "decision": dec, "next_date": d_next,
+                "fwd_return_pct": round(fwd * 100, 3), "correct": ok,
+            })
+
+        actionable_n = per_class["BUY"]["n"] + per_class["SELL"]["n"]
+        actionable_correct = per_class["BUY"]["correct"] + per_class["SELL"]["correct"]
+        return {
+            "horizon": "next_evaluation_date",
+            "hold_band_pct": round(hold_band_pct * 100, 3),
+            "evaluated_decisions": evaluated,
+            "overall_hit_rate": round(correct / evaluated, 4) if evaluated else None,
+            "actionable_hit_rate": (
+                round(actionable_correct / actionable_n, 4) if actionable_n else None
+            ),
+            "by_decision": per_class,
+            "note": "Reporting-only; computed after the run, never fed to agents (leak-safe).",
+            "detail": details,
+        }
+
+    # =========================================================================
+    # Decision-quality evaluation (fixed-horizon, leak-safe, reporting-only)
+    # =========================================================================
+
+    def _dense_price_series(
+        self, ticker: str, start_date: str, end_date: str, horizon_buffer_days: int = 45
+    ) -> Dict[str, float]:
+        """Dense daily ``{date: close}`` map over [start, end + buffer], used ONLY
+        to score decisions post-hoc.
+
+        The buffer extends past ``end_date`` so the latest decisions can still be
+        scored at the longest horizon. This is NOT look-ahead: the agents already
+        decided; we are merely measuring what actually happened next. The forward
+        prices are never fed back to any agent or to memory (that was the §C1 bug)
+        — this runs after the walk-forward loop and feeds the report only.
+        """
+        dense: Dict[str, float] = {}
+
+        # 1. Daily closes accumulated during the walk-forward loop — densely covers
+        #    the whole window (each per-date fetch had a 252-day lookback) without
+        #    any extra request. This is the reliable backbone: the provider returns
+        #    capped/partial windows for a single large-range fetch.
+        for d, c in getattr(self, "_seen_closes", {}).items():
+            try:
+                if c and float(c) > 0:
+                    dense[str(d)] = float(c)
+            except (TypeError, ValueError):
+                continue
+
+        # 2. Forward fetch PAST end_date so the latest decisions can be scored at
+        #    the longest horizon. CRITICAL: the loop leaves config["trade_date"]
+        #    pinned to the last eval date (the look-ahead clamp); it would cap this
+        #    fetch at that date, leaving no forward prices. Clearing it is correct
+        #    and leak-safe — these prices score decisions ALREADY made and are never
+        #    fed back to any agent. Restored afterwards.
+        buf_end = (
+            datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=horizon_buffer_days)
+        ).strftime("%Y-%m-%d")
+        _saved_trade_date = get_config().get("trade_date")
+        try:
+            set_config({"trade_date": None})
+            raw = self._fetch_stock_data_with_retry(ticker, end_date, buf_end)
+        finally:
+            set_config({"trade_date": _saved_trade_date})
+        for row in (raw.get("data") or []):
+            d, c = row.get("date"), row.get("close")
+            try:
+                if d and c is not None and float(c) > 0:
+                    dense[str(d)] = float(c)
+            except (TypeError, ValueError):
+                continue
+
+        # 3. Decision-date closes from buyhold_history — guarantees every decision
+        #    date is present even on --resume (when _seen_closes wasn't restored).
+        for h in self.buyhold_history:
+            if h.get("date") and h.get("price"):
+                try:
+                    dense.setdefault(str(h["date"]), float(h["price"]))
+                except (TypeError, ValueError):
+                    continue
+        return dense
+
+    def _build_decision_quality(
+        self, ticker: str, start_date: str, end_date: str
+    ) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+        """Return ``(decision_quality_block, predictions_rows)``.
+
+        ``predictions_rows`` is one row per real decision (excludes infra
+        ``agent_error`` dates), carrying ``session_id`` so the dashboard can open
+        each prediction's full reasoning trace.
+        """
+        from tradingagents.backtest.decision_metrics import (
+            compute_decision_quality,
+            per_decision_detail,
+        )
+
+        decisions = [
+            {
+                "date": a.get("date"),
+                "decision": a.get("parsed_decision"),
+                "confidence": a.get("confidence"),
+                "session_id": a.get("session_id"),
+            }
+            for a in self.audit_log
+            if a.get("date")
+            and a.get("parsed_decision")
+            and a.get("decision_status") != "agent_error"
+        ]
+        if not decisions:
+            return {"note": "no scoreable decisions (all dates errored or empty)"}, []
+
+        dense = self._dense_price_series(ticker, start_date, end_date)
+        dq = compute_decision_quality(decisions, dense, horizons=(5, 10, 20))
+        preds = per_decision_detail(
+            decisions, dense, horizons=(5, 10, 20), primary_horizon=10
+        )
+        return dq, preds
+
+    # =========================================================================
+    # Transient-error-resilient propagate
+    # =========================================================================
+    # The NVIDIA free DeepSeek endpoint is flaky under the burst of ~10 LLM calls
+    # per evaluation date — it throws BOTH 429 (rate limit) AND 5xx server errors
+    # (500/502/503/504, surfaced by the OpenAI SDK as InternalServerError). Without
+    # retry, any of these fails the date and the outer loop records a PHANTOM HOLD
+    # (decision_status="agent_error"), which the dashboard then renders as a
+    # deliberate "stay in cash" verdict — making a failed run look like a real
+    # 0%/0-trade result. We retry only TRANSIENT infra errors so the agents
+    # actually complete; genuine errors still raise immediately and surface honestly.
+    _TRANSIENT_ERROR_MARKERS = (
+        "429", "too many requests", "rate limit", "ratelimit", "overloaded",
+        "timeout", "timed out", "temporarily unavailable", "service unavailable",
+        "internal server error", "bad gateway", "gateway timeout",
+        "error code: 500", "error code: 502", "error code: 503", "error code: 504",
+        "connection error", "apiconnection",
+    )
+    # OpenAI-SDK exception class names that are always transient infra failures.
+    _TRANSIENT_ERROR_NAMES = (
+        "ratelimit", "timeout", "apiconnection", "serviceunavailable",
+        "internalservererror", "apitimeout",
+    )
+
+    def _is_transient_llm_error(self, exc: Exception) -> bool:
+        name = type(exc).__name__.lower()
+        if any(k in name for k in self._TRANSIENT_ERROR_NAMES):
+            return True
+        # OpenAI APIStatusError carries a numeric .status_code — treat any 5xx
+        # (and 429) as transient regardless of message wording.
+        code = getattr(exc, "status_code", None)
+        if isinstance(code, int) and (code == 429 or 500 <= code < 600):
+            return True
+        msg = str(exc).lower()
+        return any(m in msg for m in self._TRANSIENT_ERROR_MARKERS)
+
+    def _propagate_with_retry(
+        self, graph, ticker: str, date: str,
+        *, max_attempts: int = 4, base_delay: float = 20.0,
+    ):
+        """Run ``graph.propagate`` with backoff on transient LLM errors.
+
+        Returns ``(final_state, signal)``. Re-raises non-transient errors and the
+        final transient error after exhausting ``max_attempts`` (so the outer
+        loop still records an honest ``agent_error``).
+        """
+        import time
+        last_exc: Optional[Exception] = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                return graph.propagate(ticker, date, run_type="backtest")
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except Exception as exc:
+                last_exc = exc
+                if attempt >= max_attempts or not self._is_transient_llm_error(exc):
+                    raise
+                delay = base_delay * (2 ** (attempt - 1))   # 20s, 40s, 80s
+                logger.warning(
+                    "[%s %s] transient LLM error (%s) — retry %d/%d after %.0fs: %s",
+                    ticker, date, type(exc).__name__, attempt, max_attempts - 1,
+                    delay, str(exc)[:160],
+                )
+                time.sleep(delay)
+        assert last_exc is not None
+        raise last_exc
 
     # =========================================================================
     # Decision resolution (LLM judge + trader plan + deterministic veto)
@@ -952,8 +1255,16 @@ class BacktestingEngine:
                 target_shares = int((self.portfolio_value * 0.10) / close_price)
 
             # Scale position by confidence (min 20% of target, max 100%).
-            # confidence=0 or None means no scaling — use full position size.
-            if confidence is not None and confidence > 0:
+            # FROZEN by default: LLM `confidence` is an uncalibrated number from
+            # the same model that wrote the thesis, not a calibrated probability,
+            # so it must not size real capital until the calibration work
+            # (remediation Phase 3) validates it. Gate on `confidence_sizing_enabled`
+            # (config / CONFIDENCE_SIZING_ENABLED env). Default OFF ⇒ no scaling.
+            if (
+                self.config.get("confidence_sizing_enabled", False)
+                and confidence is not None
+                and confidence > 0
+            ):
                 confidence_scalar = max(0.20, min(1.0, confidence))
                 original_target = target_shares
                 target_shares = max(1, int(target_shares * confidence_scalar))
@@ -1094,11 +1405,33 @@ class BacktestingEngine:
         if analysts is None:
             analysts = ["market", "fundamentals", "news", "social"]
 
+        # Backtest-only: drop the news + social analysts. In a backtest there is
+        # no historical EGX news archive and the social pipeline returns
+        # NO_SIGNAL for past dates (live-only) — so both analysts contribute
+        # nothing but still cost ~2 LLM calls/date each, inflating the per-date
+        # burst that the throttled endpoints choke on. The market + fundamentals
+        # analysts run; the bull/bear debate, research manager, trader and risk
+        # stages downstream run NORMALLY on the resulting reports.
+        # Override with BACKTEST_INCLUDE_NEWS_SOCIAL=1 if you ever wire a real
+        # historical news/social archive.
+        if os.getenv("BACKTEST_INCLUDE_NEWS_SOCIAL", "0").strip() not in ("1", "true", "True"):
+            _dropped = [a for a in analysts if a in ("news", "social")]
+            analysts = [a for a in analysts if a not in ("news", "social")]
+            if not analysts:
+                analysts = ["market", "fundamentals"]
+            if _dropped:
+                logger.info(
+                    "[Backtest] news/social analysts disabled (%s) — running %s only. "
+                    "Set BACKTEST_INCLUDE_NEWS_SOCIAL=1 to re-enable.",
+                    ", ".join(_dropped), analysts,
+                )
+
         self._train_end_date = train_end_date  # stored for tagging inside the loop
         # Retained so save_results() can pass them to the Postgres backtest writer.
         self._bt_ticker = ticker
         self._bt_start_date = start_date
         self._bt_end_date = end_date
+        self._bt_analysts = list(analysts)
 
         # Workstream A — resume from a previous partial if requested.
         # Returns the set of completed date strings to skip in the main loop.
@@ -1125,6 +1458,14 @@ class BacktestingEngine:
         # look "stuck" or empty for tickers without historical coverage.
         self._run_error: Optional[str] = None
         evaluated_dates = 0
+
+        # Accumulate every daily close the per-date fetches return (each has a
+        # 252-day lookback, so this densely covers the whole window for free).
+        # Used post-hoc by _build_decision_quality to score fixed-horizon forward
+        # returns reliably — the provider returns capped/partial windows for a
+        # single large-range fetch, so we reuse the data we already paid for.
+        if not hasattr(self, "_seen_closes"):
+            self._seen_closes: Dict[str, float] = {}
 
         # ---- Fetch benchmark data upfront ----
         if self.benchmark_ticker:
@@ -1258,6 +1599,16 @@ class BacktestingEngine:
 
             evaluated_dates += 1
 
+            # Capture the full daily close series this fetch returned (dense,
+            # leak-safe — all dates <= the eval date) for post-hoc scoring.
+            for _row in stock_data["data"]:
+                _d, _c = _row.get("date"), _row.get("close")
+                try:
+                    if _d and _c is not None and float(_c) > 0:
+                        self._seen_closes[str(_d)] = float(_c)
+                except (TypeError, ValueError):
+                    continue
+
             low_liquidity = stock_data.get("low_liquidity", False)
 
             # ---- Track buy-and-hold benchmark (same ticker) ----
@@ -1362,7 +1713,7 @@ class BacktestingEngine:
 
                 _call_log.clear()
                 _t0 = time.perf_counter()
-                final_state, _ = graph.propagate(ticker, date)
+                final_state, _ = self._propagate_with_retry(graph, ticker, date)
                 _trade_time_s = time.perf_counter() - _t0
                 _llm_calls = len(_call_log)
                 _reasoning_score = _compute_reasoning_score(final_state)
@@ -1472,6 +1823,11 @@ class BacktestingEngine:
                 audit_entry = {
                     "date": date,
                     "price": current_price,
+                    # session_id links this evaluation date to its full reasoning
+                    # trace in analysis_sessions/agent_events (run_type='backtest').
+                    # The dashboard uses it to open the live-style detail screen
+                    # for any single backtest prediction.
+                    "session_id": getattr(graph, "session_id", None),
                     "raw_decision": str(raw_decision)[:200],  # Truncate long LLM text
                     "parsed_decision": decision,
                     "decision_path": _decision_path,
@@ -1604,6 +1960,29 @@ class BacktestingEngine:
         for k, v in metrics.items():
             logger.info(f"  {k:<26}: {v}")
 
+        # ---- Honesty gate: don't let a rate-limited / failed run masquerade
+        # as a clean all-HOLD 0% result. Count dates whose agent run errored
+        # (decision_status="agent_error") and surface it at the run level so the
+        # report/dashboard show a failure, not a deliberate verdict.
+        agent_errors = [a for a in self.audit_log if a.get("decision_status") == "agent_error"]
+        n_err = len(agent_errors)
+        n_eval = max(evaluated_dates, 1)
+        # ("Agent Errors" metric is added inside _calculate_metrics so it lands
+        # in the saved report too; here we only set the run-level error string.)
+        if n_err:
+            err_classes = sorted({a.get("error_class", "?") for a in agent_errors})
+            msg = (
+                f"{n_err}/{evaluated_dates} evaluation dates FAILED in the agent "
+                f"pipeline ({', '.join(err_classes)}) and were recorded as "
+                f"placeholder HOLDs — these are NOT real decisions. Likely an LLM "
+                f"rate-limit/timeout; re-run (--resume) or use a less throttled "
+                f"endpoint. Treat trade/return figures as unreliable until clean."
+            )
+            logger.warning(msg)
+            # If MOST dates failed, the whole run is untrustworthy → set run error.
+            if n_err >= n_eval * 0.5 or n_err == len(self.audit_log):
+                self._run_error = (self._run_error + " | " if getattr(self, "_run_error", None) else "") + msg
+
         # If we couldn't evaluate even a single date, emit a minimal baseline series
         # so the dashboard can still render (and show a clear error message).
         if evaluated_dates == 0 and not self.daily_history:
@@ -1624,6 +2003,25 @@ class BacktestingEngine:
         except Exception as exc:
             logger.warning("Benchmark alignment failed: %s", exc)
             self._benchmark_block = {}
+
+        # Decision-quality scoring + per-prediction rows (post-hoc, leak-safe).
+        # This is the PRIMARY thesis evidence ("skillful, not random"); it works
+        # even when the strategy mostly HOLDs and the equity curve is flat.
+        try:
+            self._decision_quality, self._predictions = self._build_decision_quality(
+                ticker, start_date, end_date
+            )
+            dq_h = (self._decision_quality.get("horizons") or {}).get("10") or {}
+            logger.info(
+                "Decision quality @10d: actionable hit-rate=%s (n=%s), IC=%s, "
+                "binomial p vs 50%%=%s",
+                dq_h.get("actionable_hit_rate"), dq_h.get("actionable_n"),
+                dq_h.get("information_coefficient"),
+                dq_h.get("actionable_binomial_p_vs_50pct"),
+            )
+        except Exception as exc:
+            logger.warning("Decision-quality scoring failed: %s", exc)
+            self._decision_quality, self._predictions = {}, []
 
         self.save_results(ticker)
 
@@ -1723,8 +2121,19 @@ class BacktestingEngine:
         report = {
             "session":              session_name,
             "error":                getattr(self, "_run_error", None),
+            "run_config": {
+                "decision_profile":      getattr(self, "decision_profile", "live_faithful"),
+                "decision_rfr_override":  getattr(self, "decision_rfr_override", None),
+                "initial_capital":        self.initial_capital,
+                "start_date":             getattr(self, "_bt_start_date", None),
+                "end_date":               getattr(self, "_bt_end_date", None),
+                "analysts":               getattr(self, "_bt_analysts", None),
+            },
             "metrics":              metrics,
             "split_metrics":        split_metrics,
+            "directional_accuracy": self._calculate_directional_accuracy(),
+            "decision_quality":     getattr(self, "_decision_quality", {}),
+            "predictions":          getattr(self, "_predictions", []),
             "benchmark":            getattr(self, "_benchmark_block", {}),
             "pipeline_efficiency":  efficiency_summary,
             "trades":               self.trade_history,
@@ -1815,6 +2224,17 @@ if __name__ == "__main__":
                         help="Benchmark ticker for Alpha calculation (pass 'none' to disable)")
     parser.add_argument("--cooldown",   type=int,   default=5,
                         help="Seconds to wait between evaluations (rate limit)")
+    parser.add_argument("--profile",    type=str,   default="live_faithful",
+                        choices=["live_faithful", "tuned"],
+                        help="Decision profile. 'live_faithful' = untouched live "
+                             "decision logic (primary thesis result). 'tuned' = "
+                             "disclosed sensitivity config that lowers the "
+                             "required-return the fundamentals analyst compares "
+                             "earnings yield against (decision context only; "
+                             "Sharpe/metrics risk-free rate unchanged).")
+    parser.add_argument("--decision-rfr", type=float, default=None,
+                        help="Explicit decision-RFR override for --profile tuned "
+                             "(default 0.12 or BACKTEST_DECISION_RFR env).")
     parser.add_argument("--resume",     action="store_true",
                         help="Resume from the per-ticker partial checkpoint if "
                              "one exists in backtest_results/. Skips dates that "
@@ -1842,6 +2262,8 @@ if __name__ == "__main__":
     engine = BacktestingEngine(
         initial_capital=args.capital,
         benchmark_ticker=benchmark,
+        decision_profile=args.profile,
+        decision_rfr_override=args.decision_rfr,
     )
     engine.run_backtest(
         args.ticker, args.start, args.end,

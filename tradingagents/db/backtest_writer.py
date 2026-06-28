@@ -114,6 +114,7 @@ def write_backtest_run(
     end_date: Any,
     metrics: Dict[str, Any],
     config: Optional[Dict[str, Any]] = None,
+    user_id: Optional[str] = None,
 ) -> bool:
     """Insert one row into ``backtest_runs``. Returns True on success.
 
@@ -147,13 +148,13 @@ def write_backtest_run(
                     total_return_pct, benchmark_return_pct, alpha_pct,
                     sharpe_ratio, calmar_ratio, max_drawdown_pct, win_rate_pct,
                     total_trades, total_commissions, final_portfolio_egp,
-                    metrics
+                    metrics, user_id
                 )
                 VALUES (%s, %s, %s, %s, %s,
                         %s, %s, %s,
                         %s, %s, %s, %s,
                         %s, %s, %s,
-                        %s::jsonb)
+                        %s::jsonb, %s)
                 ON CONFLICT (run_id) DO NOTHING
                 """,
                 (
@@ -173,6 +174,7 @@ def write_backtest_run(
                     _parse_float(metrics.get("Total Commissions")),
                     _parse_float(metrics.get("Final Portfolio")),
                     _to_jsonb({**metrics, "_config_snapshot": _config_snapshot(config)}),
+                    user_id,
                 ),
             )
         logger.debug("backtest: backtest_runs row written for run_id=%s", run_id)
