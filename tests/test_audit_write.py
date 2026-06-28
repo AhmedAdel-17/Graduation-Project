@@ -197,8 +197,9 @@ def test_write_analysis_session_executes_insert(monkeypatch):
     assert params[0] == "sess-1"
     assert params[1] == "COMI.CA"
     assert params[2] == date(2025, 12, 1)
-    # user_id is second-to-last
-    assert params[-2] == "alice"
+    # Trailing params are (..., user_id, model_fingerprint, run_type)
+    assert params[-1] == "live"  # default run_type
+    assert params[-3] == "alice"  # user_id
 
 
 def test_write_analysis_session_rejects_bad_trade_date(monkeypatch):
