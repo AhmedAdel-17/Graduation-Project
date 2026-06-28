@@ -3,6 +3,22 @@ System Validation & Hardening Test Suite
 ========================================
 Runs consistency, determinism, scenario, risk, and stability checks
 across the TradingAgents architecture.
+
+This is the sole consumer of ``tradingagents.agents.utils.scoring.calculate_unified_score``
+— the DETERMINISTIC validation / explainability engine. Note the distinction:
+
+* The LIVE BUY/SELL/HOLD decision is produced by the LLM agents (Research Manager +
+  Risk Judge) inside the compiled LangGraph, bracketed by deterministic guardrails
+  (Risk Scorer hard veto, final gate). This script does NOT exercise that path.
+* ``calculate_unified_score`` is a separate, reproducible, no-LLM engine. Here it is
+  used as a test ORACLE: fed mocked analyst states, it must (a) classify scenarios
+  correctly (bullish → STRONG_BUY, etc.) and (b) return byte-identical output across
+  100 runs (determinism). It validates the deterministic scoring math and the
+  signal/risk plumbing — not the LLM decision quality.
+
+Recommended: wire this script into CI so the deterministic engine and its oracle
+cannot silently rot (it is not currently part of any automated pipeline). See
+CLAUDE.md §12 for the full LLM-decision vs. deterministic-validation distinction.
 """
 import sys
 import os

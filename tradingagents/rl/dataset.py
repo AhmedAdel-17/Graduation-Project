@@ -55,10 +55,14 @@ from tradingagents.rl.feature_extractor import (
 
 logger = logging.getLogger("tradingagents.rl.dataset")
 
+from tradingagents.dataflows.egx_costs import ROUND_TRIP_COMMISSION_PCT
+
 DATASET_SCHEMA_VERSION = "rl_dataset_v1"
 DEFAULT_REWARD_HORIZON_DAYS = 20
 DEFAULT_DRAWDOWN_PENALTY = 0.5
-DEFAULT_TX_COST_PCT = 0.00378  # 0.189% per side × 2 sides, matches EGX cost stack
+# Round-trip commission (0.189% per side × 2). Sourced from the shared EGX cost
+# model so reward shaping cannot drift from the backtester's execution costs.
+DEFAULT_TX_COST_PCT = ROUND_TRIP_COMMISSION_PCT  # ~0.00378
 DEFAULT_REWARD_CLIP = 0.5
 
 
