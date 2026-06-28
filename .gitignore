@@ -52,3 +52,17 @@ dashboard/dist/
 # Playwright persistent session (live cookies/tokens) - never commit
 pipeline/user_session/
 user_session/
+
+# Local Documentation
+Understanding_Codebase_From_0_To_Hero/
+Thesis_Deliverable/
+docs/
+agent_docs/
+*.md
+
+# Caches & Logs
+logs/
+.vite/
+.coverage
+data/
+tradingagents/dataflows/data_cache/
