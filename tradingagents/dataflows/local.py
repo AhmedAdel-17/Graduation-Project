@@ -1,12 +1,31 @@
 from typing import Annotated
 import pandas as pd
 import os
+import logging
 from .config import DATA_DIR
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import json
 from .reddit_utils import fetch_top_from_category
 from tqdm import tqdm
+
+logger = logging.getLogger("tradingagents.dataflows.local")
+
+# Token-budget guard: tool outputs returned to LLM analysts are capped at this
+# many characters. Previously hard-coded as a bare ``2000`` at each return site.
+MAX_TOOL_OUTPUT_CHARS = 2000
+
+
+def _truncate_tool_output(text: str, limit: int = MAX_TOOL_OUTPUT_CHARS) -> str:
+    """Cap ``text`` at ``limit`` chars with a truncation marker, else return as-is.
+
+    Equivalent to the prior inline ``s[:2000] + "\\n...[TRUNCATED]..." if len(s) > 2000``
+    logic used by the finnhub-news and SimFin statement readers.
+    """
+    if len(text) > limit:
+        return text[:limit] + "\n...[TRUNCATED]..."
+    return text
+
 
 def get_YFin_data_window(
     symbol: Annotated[str, "ticker symbol of the company"],
@@ -109,7 +128,7 @@ def get_finnhub_news(
     try:
         result = get_data_in_range(query, start_date, end_date, "news_data", DATA_DIR)
     except Exception as e:
-        print(f"WARNING: get_finnhub_news failed: {e}")
+        logger.warning("get_finnhub_news failed: %s", e)
         return "## Finnhub News: No data available or error occurred."
 
     if len(result) == 0:
@@ -144,8 +163,8 @@ def get_finnhub_news(
             break
 
     final_result_str = "## " + query + " News, from " + start_date + " to " + end_date + ":\n" + str(combined_result)
-    print(f"DEBUG: local.get_finnhub_news returning string of length {len(final_result_str)}")
-    final_result_str = final_result_str[:2000] + "\n...[TRUNCATED]..." if len(final_result_str) > 2000 else final_result_str
+    logger.debug("get_finnhub_news returning string of length %d", len(final_result_str))
+    final_result_str = _truncate_tool_output(final_result_str)
     if len(final_result_str) > 500:
          final_result_str = final_result_str[:500] + "\n...[TRUNCATED to 500]..."
     return final_result_str
@@ -289,7 +308,7 @@ def get_simfin_balance_sheet(
 
     # Check if there are any available reports; if not, return a notification
     if filtered_df.empty:
-        print("No balance sheet available before the given current date.")
+        logger.info("No balance sheet available before the given current date.")
         return ""
 
     # Get the most recent balance sheet by selecting the row with the latest Publish Date
@@ -303,9 +322,8 @@ def get_simfin_balance_sheet(
         + str(latest_balance_sheet)
         + "\n\nThis includes metadata like reporting dates and currency, share details, and a breakdown of assets, liabilities, and equity. Assets are grouped as current (liquid items like cash and receivables) and noncurrent (long-term investments and property). Liabilities are split between short-term obligations and long-term debts, while equity reflects shareholder funds such as paid-in capital and retained earnings. Together, these components ensure that total assets equal the sum of liabilities and equity."
     )
-    print(f"DEBUG: local.get_simfin_balance_sheet returning length {len(res_str)}")
-    if len(res_str) > 2000:
-        res_str = res_str[:2000] + "\n...[TRUNCATED]..."
+    logger.debug("get_simfin_balance_sheet returning length %d", len(res_str))
+    res_str = _truncate_tool_output(res_str)
     return res_str
 
 
@@ -340,7 +358,7 @@ def get_simfin_cashflow(
 
     # Check if there are any available reports; if not, return a notification
     if filtered_df.empty:
-        print("No cash flow statement available before the given current date.")
+        logger.info("No cash flow statement available before the given current date.")
         return ""
 
     # Get the most recent cash flow statement by selecting the row with the latest Publish Date
@@ -354,9 +372,8 @@ def get_simfin_cashflow(
         + str(latest_cash_flow)
         + "\n\nThis includes metadata like reporting dates and currency, share details, and a breakdown of cash movements. Operating activities show cash generated from core business operations, including net income adjustments for non-cash items and working capital changes. Investing activities cover asset acquisitions/disposals and investments. Financing activities include debt transactions, equity issuances/repurchases, and dividend payments. The net change in cash represents the overall increase or decrease in the company's cash position during the reporting period."
     )
-    print(f"DEBUG: local.get_simfin_cashflow returning length {len(res_str)}")
-    if len(res_str) > 2000:
-        res_str = res_str[:2000] + "\n...[TRUNCATED]..."
+    logger.debug("get_simfin_cashflow returning length %d", len(res_str))
+    res_str = _truncate_tool_output(res_str)
     return res_str
 
 
@@ -391,7 +408,7 @@ def get_simfin_income_statements(
 
     # Check if there are any available reports; if not, return a notification
     if filtered_df.empty:
-        print("No income statement available before the given current date.")
+        logger.info("No income statement available before the given current date.")
         return ""
 
     # Get the most recent income statement by selecting the row with the latest Publish Date
@@ -405,9 +422,8 @@ def get_simfin_income_statements(
         + str(latest_income)
         + "\n\nThis includes metadata like reporting dates and currency, share details, and a comprehensive breakdown of the company's financial performance. Starting with Revenue, it shows Cost of Revenue and resulting Gross Profit. Operating Expenses are detailed, including SG&A, R&D, and Depreciation. The statement then shows Operating Income, followed by non-operating items and Interest Expense, leading to Pretax Income. After accounting for Income Tax and any Extraordinary items, it concludes with Net Income, representing the company's bottom-line profit or loss for the period."
     )
-    print(f"DEBUG: local.get_simfin_income_statements returning length {len(res_str)}")
-    if len(res_str) > 2000:
-        res_str = res_str[:2000] + "\n...[TRUNCATED]..."
+    logger.debug("get_simfin_income_statements returning length %d", len(res_str))
+    res_str = _truncate_tool_output(res_str)
     return res_str
 
 
@@ -516,7 +532,7 @@ def get_reddit_company_news(
             )
             posts.extend(fetch_result)
         except Exception as e:
-            print(f"WARNING: Reddit fetch failed for {curr_date_str}: {e}")
+            logger.warning("Reddit fetch failed for %s: %s", curr_date_str, e)
             
         curr_date += relativedelta(days=1)
         pbar.update(1)

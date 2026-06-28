@@ -72,7 +72,7 @@ def get_eodhd_stock_data(
     # Normalize symbol format
     original_symbol = symbol
     symbol_upper = symbol.upper().strip()
-    
+
     # Extract exchange code if present, otherwise use default
     if "." in symbol_upper:
         parts = symbol_upper.rsplit(".", 1)
@@ -81,7 +81,15 @@ def get_eodhd_stock_data(
     else:
         symbol_code = symbol_upper
         exchange_code = exchange
-    
+
+    # EODHD uses the ".EGX" exchange code for the Egyptian Exchange, NOT the
+    # Yahoo-style ".CA" suffix used elsewhere in this repo. Passing "COMI.CA"
+    # to EODHD 404s ("Ticker Not Found"); "COMI.EGX" returns data. Map the
+    # Cairo aliases here so this fallback actually works (it is the only live
+    # source that covers the yfinance-dead names like QNBA / ORAS / ESRS).
+    if exchange_code in ("CA", "EG", "EGY"):
+        exchange_code = "EGX"
+
     # Full symbol for EODHD
     full_symbol = f"{symbol_code}.{exchange_code}"
     
@@ -254,7 +262,7 @@ def get_eodhd_indicators(
         if "_" in indicator_upper:
             try:
                 period = int(indicator_upper.split("_")[1])
-            except:
+            except Exception:
                 pass
         
         values = _calculate_sma(closes, period)
@@ -264,7 +272,7 @@ def get_eodhd_indicators(
         if "_" in indicator_upper:
             try:
                 period = int(indicator_upper.split("_")[1])
-            except:
+            except Exception:
                 pass
         
         values = _calculate_ema(closes, period)

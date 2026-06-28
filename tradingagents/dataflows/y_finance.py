@@ -3,7 +3,11 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import yfinance as yf
 import os
+import logging
 from .stockstats_utils import StockstatsUtils
+from .symbol_utils import normalize_egx_ticker
+
+logger = logging.getLogger("tradingagents.dataflows.y_finance")
 
 # =============================================================================
 # EGX (Egyptian Exchange) Configuration
@@ -48,7 +52,26 @@ def get_YFin_data_online(
         - errors: List of any issues encountered
     """
     errors = []
-    
+
+    # LOCAL-ONLY backtest mode: serve OHLCV from the saved data/egx30_ohlcv CSVs
+    # with ZERO network/API calls. This is the single chokepoint for the LLM's
+    # get_stock_data tool AND the technical-panel fetch (both call this function),
+    # so flipping it here guarantees the market analyst never contacts yfinance.
+    try:
+        from .config import get_config as _gc
+        if _gc().get("ohlcv_local_only"):
+            from .local_ohlcv import get_local_ohlcv_data
+            out = get_local_ohlcv_data(symbol, start_date, end_date)
+            if isinstance(max_records, int) and max_records > 0:
+                _d = out.get("data") or []
+                if len(_d) > max_records:
+                    out["data"] = _d[-max_records:]
+            return out
+    except Exception as _e:
+        # Never let the local short-circuit break the normal path.
+        import logging as _lg
+        _lg.getLogger("tradingagents.y_finance").debug("local-only OHLCV failed: %s", _e)
+
     # Validate date format
     try:
         datetime.strptime(start_date, "%Y-%m-%d")
@@ -62,10 +85,9 @@ def get_YFin_data_online(
     
     # Normalize EGX symbol format - ensure .CA suffix for Cairo Stock Exchange
     original_symbol = symbol
-    symbol_upper = symbol.upper().strip()
-    
-    if not symbol_upper.endswith(".CA"):
-        symbol_upper = f"{symbol_upper}.CA"
+    symbol_upper = normalize_egx_ticker(symbol)
+
+    if symbol_upper != symbol.upper().strip():
         errors.append(f"Symbol normalized: '{original_symbol}' -> '{symbol_upper}' (EGX format)")
     
     # Create ticker object
@@ -137,32 +159,52 @@ def get_YFin_data_online(
     # Process data into structured format with mandatory OHLCV fields
     ohlcv_records: List[Dict[str, Any]] = []
     volume_missing_count = 0
+    phantom_dropped = 0
     total_volume = 0
-    
+
     for idx, row in data.iterrows():
         date_str = idx.strftime("%Y-%m-%d")
-        
+
         # Extract OHLCV - all fields are mandatory
         volume = row.get("Volume", 0)
         if volume is None or volume == 0 or (hasattr(volume, '__nan__') or str(volume) == 'nan'):
             volume = 0
-            volume_missing_count += 1
         else:
             volume = int(volume)
-        
+
+        o = round(float(row.get("Open", 0)), 2)
+        h = round(float(row.get("High", 0)), 2)
+        l = round(float(row.get("Low", 0)), 2)
+        c = round(float(row.get("Close", 0)), 2)
+
+        # Drop phantom forward-filled bars. yfinance pads recent days it has not
+        # yet ingested (and some non-trading days) with a flat, zero-volume bar
+        # where O==H==L==C (the prior close carried forward). These are NOT real
+        # sessions — keeping them corrupted the last price, the 1D/1W % change,
+        # and collapsed the pivot range to zero (high==low). A genuine ±10% limit
+        # / halt day still trades, so it has volume > 0 and survives this filter.
+        if volume == 0 and o == h == l == c:
+            phantom_dropped += 1
+            continue
+
+        if volume == 0:
+            # Real bar (price moved) but the vendor omitted volume — keep it,
+            # but flag it so liquidity-aware sizing knows volume is unreliable.
+            volume_missing_count += 1
+
         total_volume += volume
-        
+
         record = {
             "date": date_str,
-            "open": round(float(row.get("Open", 0)), 2),
-            "high": round(float(row.get("High", 0)), 2),
-            "low": round(float(row.get("Low", 0)), 2),
-            "close": round(float(row.get("Close", 0)), 2),
+            "open": o,
+            "high": h,
+            "low": l,
+            "close": c,
             "volume": volume
         }
         ohlcv_records.append(record)
     
-    print(f"DEBUG: y_finance.get_YFin_data_online generated {len(ohlcv_records)} records before truncation", flush=True)
+    logger.debug("get_YFin_data_online generated %d records before truncation", len(ohlcv_records))
     
     # Limit to the last `max_records` bars to prevent token overflow on the LLM
     # analyst path (Groq TPM limit 12k/request). `max_records=None` returns the
@@ -188,6 +230,12 @@ def get_YFin_data_online(
         errors.append(
             f"VOLUME DATA MISSING: {volume_missing_count}/{num_records} bars have zero/missing volume"
         )
+
+    if phantom_dropped:
+        errors.append(
+            f"DROPPED {phantom_dropped} phantom forward-filled bar(s) "
+            f"(flat OHLC, zero volume) — not real trading sessions"
+        )
     
     # Build structured response
     result = {
@@ -204,6 +252,7 @@ def get_YFin_data_online(
         "liquidity_threshold": liquidity_threshold,
         "volume_missing": volume_missing,
         "volume_missing_count": volume_missing_count,
+        "phantom_dropped": phantom_dropped,
         "errors": errors if errors else None
     }
     
@@ -373,7 +422,7 @@ def get_stock_stats_indicators_window(
             count += 1
         
     except Exception as e:
-        print(f"Error getting bulk stockstats data: {e}")
+        logger.warning("Error getting bulk stockstats data: %s", e)
         # Fallback to original implementation if bulk method fails
         ind_string = ""
         curr_date_dt = datetime.strptime(curr_date, "%Y-%m-%d")
@@ -391,7 +440,7 @@ def get_stock_stats_indicators_window(
         + best_ind_params.get(indicator, "No description available.")
     )
 
-    print(f"DEBUG: y_finance.get_stock_stats_indicators_window returning string of length {len(result_str)}", flush=True)
+    logger.debug("get_stock_stats_indicators_window returning string of length %d", len(result_str))
     
     # SAFETY NET: Global truncation for this function output
     if len(result_str) > 2000:
@@ -501,8 +550,9 @@ def get_stockstats_indicator(
             curr_date,
         )
     except Exception as e:
-        print(
-            f"Error getting stockstats indicator data for indicator {indicator} on {curr_date}: {e}"
+        logger.warning(
+            "Error getting stockstats indicator data for indicator %s on %s: %s",
+            indicator, curr_date, e,
         )
         return ""
 

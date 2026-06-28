@@ -19,6 +19,30 @@ class StockstatsUtils:
     ):
         # Get config and set up data directory path
         config = get_config()
+
+        # LOCAL-ONLY backtest mode: compute the indicator from the saved
+        # data/egx30_ohlcv CSVs — no yfinance/API call. Same output contract.
+        if config.get("ohlcv_local_only"):
+            from .local_ohlcv import get_local_ohlcv_data
+            cd = pd.to_datetime(curr_date).strftime("%Y-%m-%d")
+            start = (pd.to_datetime(curr_date) - pd.DateOffset(years=3)).strftime("%Y-%m-%d")
+            raw = get_local_ohlcv_data(symbol, start, cd)
+            rows = raw.get("data") or []
+            if not rows:
+                return "N/A: no local OHLCV data"
+            data = pd.DataFrame(rows).rename(columns={
+                "date": "Date", "open": "Open", "high": "High",
+                "low": "Low", "close": "Close", "volume": "Volume",
+            })
+            df = wrap(data)
+            date_col = "Date" if "Date" in df.columns else "date"
+            df[date_col] = pd.to_datetime(df[date_col]).dt.strftime("%Y-%m-%d")
+            df[indicator]  # trigger calculation
+            matching_rows = df[df[date_col].str.startswith(cd)]
+            if not matching_rows.empty:
+                return matching_rows[indicator].values[0]
+            return "N/A: Not a trading day (weekend or holiday)"
+
         online = config["data_vendors"]["technical_indicators"] != "local"
 
         df = None

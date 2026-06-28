@@ -133,7 +133,7 @@ class MubasherScraper:
                     match = re.search(r'(\d+\.\d{2})', text)
                     if match:
                         return float(match.group(1).replace(',', ''))
-            except:
+            except Exception:
                 pass
                 
         # Strategy 3: Brute force search for "121." etc (if we know approx price)
@@ -155,7 +155,7 @@ class MubasherScraper:
                     if pct_match:
                         # Value usually nearby
                         return 0.0, float(pct_match.group(1)) # Placeholder for absolute change
-        except:
+        except Exception:
             pass
         return None, None
 
@@ -171,7 +171,7 @@ class MubasherScraper:
                     match = re.search(r'(\d{1,3}(,\d{3})*)', text) # Matches 1,000,000
                     if match:
                         return float(match.group(1).replace(',', ''))
-        except:
+        except Exception:
             pass
         return 0.0
 

@@ -108,9 +108,14 @@ class DataGateway:
         providers = self._build_ohlcv_providers(symbol_normalized, start_date, end_date)
 
         try:
+            # A provider only "succeeds" if it returns a dict with non-empty
+            # data. yfinance returns an empty dict (no exception) for thin /
+            # delisted EGX names — without this predicate the EODHD + local-CSV
+            # fallbacks would never be reached.
             result, source_name = fetch_with_fallback(
                 providers=providers,
                 method_name=f"stock_data({symbol_normalized})",
+                is_valid=lambda r: isinstance(r, dict) and bool(r.get("data")),
             )
 
             # Validate with schema
@@ -148,6 +153,22 @@ class DataGateway:
         """Build ordered list of OHLCV providers."""
         providers = []
 
+        # LOCAL-ONLY mode (backtests): use ONLY the pre-built per-ticker CSVs in
+        # data/egx30_ohlcv — no network/API calls for price data. Set via
+        # config['ohlcv_local_only']=True (the scenario/event-study backtester
+        # does this). Returns just the local provider so yfinance/EODHD/egxpy are
+        # never contacted.
+        if self.config.get("ohlcv_local_only"):
+            try:
+                from .local_ohlcv import get_local_ohlcv_data
+                return [(
+                    "local_csv",
+                    lambda s=symbol, sd=start_date, ed=end_date: get_local_ohlcv_data(s, sd, ed),
+                )]
+            except ImportError:
+                logger.error("ohlcv_local_only set but local_ohlcv unavailable!")
+                return []
+
         # Provider 1: yfinance (always available)
         try:
             from .y_finance import get_YFin_data_online
@@ -179,6 +200,20 @@ class DataGateway:
                     "egxpy",
                     lambda s=symbol, sd=start_date, ed=end_date: get_stock_data_egxpy(s, sd, ed),
                 ))
+        except ImportError:
+            pass
+
+        # Provider 4: local CSV cache (LAST RESORT — offline, delayed). Only ever
+        # reached when every live source above returns empty/raises. This keeps a
+        # backtest producing real per-date decisions (instead of all-HOLD / zero
+        # returns with blank reasoning) for thin or yfinance-dead EGX names. The
+        # window filter is end-EXCLUSIVE there, so it is look-ahead-safe.
+        try:
+            from .local_ohlcv import get_local_ohlcv_data
+            providers.append((
+                "local_csv",
+                lambda s=symbol, sd=start_date, ed=end_date: get_local_ohlcv_data(s, sd, ed),
+            ))
         except ImportError:
             pass
 
@@ -527,11 +562,9 @@ class DataGateway:
     # =========================================================================
 
     def _normalize_symbol(self, symbol: str) -> str:
-        """Ensure EGX symbol has .CA suffix."""
-        symbol = symbol.upper().strip()
-        if not symbol.endswith(".CA"):
-            symbol += ".CA"
-        return symbol
+        """Ensure EGX symbol has .CA suffix (canonical helper, MEMORY.md §H)."""
+        from tradingagents.dataflows.symbol_utils import normalize_egx_ticker
+        return normalize_egx_ticker(symbol)
 
     def _log_quality(
         self,

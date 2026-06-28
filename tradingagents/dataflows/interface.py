@@ -10,6 +10,8 @@ from .y_finance import get_YFin_data_online, get_stock_stats_indicators_window, 
 from .eodhd import get_stock_data_eodhd, get_indicators_eodhd
 # egxpy - Native EGX data library (RECOMMENDED for EGX)
 from .egxpy_wrapper import get_stock_data_egxpy, is_egxpy_available
+# TradingView (tvDatafeed) - keyless live OHLCV, best free EGX coverage
+from .tradingview_provider import get_tradingview_ohlcv
 
 # Configuration and routing logic
 from .config import get_config
@@ -75,6 +77,10 @@ VENDOR_METHODS = {
     # core_stock_apis
     "get_stock_data": {
         "yfinance": get_YFin_data_online,
+        # TradingView is tried right after the configured primary: keyless,
+        # freshest, widest EGX coverage. Look-ahead-safe (end-exclusive window),
+        # so it returns empty for past backtest dates and falls through cleanly.
+        "tradingview": get_tradingview_ohlcv,
         "local": get_YFin_data,
         "eodhd": get_stock_data_eodhd,
         "egxpy": get_stock_data_egxpy,
@@ -201,9 +207,25 @@ def route_to_vendor(method: str, *args, **kwargs):
             try:
                 logger.debug(f"Calling {impl_func.__name__} from vendor '{vendor_name}'...")
                 result = impl_func(*args, **kwargs)
+
+                # Treat an OHLCV-style dict that carries an empty `data` list as a
+                # SOFT failure so the fallback chain advances. yfinance returns
+                # {"data": [], "error": ...} (a truthy dict, no exception) for thin
+                # or delisted EGX names; without this guard the router accepted that
+                # empty payload as success and never tried EODHD/egxpy — the live
+                # pipeline then ran its market analyst with no price data. Only
+                # dict results with an explicit "data" key are checked, so the
+                # string-returning methods (news, indicators) are unaffected.
+                if isinstance(result, dict) and "data" in result and not result.get("data"):
+                    logger.warning(
+                        "EMPTY: %s from vendor '%s' returned no data — falling through to next vendor",
+                        impl_func.__name__, vendor_name,
+                    )
+                    continue
+
                 vendor_results.append(result)
                 logger.info(f"SUCCESS: {impl_func.__name__} from vendor '{vendor_name}' completed successfully")
-                    
+
             except Exception as e:
                 # Log error but continue with other implementations
                 logger.warning(f"FAILED: {impl_func.__name__} from vendor '{vendor_name}' failed: {e}")
