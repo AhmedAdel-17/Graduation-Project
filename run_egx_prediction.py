@@ -53,6 +53,78 @@ def _resolve_llm_api_key(backend_url: str) -> str:
         )
     return key
 
+
+def _fetch_ohlcv_resilient(ticker, start_date, end_date, min_rows=5):
+    """Fetch live EGX OHLCV with a multi-provider fallback chain.
+
+    The dashboard's Quick Analysis + Full Pipeline both used to call
+    ``get_YFin_data_online`` directly with no fallback. yfinance is rate-limited
+    and intermittently empty for thin EGX names (and *permanently* empty for a
+    handful such as QNBA.CA / ORAS.CA), which surfaced to the user as
+    "Insufficient data for <ticker>" or runs that worked for some tickers and
+    refused others.
+
+    Chain (LIVE sources only — no stale local CSV on the live path):
+        1. TradingView (tvDatafeed) — keyless, near-real-time, best free EGX
+           coverage (returns history even for yfinance-dead names like ORAS)
+        2. yfinance  (free, ~15 min delayed)
+        3. EODHD     (live, covers QNBA which is absent from TradingView; needs EODHD_API_KEY)
+
+    Returns the first provider response carrying >= ``min_rows`` bars. If none
+    qualifies, returns the best (most rows) response so the caller can raise a
+    precise, provider-attributed error instead of a generic "insufficient data".
+    """
+    import time
+    attempts = []  # (provider_name, result_dict)
+
+    # --- Provider 1: TradingView (primary — keyless, freshest, widest coverage) ---
+    try:
+        from tradingagents.dataflows.tradingview_provider import get_tradingview_ohlcv
+        tv_result = get_tradingview_ohlcv(ticker, start_date, end_date)
+        if tv_result.get("data") and len(tv_result["data"]) >= min_rows:
+            return tv_result
+        attempts.append(("tradingview", tv_result))
+    except Exception as e:
+        logger.warning("TradingView fetch failed for %s: %s", ticker, e)
+
+    # --- Provider 2: yfinance (retry once on a transient empty/exception) ---
+    yf_result = None
+    for attempt in range(2):
+        try:
+            yf_result = get_YFin_data_online(ticker, start_date, end_date)
+            if yf_result.get("data") and len(yf_result["data"]) >= min_rows:
+                return yf_result
+            # Empty/short — retry once (transient yfinance throttling is common)
+            if attempt == 0:
+                time.sleep(1.0)
+        except Exception as e:
+            logger.warning("yfinance fetch failed for %s (attempt %d): %s", ticker, attempt + 1, e)
+            if attempt == 0:
+                time.sleep(1.0)
+    if yf_result is not None:
+        attempts.append(("yfinance", yf_result))
+
+    # --- Provider 3: EODHD (live; covers QNBA, which TradingView lacks) ---
+    try:
+        from tradingagents.dataflows.eodhd import get_stock_data_eodhd
+        eodhd_result = get_stock_data_eodhd(ticker, start_date, end_date)
+        if eodhd_result.get("data") and len(eodhd_result["data"]) >= min_rows:
+            logger.info("Using EODHD live fallback for %s (TradingView/yfinance insufficient)", ticker)
+            return eodhd_result
+        attempts.append(("eodhd", eodhd_result))
+    except Exception as e:
+        logger.warning("EODHD fetch failed for %s: %s", ticker, e)
+
+    # Nothing met the bar — return the response with the most rows for a precise
+    # error message (or a synthetic empty result if every provider hard-failed).
+    if attempts:
+        attempts.sort(key=lambda kv: len(kv[1].get("data") or []), reverse=True)
+        best_name, best = attempts[0]
+        best = dict(best)
+        best.setdefault("_providers_tried", [name for name, _ in attempts])
+        return best
+    return {"symbol": ticker, "data": [], "error": "All OHLCV providers failed", "_providers_tried": ["tradingview", "yfinance", "eodhd"]}
+
 def run_prediction(target_tickers=None):
     global log_file
     log_file = open("final_result.log", "w", encoding="utf-8")
@@ -89,15 +161,17 @@ def run_prediction(target_tickers=None):
     for ticker, name in EGX_TICKERS:
         log(f"  Trying {ticker} ({name})...")
         try:
-            data = get_YFin_data_online(ticker, start_date, end_date)
+            data = _fetch_ohlcv_resilient(ticker, start_date, end_date, min_rows=5)
             if data.get("data") and len(data["data"]) >= 5:
                 price_data = data
                 selected_ticker = ticker
                 selected_name = name
-                log(f"  SUCCESS! Found {len(data['data'])} trading days")
+                _src = data.get("source", "yfinance")
+                log(f"  SUCCESS! Found {len(data['data'])} trading days (source: {_src})")
                 break
             else:
-                log(f"    Failed to get enough data for {ticker}")
+                log(f"    Failed to get enough data for {ticker} "
+                    f"(tried: {', '.join(data.get('_providers_tried', ['yfinance']))})")
         except Exception as e:
             log(f"    Error: {e}")
 
@@ -294,11 +368,20 @@ def analyze_ticker_for_api(ticker):
     start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
     
     try:
-        price_data = get_YFin_data_online(ticker, start_date, end_date)
+        price_data = _fetch_ohlcv_resilient(ticker, start_date, end_date, min_rows=5)
         if not price_data.get("data") or len(price_data["data"]) < 5:
-            return {"error": f"Insufficient data for {ticker}"}
+            n = len(price_data.get("data") or [])
+            tried = price_data.get("_providers_tried") or ["yfinance", "eodhd"]
+            detail = price_data.get("error") or f"only {n} trading day(s) available"
+            return {
+                "error": (
+                    f"No usable market data for {ticker} "
+                    f"(tried: {', '.join(tried)} — {detail}). "
+                    f"This EGX symbol may be delisted, halted, or unavailable on the live feeds."
+                )
+            }
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"Data fetch failed for {ticker}: {e}"}
     
     # Extract stock name (ticker without .CA)
     stock_name = ticker.replace(".CA", "")
@@ -308,17 +391,28 @@ def analyze_ticker_for_api(ticker):
     sma_5 = sum(closes[-5:]) / 5 if len(closes) >= 5 else None
     sma_10 = sum(closes[-10:]) / 10 if len(closes) >= 10 else None
     
-    # Try to get live price
+    # Try to get a live price. Primary: TradingView snapshot (keyless,
+    # near-real-time, far more reliable than the Mubasher CSS scrape). Fallback:
+    # Mubasher. Else the last historical close already in `current_price`.
     current_price = closes[-1]
     live_source = "Historical"
     try:
-        from tradingagents.dataflows.mubasher_scraper import MubasherScraper
-        live_data = MubasherScraper.get_live_data(ticker)
-        if live_data and "price" in live_data:
-            current_price = live_data["price"]
-            live_source = "Live"
-    except:
+        from tradingagents.dataflows.tradingview_provider import get_tradingview_price
+        tv_price = get_tradingview_price(ticker)
+        if tv_price and tv_price.get("price"):
+            current_price = tv_price["price"]
+            live_source = "Live (TradingView)"
+    except Exception:
         pass
+    if live_source == "Historical":
+        try:
+            from tradingagents.dataflows.mubasher_scraper import MubasherScraper
+            live_data = MubasherScraper.get_live_data(ticker)
+            if live_data and "price" in live_data:
+                current_price = live_data["price"]
+                live_source = "Live (Mubasher)"
+        except Exception:
+            pass
     
     daily_change = ((closes[-1] - closes[-2]) / closes[-2]) * 100 if len(closes) >= 2 else 0
     weekly_change = ((closes[-1] - closes[-5]) / closes[-5]) * 100 if len(closes) >= 5 else 0
@@ -338,15 +432,28 @@ def analyze_ticker_for_api(ticker):
     
     trend = "UPTREND" if sma_5 and sma_10 and sma_5 > sma_10 else "DOWNTREND" if sma_5 and sma_10 and sma_5 < sma_10 else "NEUTRAL"
     
-    # Get LLM recommendation with multi-perspective analysis
+    # Get LLM recommendation with multi-perspective analysis.
+    # Use the shared failover chain (nvidia → deepseek → google → groq) instead
+    # of a raw single-endpoint ChatOpenAI, so a Quick Analysis no longer dies on
+    # an NVIDIA 504/429 — it rotates to DeepSeek-direct (the reliable free key)
+    # automatically, the same way the full pipeline does.
     try:
-        llm = ChatOpenAI(
-            model=DEFAULT_CONFIG["quick_think_llm"],
-            base_url=DEFAULT_CONFIG["backend_url"],
-            api_key=_resolve_llm_api_key(DEFAULT_CONFIG["backend_url"]),
-            temperature=0,
-            seed=int(DEFAULT_CONFIG.get("llm_seed", 42)),
-        )
+        try:
+            from tradingagents.agents.utils.llm_failover import build_resilient_llm
+            llm = build_resilient_llm(
+                DEFAULT_CONFIG, role="quick",
+                seed=int(DEFAULT_CONFIG.get("llm_seed", 42)),
+            )
+        except Exception:
+            # Last-ditch: raw single-endpoint client (keeps Quick working even if
+            # the failover module can't be imported for some reason).
+            llm = ChatOpenAI(
+                model=DEFAULT_CONFIG["quick_think_llm"],
+                base_url=DEFAULT_CONFIG["backend_url"],
+                api_key=_resolve_llm_api_key(DEFAULT_CONFIG["backend_url"]),
+                temperature=0,
+                seed=int(DEFAULT_CONFIG.get("llm_seed", 42)),
+            )
 
         price_table = "\n".join([
             f"  {d['date']}: O={d['open']:.2f} H={d['high']:.2f} L={d['low']:.2f} C={d['close']:.2f}"
@@ -495,10 +602,19 @@ RECOMMENDATION:
     else:
         llm_error = None
     
+    # Full Investing-style technical panel (best-effort; never fails the response).
+    try:
+        from tradingagents.dataflows.technical_panel import get_live_panel
+        _panel = get_live_panel(ticker)
+        technical_panel = _panel if isinstance(_panel, dict) and _panel.get("panel") else None
+    except Exception:
+        technical_panel = None
+
     # Return structured data
     return {
         "ticker": ticker,
         "name": stock_name,
+        "technical_panel": technical_panel,
         "price": {
             "current": round(current_price, 2),
             "daily_change": round(daily_change, 2),

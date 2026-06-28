@@ -2,19 +2,24 @@ import os
 
 # EGX ticker universe — from CLAUDE.md §10.
 # Format: uppercase with .CA suffix (Yahoo Finance / EGX convention).
+# This is the single source of truth for the dashboard ticker picker (live + backtest
+# screens, via /api/test/egx-tickers). Names cross-referenced against
+# data/egx30_fundamentals/_slug_map.json. Keep in sync with
+# dashboard/src/data/egxTickerMeta.ts and dashboard/src/hooks/useTickers.ts.
 EGX_TICKERS: list[str] = [
     # Banks
-    "COMI.CA", "ADIB.CA", "CIEB.CA", "EXPA.CA", "HDBK.CA", "QNBA.CA", "SAUD.CA",
+    "COMI.CA", "ADIB.CA",
     # Real Estate
-    "TMGH.CA", "HELI.CA", "PHDC.CA", "OCDI.CA", "ORAS.CA", "EMFD.CA",
-    # Industry
-    "EAST.CA", "ESRS.CA", "SWDY.CA", "ABUK.CA", "MFPC.CA", "EGAL.CA", "EGCH.CA", "EFIC.CA",
+    "TMGH.CA", "HELI.CA", "PHDC.CA", "ORAS.CA", "EMFD.CA", "ORHD.CA",
+    # Industry & Materials
+    "ABUK.CA", "EAST.CA", "EGAL.CA", "EGCH.CA", "ORWE.CA", "AMOC.CA",
+    "MCQE.CA", "ARCC.CA", "ISPH.CA", "RMDA.CA", "GBCO.CA",
     # Telecom / Tech
-    "ETEL.CA", "FWRY.CA", "EFIH.CA", "RAYA.CA",
+    "ETEL.CA", "FWRY.CA", "EFIH.CA", "RAYA.CA", "OIH.CA",
     # Financial Services
-    "HRHO.CA", "BTFH.CA", "CICH.CA",
+    "HRHO.CA", "BTFH.CA", "CCAP.CA", "VLMR.CA",
     # Food & Beverage
-    "JUFO.CA", "EFID.CA", "DOMT.CA",
+    "JUFO.CA", "EFID.CA",
 ]
 
 DEFAULT_CONFIG = {
@@ -68,11 +73,23 @@ DEFAULT_CONFIG = {
     # Master toggle for mounting the /api/portfolio/* router (P4). Default on;
     # documents the no-auth blocker (MEMORY.md) — portfolios are personal data.
     "pa_enabled": os.getenv("PA_ENABLED", "1") == "1",
-    # Provider failover order used by build_resilient_llm().
-    # "nvidia"  -> NVIDIA Build (DeepSeek-V4-Pro, NVIDIA_API_KEY)
-    # "deepseek"-> DeepSeek direct (DEEPSEEK_API_KEY)
-    # "google"  -> Gemini flash  (GOOGLE_API_KEY)
-    "llm_failover_priority": ["nvidia", "deepseek", "google"],
+    # Provider failover order used by build_resilient_llm(). Primary first; each
+    # next provider is tried automatically on rate-limit (429) / overload (503/504).
+    # "nvidia"   -> NVIDIA Build (DeepSeek-V4-Pro, NVIDIA_API_KEY)   [PRIMARY]
+    # "google"   -> Gemini       (GOOGLE_API_KEY)                    [fallback #1]
+    # "deepseek" -> DeepSeek direct (deepseek-chat, DEEPSEEK_API_KEY)[fallback #2]
+    # "groq"     -> Groq Llama   (GROQ_API_KEY)                      [fallback #3]
+    # "openrouter" -> OpenRouter (openai/gpt-4o-mini, OR_API_KEY)      [fallback #4]
+    #
+    # NOTE: With NVIDIA primary, live runs keep DeepSeek-V4-Pro quality and fallback
+    # on rate-limit/overload. Google is fallback #1 and DeepSeek-direct is fallback #2.
+    # See MEMORY.md §FF / §GG.
+    "llm_failover_priority": os.getenv(
+        "LLM_FAILOVER_PRIORITY", "nvidia,google,deepseek,groq,openrouter"
+    ).split(","),
+    # Fallback provider models (override via env).
+    "google_model": os.getenv("GOOGLE_MODEL", "gemini-2.0-flash"),
+    "groq_model": os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
     # Determinism: every LLM is built with temperature=0; this seed is also
     # pinned on providers that support it (OpenAI/DeepSeek, Google) so backtest
     # runs and audit trails are reproducible. Override with LLM_SEED.
@@ -118,6 +135,26 @@ DEFAULT_CONFIG = {
     # trades when the entire portfolio is allocated to one ticker.
     # Set False for live / multi-stock portfolio trading.
     "backtest_mode": True,
+
+    # ─── Cost-aware BUY gate ──────────────────────────────────────────────────
+    # A BUY is only worth taking if its expected upside clears the EGX round-trip
+    # cost by a margin (estimation error means a thesis that barely beats costs is
+    # net-negative in expectation). The deterministic final gate downgrades BUY →
+    # HOLD when the bull-case base upside < `min_edge_cost_multiple` × round-trip
+    # cost. Default 2.0 (expected move must be at least 2× the cost hurdle).
+    # Set 0 to disable the gate. Override via MIN_EDGE_COST_MULTIPLE.
+    "min_edge_cost_multiple": float(os.environ.get("MIN_EDGE_COST_MULTIPLE", "2.0")),
+
+    # ─── Confidence-driven position sizing (FROZEN by default) ────────────────
+    # When True, the executor scales target position size by the LLM-emitted
+    # `confidence` scalar. This is OFF by default because that confidence is an
+    # uncalibrated number produced by the same text model that wrote the thesis —
+    # it is NOT a calibrated probability and must not size real capital until the
+    # calibration work (remediation Phase 3) validates it (Brier / reliability).
+    # Re-enable only after calibration, via CONFIDENCE_SIZING_ENABLED=1.
+    "confidence_sizing_enabled": os.environ.get(
+        "CONFIDENCE_SIZING_ENABLED", "0"
+    ).strip() in ("1", "true", "True", "yes"),
 
     # ─── Database configuration ──────────────────────────────────────────────
     # PostgreSQL connection URL. Required for persistent agent memories,

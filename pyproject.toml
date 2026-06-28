@@ -40,6 +40,11 @@ dependencies = [
     "requests>=2.32.4",
     "rich>=14.0.0",
     "stockstats>=0.6.5",
+    # TradingView free EGX data (keyless). tradingview-ta = live snapshot signals
+    # + price; tvdatafeed = historical daily OHLCV (best free EGX coverage, even
+    # for names yfinance has dropped). Both used by dataflows/tradingview_provider.
+    "tradingview-ta>=3.3.0",
+    "tvdatafeed>=2.1.0",
     "tqdm>=4.67.1",
     "typing-extensions>=4.14.0",
     "uvicorn>=0.30.0",
