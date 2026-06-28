@@ -226,16 +226,18 @@ def run_thesis_cot(
     back gracefully with whatever was parsed.
     """
     from langchain_core.messages import HumanMessage, SystemMessage
+    from tradingagents.agents.utils.temporal import point_in_time_notice
 
     ticker = evidence_pack.get("ticker", "")
     sector = evidence_pack.get("sector", "operational")
     narrative = evidence_pack.get("narrative", "")
+    as_of = evidence_pack.get("analysis_date", "")
 
     user_prompt = build_thesis_prompt(narrative, concept_output, ticker, sector)
 
     try:
         response = llm.invoke([
-            SystemMessage(content=_SYSTEM_PROMPT),
+            SystemMessage(content=point_in_time_notice(as_of) + "\n" + _SYSTEM_PROMPT),
             HumanMessage(content=user_prompt),
         ])
         raw_text = response.content if hasattr(response, "content") else str(response)

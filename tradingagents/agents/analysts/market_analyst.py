@@ -3,7 +3,9 @@ import time
 import json
 from typing import Dict, Any, Optional
 from tradingagents.agents.utils.agent_utils import get_stock_data, get_indicators
+from tradingagents.agents.utils.technical_panel_tool import get_technical_panel
 from tradingagents.dataflows.config import get_config
+from tradingagents.agents.utils.temporal import point_in_time_notice
 
 # =============================================================================
 # Technical Analyst ("Chartist") for EGX Market
@@ -30,6 +32,22 @@ EGX_DAILY_INDICATORS = [
     "boll_lb",      # Bollinger lower band
     "close_50_sma", # Medium-term trend
 ]
+
+
+def _compute_full_panel(ticker: str, as_of: str) -> Optional[Dict[str, Any]]:
+    """Compute the full Investing-style technical panel for the as-of date.
+
+    Reuses the shared engine (tradingagents.dataflows.technical_panel) so the live
+    panel is identical to the backtest dataset. Look-ahead-safe (the engine hard-filters
+    to ``date <= as_of``). Best-effort: returns None on any failure so a panel hiccup
+    never breaks the analyst node or the graph.
+    """
+    try:
+        from tradingagents.dataflows.technical_panel import get_live_panel
+        res = get_live_panel(ticker, as_of=as_of)
+        return res if isinstance(res, dict) and res.get("panel") else None
+    except Exception:
+        return None
 
 
 def parse_technical_signals(indicator_results: Dict[str, Any]) -> Dict[str, Any]:
@@ -246,9 +264,23 @@ def create_market_analyst(llm):
         low_liquidity = state.get("low_liquidity", False)
         volume_missing = state.get("volume_missing", False)
 
+        # Compute the full technical panel ONCE and inject it into the prompt so the
+        # Chartist reasons over the 12 indicators + verdicts + SMA/EMA grid + pivots
+        # proactively (not only if it chooses to call the get_technical_panel tool).
+        # Reused in the return so we never compute it twice.
+        panel_res = _compute_full_panel(ticker, current_date)
+        panel_context = ""
+        if panel_res and panel_res.get("panel"):
+            from tradingagents.dataflows.technical_panel import format_panel_text
+            panel_context = format_panel_text(
+                panel_res["panel"], ticker=ticker,
+                as_of=panel_res.get("as_of", current_date), bars=panel_res.get("bars"),
+            )
+
         tools = [
             get_stock_data,
             get_indicators,
+            get_technical_panel,
         ]
 
         # EGX-specific system message for Technical Analyst
@@ -316,7 +348,7 @@ After your analysis, you MUST end with a JSON block in this exact format:
 }
 ```
 
-First call get_stock_data to retrieve OHLCV data, then use get_indicators for each indicator. Provide detailed analysis before the JSON summary."""
+First call get_stock_data to retrieve OHLCV data. You may call get_technical_panel(symbol, curr_date) ONCE to retrieve the full panel (all 12 indicators with Buy/Sell/Neutral verdicts, the SMA/EMA grid, summary tallies, and pivot levels) in a single call, or use get_indicators for individual indicators. Provide detailed analysis before the JSON summary."""
 
         prompt = ChatPromptTemplate.from_messages(
             [
@@ -338,6 +370,15 @@ First call get_stock_data to retrieve OHLCV data, then use get_indicators for ea
             ]
         )
 
+        system_message = point_in_time_notice(current_date) + "\n" + system_message
+        if panel_context:
+            system_message += (
+                "\n\n## Pre-computed Technical Panel (use this as your primary evidence)\n"
+                "The following panel was computed deterministically from the OHLCV for this\n"
+                "ticker/date (look-ahead-safe). Treat it as ground truth and reason over it;\n"
+                "you do not need to re-fetch it via the tool unless you want a different date.\n\n"
+                + panel_context
+            )
         prompt = prompt.partial(system_message=system_message)
         prompt = prompt.partial(tool_names=", ".join([tool.name for tool in tools]))
         prompt = prompt.partial(current_date=current_date)
@@ -391,6 +432,7 @@ First call get_stock_data to retrieve OHLCV data, then use get_indicators for ea
             "market_messages": [result],
             "market_report": report,
             "technical_analysis": structured_analysis,
+            "technical_panel": panel_res,
             "low_liquidity": low_liquidity,
         }
 
@@ -560,21 +602,39 @@ def create_deterministic_market_analyst():
             datetime.strptime(trade_date, "%Y-%m-%d") - relativedelta(days=120)
         ).strftime("%Y-%m-%d")
 
-        # Try EODHD first (paid tier supports .CA), fall back to yfinance.
-        price_result = get_eodhd_stock_data(ticker, start_date, trade_date)
+        # LOCAL-ONLY backtest mode: prices come ONLY from the saved
+        # data/egx30_ohlcv CSVs — no EODHD/yfinance API call.
+        from tradingagents.dataflows.config import get_config as _get_cfg
+        _local_only = bool(_get_cfg().get("ohlcv_local_only"))
 
         closes = []
         data_source = "none"
-        if price_result and price_result.get("data"):
-            closes = [bar["close"] for bar in price_result["data"]]
-            data_source = "eodhd"
-            if not low_liquidity:
-                low_liquidity = price_result.get("low_liquidity", False)
-            if not volume_missing:
-                volume_missing = price_result.get("volume_missing", False)
+        if _local_only:
+            from tradingagents.dataflows.local_ohlcv import get_local_ohlcv_data
+            # max_records=None -> full 120-day window (SMA50/Bollinger need the history,
+            # not just the last 20 bars the default cap would return).
+            price_result = get_local_ohlcv_data(ticker, start_date, trade_date, max_records=None)
+            if price_result and price_result.get("data"):
+                closes = [bar["close"] for bar in price_result["data"]]
+                data_source = "local_csv"
+                if not low_liquidity:
+                    low_liquidity = price_result.get("low_liquidity", False)
+                if not volume_missing:
+                    volume_missing = price_result.get("volume_missing", False)
+        else:
+            # Try EODHD first (paid tier supports .CA), fall back to yfinance.
+            price_result = get_eodhd_stock_data(ticker, start_date, trade_date)
+            if price_result and price_result.get("data"):
+                closes = [bar["close"] for bar in price_result["data"]]
+                data_source = "eodhd"
+                if not low_liquidity:
+                    low_liquidity = price_result.get("low_liquidity", False)
+                if not volume_missing:
+                    volume_missing = price_result.get("volume_missing", False)
 
-        # Fallback to yfinance when EODHD returned nothing (e.g. free tier on .CA)
-        if not closes:
+        # Fallback to yfinance when EODHD returned nothing (e.g. free tier on .CA).
+        # Skipped in local-only mode (no network).
+        if not closes and not _local_only:
             yf_closes, yf_avg_vol, yf_low_liq = _yf_fetch_closes_volumes(
                 ticker, start_date, trade_date
             )
@@ -589,14 +649,17 @@ def create_deterministic_market_analyst():
                 )
 
         # ── 2. Fetch RSI (EODHD), then fall back to local pandas calc ──────────
-        rsi_result = get_eodhd_indicators(ticker, "RSI", trade_date, look_back_days=90)
+        # In local-only mode skip the EODHD API entirely — RSI is computed locally
+        # from `closes` (the saved-CSV prices) below.
+        rsi_result = {} if _local_only else get_eodhd_indicators(ticker, "RSI", trade_date, look_back_days=90)
         rsi_values = rsi_result.get("values", []) if not rsi_result.get("error") else []
         rsi_latest = _extract_latest(rsi_values)
         if rsi_latest is None and closes:
             rsi_latest = _local_rsi(closes)
 
         # ── 3. Fetch MACD (EODHD), then fall back to local pandas calc ─────────
-        macd_result = get_eodhd_indicators(ticker, "MACD", trade_date, look_back_days=90)
+        # Local-only mode: skip the EODHD API; MACD is computed locally from `closes`.
+        macd_result = {} if _local_only else get_eodhd_indicators(ticker, "MACD", trade_date, look_back_days=90)
         macd_values = {}
         if not macd_result.get("error"):
             mv = macd_result.get("values", {})
@@ -667,9 +730,23 @@ def create_deterministic_market_analyst():
             f"Confidence: {confidence:.2f}"
         )
 
+        # ── Full technical panel: compute ONCE, then use TWICE ─────────────────
+        # (1) inject the formatted panel (12 indicators + verdicts + SMA/EMA grid +
+        #     pivots) into market_report so the downstream reasoning agents
+        #     (Bull/Bear/Research-Manager/Trader) get the richer technical picture;
+        # (2) return the structured panel in state for the dashboard.
+        panel_res = _compute_full_panel(ticker, trade_date)
+        if panel_res and panel_res.get("panel"):
+            from tradingagents.dataflows.technical_panel import format_panel_text
+            report += "\n\n" + format_panel_text(
+                panel_res["panel"], ticker=ticker,
+                as_of=panel_res.get("as_of", trade_date), bars=panel_res.get("bars"),
+            )
+
         return {
             "market_report": report,
             "technical_analysis": structured_analysis,
+            "technical_panel": panel_res,
             "low_liquidity": low_liquidity,
             # Clear per-analyst message channel (no messages were added)
             "market_messages": [],

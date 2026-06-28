@@ -7,6 +7,7 @@ from typing import Dict, Any, List, Optional
 from tradingagents.agents.utils.agent_utils import get_news, get_global_news
 from tradingagents.agents.utils.news_data_tools import get_egx_company_news, get_egx_market_news
 from tradingagents.dataflows.config import get_config
+from tradingagents.agents.utils.temporal import point_in_time_notice
 
 logger = logging.getLogger("tradingagents.news_analyst")
 
@@ -169,6 +170,7 @@ def create_news_analyst(llm):
             # Build a direct (non-tool) prompt with the pre-fetched data injected
             prefetch_prompt = f"""You are a News & Sentiment Analyst ("Journalist") specializing in {market_context}.
 
+{point_in_time_notice(current_date)}
 ## Pre-Fetched News Data
 The following news data has been retrieved for you. Analyze it directly without calling any tools.
 
@@ -213,6 +215,7 @@ Current date: {current_date} | Company: {ticker} | Market: {market_context}"""
             # Standard tool-calling path (fallback when no prefetch available)
             system_message = f"""You are a News & Sentiment Analyst ("Journalist") specializing in {market_context}.
 
+{point_in_time_notice(current_date)}
 ## Your Role
 Analyze news and market sentiment for stocks. You must interpret BOTH Arabic and English news sources and provide structured sentiment analysis.
 

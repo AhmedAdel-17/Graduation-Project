@@ -85,6 +85,29 @@ def get_egx_risk_free_rate_as_of(
                           | "not_configured"
           effective_date: ISO date string when rate took effect, or None
     """
+    # ── Tier 0: DISCLOSED backtest decision-RFR override ──────────────────────
+    # The 'tuned' backtest profile sets ``decision_rfr_override`` to study how the
+    # system allocates under a LOWER required-return assumption than the true CBE
+    # policy rate (the ~27.5% rate makes almost every EGX earnings yield look
+    # unattractive, driving a rational but uninformative all-HOLD bias). This
+    # override affects ONLY the required-return the fundamentals analyst compares
+    # earnings yield against — it NEVER touches the backtester's Sharpe/metrics
+    # risk-free rate (config['egx_risk_free_rate']). It is unset (None) for the
+    # 'live_faithful' profile and for all live runs, so live behaviour is
+    # untouched. Disclosed in the thesis as a sensitivity configuration.
+    override = config.get("decision_rfr_override")
+    if override is not None:
+        try:
+            rate_float = float(override)
+            logger.info(
+                "rate_lookup[%s]: DECISION-RFR OVERRIDE active (%.4f) — tuned "
+                "backtest profile; metrics risk-free rate is unaffected.",
+                trade_date, rate_float,
+            )
+            return rate_float, "backtest_decision_override", None
+        except (ValueError, TypeError):
+            logger.warning("rate_lookup: decision_rfr_override is not a valid float; ignoring")
+
     csv_path = rates_csv_path if rates_csv_path is not None else _DEFAULT_RATES_CSV
 
     # ── Tier 1: Date-aware CSV lookup ─────────────────────────────────────────

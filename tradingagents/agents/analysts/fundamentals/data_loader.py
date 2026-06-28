@@ -7,6 +7,12 @@ enabling YoY/QoQ calculations in the standardizer.
 
 This is a thin wrapper — all CSV parsing reuses the same column normalization
 and numeric parsing logic from local.py.
+
+Data source: the normalized CSVs under
+``tradingagents/dataflows/data_cache/egx_fundamentals/`` are regenerated from the
+richer Investing.com dump (``data/egx30_fundamentals/``) by
+``scripts/normalize_egx30_fundamentals.py``. Re-run that converter after refreshing
+the dump with ``scripts/fetch_egx_fundamentals.py``. See MEMORY.md §LL.
 """
 from __future__ import annotations
 
