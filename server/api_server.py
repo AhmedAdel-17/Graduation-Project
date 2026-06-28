@@ -364,6 +364,7 @@ def _normalize_llm_report(report: Dict[str, Any], *, session_id: str) -> Dict[st
     legacy = report.get("metrics") if isinstance(report.get("metrics"), dict) else {}
     total_return_pct = _parse_percent(legacy.get("Total Return"))
     sharpe_ratio = _parse_float(legacy.get("Sharpe Ratio"))
+    sortino_ratio = _parse_float(legacy.get("Sortino Ratio"))
     max_drawdown_pct = _parse_percent(legacy.get("Max Drawdown"))
     win_rate_pct = _parse_percent(legacy.get("Win Rate"))
     benchmark_return_pct = _parse_percent(legacy.get("Benchmark Return"))
@@ -457,6 +458,7 @@ def _normalize_llm_report(report: Dict[str, Any], *, session_id: str) -> Dict[st
     metrics: Dict[str, Any] = {
         "total_return_pct": total_return_pct,
         "sharpe_ratio": sharpe_ratio,
+        "sortino_ratio": sortino_ratio,
         "max_drawdown_pct": abs(max_drawdown_pct) if max_drawdown_pct is not None else None,
         "win_rate": win_rate_pct,
         "total_trades": len(trades_raw),
@@ -474,6 +476,35 @@ def _normalize_llm_report(report: Dict[str, Any], *, session_id: str) -> Dict[st
     # to populate the agent cards with real text instead of templated copy.
     audit_log_raw = report.get("audit_log") if isinstance(report.get("audit_log"), list) else []
 
+    # Post-hoc directional accuracy (leak-safe; "was each call right?").
+    directional_accuracy = (
+        report.get("directional_accuracy")
+        if isinstance(report.get("directional_accuracy"), dict) else None
+    )
+
+    # Decision-quality block + per-prediction rows (the thesis "skillful, not
+    # random" evidence). predictions[] carries session_id per date so the
+    # dashboard can open each prediction's full reasoning trace via
+    # /api/sessions/{session_id}/trace.
+    decision_quality = (
+        report.get("decision_quality")
+        if isinstance(report.get("decision_quality"), dict) else None
+    )
+    predictions = (
+        report.get("predictions")
+        if isinstance(report.get("predictions"), list) else []
+    )
+    run_config = (
+        report.get("run_config")
+        if isinstance(report.get("run_config"), dict) else None
+    )
+    # Scenario event-study block (Follow-the-AI vs EGX30 index). Present only on
+    # reports written by scripts/scenario_backtest.py.
+    scenario_comparison = (
+        report.get("scenario_comparison")
+        if isinstance(report.get("scenario_comparison"), dict) else None
+    )
+
     return {
         "ticker": ticker_norm or ticker,
         "llm": {
@@ -485,6 +516,11 @@ def _normalize_llm_report(report: Dict[str, Any], *, session_id: str) -> Dict[st
             "benchmark_history": bm,
             "buyhold_history": buyhold,
             "benchmark": benchmark_block,
+            "directional_accuracy": directional_accuracy,
+            "decision_quality": decision_quality,
+            "predictions": predictions,
+            "run_config": run_config,
+            "scenario_comparison": scenario_comparison,
             "audit_log": audit_log_raw,
         },
     }
@@ -853,7 +889,59 @@ async def get_news(
 
 @app.get("/api/results")
 async def list_results():
-    """List all past analysis results from audit logs."""
+    """List past LIVE analysis runs, newest first.
+
+    Primary source: Postgres ``analysis_sessions`` filtered to
+    ``run_type='live'`` (written by the multi-agent graph and the quick-analysis
+    path). This is the same store the trace-detail endpoint reads, so the list
+    and the detail are always consistent — backtest-interior analyses
+    (``run_type='backtest'``) are excluded so they never pollute "My Analyses".
+
+    Fallback: the legacy ``audit_logs/<ticker>/audit_log.jsonl`` files, used only
+    when Postgres is unreachable.
+    """
+    # ── Postgres path ─────────────────────────────────────────────────────
+    try:
+        from tradingagents.db import is_postgres_available
+        from tradingagents.db.connection import cursor as db_cursor
+        pg_ok = is_postgres_available()
+    except Exception:
+        pg_ok = False
+
+    if pg_ok:
+        try:
+            sessions: List[Dict[str, Any]] = []
+            with db_cursor(dict_cursor=True) as cur:
+                cur.execute(
+                    """
+                    SELECT session_id, ticker, trade_date, market,
+                           final_decision, confidence_overall, risk_veto,
+                           run_type, created_at
+                      FROM analysis_sessions
+                     ORDER BY created_at DESC
+                     LIMIT 500
+                    """
+                )
+                for row in cur.fetchall():
+                    d = _trace_row_to_dict(row)
+                    decision = (d.get("final_decision") or "").strip()
+                    sessions.append({
+                        "ticker": d.get("ticker") or "—",
+                        "session_id": d.get("session_id"),
+                        "trade_date": d.get("trade_date") or "",
+                        "market": d.get("market") or "EGX",
+                        "final_decision": decision.split("\n")[0][:24] or None,
+                        "confidence_overall": d.get("confidence_overall"),
+                        "risk_veto": bool(d.get("risk_veto")),
+                        "run_type": d.get("run_type") or "live",
+                        "timestamp": d.get("created_at") or "",
+                    })
+            return {"sessions": sessions}
+        except Exception as exc:
+            logger.warning("Postgres results list failed, falling back to jsonl: %s", exc)
+            return {"error": str(exc), "sessions": []}
+
+    # ── JSONL fallback (legacy on-disk audit trail) ───────────────────────
     audit_dir = PROJECT_ROOT / "audit_logs"
     if not audit_dir.exists():
         return {"sessions": []}
@@ -864,7 +952,6 @@ async def list_results():
             continue
         ticker = ticker_dir.name
 
-        # Read JSONL log for session metadata
         jsonl_path = ticker_dir / "audit_log.jsonl"
         if jsonl_path.exists():
             try:
@@ -877,6 +964,7 @@ async def list_results():
                                 "session_id": entry.get("_session_id", "unknown"),
                                 "trade_date": entry.get("trade_date", "unknown"),
                                 "market": entry.get("market", "unknown"),
+                                "run_type": "live",
                                 "timestamp": entry.get("_logged_at", ""),
                             })
             except Exception:
@@ -1059,6 +1147,205 @@ def _jsonl_entry_to_event(entry: Dict[str, Any]) -> Dict[str, Any]:
         "model_fingerprint": entry.get("model_fingerprint"),
         "logged_at": entry.get("_logged_at"),
     }
+
+
+
+@app.get("/api/prediction/session/{session_id}")
+async def get_past_prediction(session_id: str):
+    """Retrieve a past analysis session and format it as a full PredictionResult."""
+    try:
+        from tradingagents.db import is_postgres_available
+        from tradingagents.db.connection import cursor as db_cursor
+        from fastapi import HTTPException
+        if not is_postgres_available():
+            raise HTTPException(503, "Postgres not available")
+        
+        with db_cursor() as cur:
+            cur.execute(
+                """
+                SELECT ticker, trade_date, full_state
+                FROM analysis_sessions
+                WHERE session_id = %s
+                """,
+                (session_id,)
+            )
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(404, "Session not found")
+            
+            ticker, trade_date, final_state = row
+            
+            # ── Reconstruct price data ──────────────────────────────
+            # New live runs (saved by analyze-full) store a "price" dict.
+            # Old backtest runs store "current_price" as a top-level float.
+            price_dict = final_state.get("price")
+            if not price_dict or not isinstance(price_dict, dict) or not price_dict.get("current"):
+                cp = final_state.get("current_price")
+                if cp and isinstance(cp, (int, float)) and cp > 0:
+                    price_dict = {"current": float(cp), "daily_change": None, "weekly_change": None}
+                else:
+                    price_dict = {}
+
+            # ── Reconstruct indicators ──────────────────────────────
+            indicators_dict = final_state.get("indicators")
+            if not indicators_dict or not isinstance(indicators_dict, dict):
+                ta = final_state.get("technical_analysis") or {}
+                signals = ta.get("indicator_signals") or {}
+                trend_info = ta.get("trend_direction") or {}
+                trend_str = None
+                if isinstance(trend_info, dict):
+                    trend_str = trend_info.get("direction")
+                elif isinstance(trend_info, str):
+                    trend_str = trend_info
+                indicators_dict = {
+                    "rsi": signals.get("rsi"),
+                    "trend": trend_str,
+                }
+
+            # ── Base payload ────────────────────────────────────────
+            base = {
+                "ticker": ticker,
+                "name": ticker,
+                "price": price_dict,
+                "indicators": indicators_dict,
+                "technical_panel": final_state.get("technical_panel"),
+                "price_history": final_state.get("price_history") or [],
+            }
+            
+            # ── Map final_state → Recommendation ────────────────────
+            debate = final_state.get("investment_debate_state") or {}
+            bull_thesis = debate.get("bull_thesis") or {}
+            bear_thesis = debate.get("bear_thesis") or {}
+            judge_decision = debate.get("judge_decision") or final_state.get("investment_plan") or ""
+            final_decision_text = final_state.get("final_trade_decision") or ""
+
+            try:
+                from tradingagents.graph.signal_processing import SignalProcessor
+                signal = SignalProcessor(None).process_signal(final_decision_text) or "HOLD"
+            except Exception:
+                signal = "HOLD"
+            signal = (signal or "HOLD").upper()
+
+            def _thesis_to_text(thesis: dict, history: str) -> str:
+                prose = (history or "").strip()
+                if prose:
+                    return prose
+                if isinstance(thesis, dict) and thesis:
+                    try:
+                        import json
+                        return json.dumps(thesis, indent=2, ensure_ascii=False)
+                    except Exception:
+                        pass
+                return ""
+
+            bull_case = _thesis_to_text(bull_thesis, debate.get("bull_history", ""))
+            bear_case = _thesis_to_text(bear_thesis, debate.get("bear_history", ""))
+
+            current_price = price_dict.get("current") or 0
+            target_price = None
+            stop_loss = None
+            if isinstance(bull_thesis, dict):
+                upside = bull_thesis.get("upside_scenario", {}) or {}
+                base_pct = upside.get("base_case_upside_pct")
+                if isinstance(base_pct, (int, float)) and current_price:
+                    target_price = round(current_price * (1 + base_pct / 100.0), 2)
+            if isinstance(bear_thesis, dict):
+                downside = bear_thesis.get("downside_range", {}) or {}
+                sl = downside.get("support_level_1")
+                if isinstance(sl, (int, float)):
+                    stop_loss = float(sl)
+            
+            stop_loss_is_default = stop_loss is None
+            if stop_loss is None and current_price:
+                stop_loss = round(current_price * 0.9, 2)
+
+            # ── Confidence ──────────────────────────────────────────
+            confidence = "MEDIUM"
+            if isinstance(bull_thesis, dict):
+                cv = (bull_thesis.get("conviction_level") or "").upper()
+                if cv in ("HIGH", "MEDIUM", "LOW"):
+                    confidence = cv
+                elif cv == "MODERATE":
+                    confidence = "MEDIUM"
+            # Also check confidence_scores from the state
+            cs = final_state.get("confidence_scores") or {}
+            overall_conf = cs.get("overall")
+            if isinstance(overall_conf, (int, float)):
+                if overall_conf >= 0.7:
+                    confidence = "HIGH"
+                elif overall_conf <= 0.35:
+                    confidence = "LOW"
+
+            # ── Execution plan / time horizon ───────────────────────
+            raw_plan = final_state.get("execution_plan") or {}
+            plan = raw_plan.get("execution_plan", raw_plan) if isinstance(raw_plan, dict) else {}
+
+            risk_action = str(final_state.get("risk_action") or "ALLOW").upper()
+            risk_profile = {
+                "VETO": "HIGH",
+                "THROTTLE": "MEDIUM",
+                "WARN": "MEDIUM",
+                "ALLOW": "LOW",
+            }.get(risk_action, "MEDIUM")
+            
+            if current_price and stop_loss and not stop_loss_is_default:
+                stop_dist_pct = abs((stop_loss - current_price) / current_price) * 100
+                if stop_dist_pct >= 12:
+                    risk_profile = "HIGH"
+                elif stop_dist_pct >= 7 and risk_profile == "LOW":
+                    risk_profile = "MEDIUM"
+
+            # Time horizon: try execution_plan.exit_logic.time_stop, then bull_thesis.time_horizon
+            time_horizon = None
+            if isinstance(plan, dict):
+                exit_logic = plan.get("exit_logic") or {}
+                ts = exit_logic.get("time_stop")
+                if isinstance(ts, str) and ts.strip() and "[" not in ts:
+                    time_horizon = ts.strip()
+            if not time_horizon and isinstance(bull_thesis, dict):
+                th = bull_thesis.get("time_horizon")
+                if isinstance(th, str) and th.strip():
+                    time_horizon = th.strip()
+
+            # ── Build the trader investment plan as the execution rationale ──
+            trader_plan = final_state.get("trader_investment_plan") or ""
+            final_rec = final_state.get("execution_plan", {})
+            final_rec_text = ""
+            if isinstance(final_rec, dict):
+                fr = final_rec.get("final_recommendation")
+                if isinstance(fr, str) and fr.strip():
+                    final_rec_text = fr
+
+            recommendation = {
+                "signal": signal,
+                "confidence": confidence,
+                "target_price": target_price,
+                "stop_loss": stop_loss,
+                "risk": risk_profile,
+                "time_horizon": time_horizon,
+                "bull_case": bull_case or "No bullish thesis was returned for this run.",
+                "bear_case": bear_case or "No bearish thesis was returned for this run.",
+                "neutral_case": judge_decision or "",
+                "rationale": judge_decision or "",
+                "recommendation": final_rec_text or final_decision_text or judge_decision or "",
+                "full_text": trader_plan or final_decision_text,
+                "styled_recommendations": final_state.get("styled_recommendations"),
+            }
+
+            return {
+                **base,
+                "session_id": session_id,
+                "recommendation": recommendation,
+                "llm_error": None,
+                "status": "ok",
+                "pipeline": "historical",
+                "_final_state_keys": list(final_state.keys()),
+            }
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(500, f"Failed to retrieve past prediction: {str(exc)}")
 
 
 @app.get("/api/results/{ticker}/{session_id}")
@@ -1981,12 +2268,16 @@ async def list_backtests():
             # Normalize metrics for dashboard
             normalized = _normalize_llm_report(data, session_id=session_id)
             llm = (normalized.get("llm") or {}) if isinstance(normalized, dict) else {}
+            start_date, end_date = _bt_period_from_report(data)
             sessions.append({
                 "session_id": session_id,
                 "ticker":     normalized.get("ticker") or ticker,
                 "engine":     "llm_multi_agent",
                 "metrics":    llm.get("metrics", {}) if isinstance(llm, dict) else {},
                 "total_trades": len(data.get("trades", [])),
+                "start_date": start_date,
+                "end_date": end_date,
+                "ran_at": _bt_ran_at_from_stem(file.stem),
             })
         except Exception:
             continue
@@ -2000,18 +2291,53 @@ async def list_backtests():
             ticker = data.get("session", "")
             normalized = _normalize_bt_report(data, session_id=session_id)
             bt = (normalized.get("bt") or {}) if isinstance(normalized, dict) else {}
+            start_date, end_date = _bt_period_from_report(data)
             sessions.append({
                 "session_id": session_id,
                 "ticker":     normalized.get("ticker") or ticker,
                 "engine":     "classical_technical",
                 "metrics":    bt.get("metrics", {}) if isinstance(bt, dict) else {},
                 "total_trades": len(data.get("trades", [])),
+                "start_date": start_date,
+                "end_date": end_date,
+                "ran_at": _bt_ran_at_from_stem(file.stem),
             })
         except Exception:
             continue
 
-    sessions.sort(key=lambda s: s["session_id"], reverse=True)
+    sessions.sort(key=lambda s: s.get("ran_at") or s["session_id"], reverse=True)
     return {"sessions": sessions}
+
+
+def _bt_period_from_report(data: Dict[str, Any]) -> tuple:
+    """Best-effort (start_date, end_date) for a backtest report.
+
+    The chosen window is the first/last bar of the recorded equity curve;
+    falls back to the first/last trade date when the curve is empty.
+    """
+    daily = data.get("daily_portfolio") if isinstance(data.get("daily_portfolio"), list) else []
+    if daily:
+        return daily[0].get("date"), daily[-1].get("date")
+    trades = data.get("trades") if isinstance(data.get("trades"), list) else []
+    if trades:
+        return trades[0].get("date"), trades[-1].get("date")
+    return None, None
+
+
+def _bt_ran_at_from_stem(stem: str) -> Optional[str]:
+    """Parse the run timestamp embedded in a report filename stem.
+
+    Filenames look like ``report_COMI.CA_20260625_024112`` or
+    ``bt_report_COMI.CA_20260625_024112``. Returns an ISO 8601 string or None.
+    """
+    import re as _re
+    m = _re.search(r"(\d{8})_(\d{6})$", stem)
+    if not m:
+        return None
+    try:
+        return datetime.strptime(m.group(1) + m.group(2), "%Y%m%d%H%M%S").isoformat() + "Z"
+    except ValueError:
+        return None
 
 @app.get("/api/backtests/compare/{ticker}")
 async def compare_backtests(ticker: str):
@@ -2116,6 +2442,14 @@ async def get_backtest_detail(session_id: str):
             # rich agent-text cards have everything they need.
             "buyhold_history": block.get("buyhold_history") or [],
             "benchmark": block.get("benchmark") or {},
+            # Thesis decision-quality evidence + per-prediction drill-down.
+            # predictions[] carries session_id per date → the dashboard opens
+            # each prediction's full reasoning trace (same screen as a live run).
+            "decision_quality": block.get("decision_quality"),
+            "predictions": block.get("predictions") or [],
+            "run_config": block.get("run_config"),
+            "scenario_comparison": block.get("scenario_comparison"),
+            "directional_accuracy": block.get("directional_accuracy"),
             "audit_log": raw.get("audit_log") or [],
             "cost_model": raw.get("cost_model") or {},
             "error": block.get("error"),
@@ -2176,14 +2510,15 @@ async def run_backtest_endpoint(req: RunBacktestRequest, background_tasks: Backg
 
     def run_bt():
         try:
-            from scripts.backtester import BacktestingEngine
-            engine = BacktestingEngine(initial_capital=req.initial_capital)
-            engine.run_backtest(
-                ticker=req.ticker,
-                start_date=req.start_date,
-                end_date=req.end_date,
-                interval_days=req.interval,
-                analysts=req.selected_analysts
+            # Scenario event-study: decide ONCE on start_date, evaluate at end_date.
+            # Market + fundamentals only; local CSV data; no news/social.
+            from scripts.scenario_backtest import run_single_scenario
+            run_single_scenario(
+                req.ticker,
+                start=req.start_date,
+                end=req.end_date,
+                initial_capital=req.initial_capital,
+                rfr=0.0,
             )
             # Hypothesis A: report may be written to wrong dir; verify expected dir has report.
             try:
@@ -2588,6 +2923,74 @@ async def _run_streaming_analysis(
 # Entry Point
 # =============================================================================
 
+_QUICK_CONF_MAP = {"HIGH": 0.8, "MEDIUM": 0.55, "MED": 0.55, "LOW": 0.3}
+
+
+def _quick_conf_to_float(value: Any) -> Optional[float]:
+    """Map a quick-analysis confidence label (or number) to a 0–1 float."""
+    if isinstance(value, (int, float)):
+        v = float(value)
+        return v / 100.0 if v > 1.0 else v
+    if isinstance(value, str):
+        return _QUICK_CONF_MAP.get(value.strip().upper())
+    return None
+
+
+def _persist_quick_analysis_to_pg(
+    *, session_id: str, ticker: str, trade_date: str,
+    result: Dict[str, Any], rec: Dict[str, Any],
+) -> None:
+    """Write a quick (single-LLM) dashboard analysis into Supabase as a full
+    ``run_type='live'`` session plus synthetic agent_events, so it appears in
+    "My Analyses" and renders its full reasoning in the trace panel.
+
+    No-ops silently when Postgres is unavailable (the JSONL fallback still runs).
+    """
+    from tradingagents.db import audit_writer, is_postgres_available
+    from tradingagents.default_config import DEFAULT_CONFIG
+    if not is_postgres_available():
+        return
+
+    signal = str(rec.get("signal", "HOLD") or "HOLD").upper()
+    overall = _quick_conf_to_float(rec.get("confidence"))
+
+    # A final-state-shaped dict the writers already know how to project.
+    synthetic_state: Dict[str, Any] = {
+        "final_trade_decision": signal,
+        "confidence_scores": {"overall": overall} if overall is not None else {},
+        "target_market": "EGX",
+        "analysis_mode": "quick",
+        "price": result.get("price"),
+        "indicators": result.get("indicators"),
+        "recommendation": rec,
+        "investment_debate_state": {
+            "bull_history": rec.get("bull_case"),
+            "bear_history": rec.get("bear_case"),
+            "judge_decision": "\n\n".join(
+                p for p in (rec.get("neutral_case"), rec.get("rationale")) if p
+            ) or None,
+        },
+        "trader_investment_plan": rec.get("recommendation"),
+    }
+
+    fingerprint = audit_writer.build_model_fingerprint(dict(DEFAULT_CONFIG))
+    fingerprint["analysis_mode"] = "quick"
+    audit_writer.write_analysis_session(
+        session_id=session_id,
+        ticker=ticker,
+        trade_date=trade_date,
+        final_state=synthetic_state,
+        model_fingerprint=fingerprint,
+        user_id="local",
+        run_type="live",
+    )
+    audit_writer.write_agent_events(
+        session_id=session_id,
+        final_state=synthetic_state,
+        model_fingerprint=fingerprint,
+    )
+
+
 # =============================================================================
 # Test / Utility Endpoints
 # =============================================================================
@@ -2638,8 +3041,23 @@ async def test_random_egx(req: TestEgxRequest = TestEgxRequest()):
                 
                 now = datetime.utcnow().isoformat() + "Z"
                 rec = result.get("recommendation", {})
-                
-                # Write JSONL entries
+
+                # ── Persist the FULL quick-analysis to Supabase (run_type='live')
+                # so it shows in "My Analyses" with every detail viewable, exactly
+                # like a full multi-agent run. The synthetic agent_events let the
+                # existing trace UI render the bull / bear / judge sections.
+                try:
+                    _persist_quick_analysis_to_pg(
+                        session_id=session_id,
+                        ticker=selected_ticker,
+                        trade_date=datetime.now().strftime("%Y-%m-%d"),
+                        result=result,
+                        rec=rec,
+                    )
+                except Exception as _pg_err:
+                    logger.warning("Quick-analysis Supabase persist failed: %s", _pg_err)
+
+                # Write JSONL entries (legacy on-disk fallback for when PG is down)
                 jsonl_path = audit_dir / "audit_log.jsonl"
                 entries = [
                     {
@@ -2843,6 +3261,34 @@ async def analyze_full(req: FullAnalyzeRequest):
             "status": "degraded",
         }
 
+    try:
+        from tradingagents.db import audit_writer
+        fingerprint = audit_writer.build_model_fingerprint(get_config())
+        
+        # Inject base fields into final_state so they are preserved in the DB
+        state_to_save = dict(final_state)
+        state_to_save["price"] = base.get("price")
+        state_to_save["indicators"] = base.get("indicators")
+        state_to_save["technical_panel"] = base.get("technical_panel")
+        state_to_save["price_history"] = base.get("price_history")
+        
+        audit_writer.write_analysis_session(
+            session_id=run_id,
+            ticker=ticker,
+            trade_date=trade_date,
+            final_state=state_to_save,
+            model_fingerprint=fingerprint,
+            user_id="local",
+            run_type="live",
+        )
+        audit_writer.write_agent_events(
+            session_id=run_id,
+            final_state=state_to_save,
+            model_fingerprint=fingerprint,
+        )
+    except Exception as exc:
+        logger.warning("Audit write failed in analyze-full: %s", exc)
+
     _hub_publish(
         run_id, ticker, trade_date, "main",
         ftype="complete", node="Final Recommendation", status="completed",
@@ -2896,6 +3342,10 @@ async def analyze_full(req: FullAnalyzeRequest):
         sl = downside.get("support_level_1")
         if isinstance(sl, (int, float)):
             stop_loss = float(sl)
+    # Track whether the stop is a real thesis stop or a synthetic fallback. The
+    # fallback sits at exactly 10% below spot, which must NOT be allowed to drive
+    # the risk profile (it would pin every run to HIGH — see risk_profile below).
+    stop_loss_is_default = stop_loss is None
     if stop_loss is None and current_price:
         stop_loss = round(current_price * 0.9, 2)
 
@@ -2905,28 +3355,89 @@ async def analyze_full(req: FullAnalyzeRequest):
         if cv in ("HIGH", "MEDIUM", "LOW"):
             confidence = cv
 
+    # Unwrap the trader's structured execution plan (may be double-nested as
+    # {"execution_plan": {...}}). It carries per-stock risk controls + the
+    # thesis time-stop, both of which we surface instead of hardcoded constants.
+    raw_plan = final_state.get("execution_plan") or {}
+    plan = raw_plan.get("execution_plan", raw_plan) if isinstance(raw_plan, dict) else {}
+
+    # Risk profile — DERIVED from the deterministic risk scorer + the stop
+    # distance, not a fixed "MEDIUM". This is the real per-stock risk read.
+    # THROTTLE is a position-SIZING adjustment (5-10% ADV), not an inherently
+    # high-risk verdict, so it maps to MEDIUM, not HIGH.
+    risk_action = str(final_state.get("risk_action") or "ALLOW").upper()
+    risk_profile = {
+        "VETO": "HIGH",
+        "THROTTLE": "MEDIUM",
+        "WARN": "MEDIUM",
+        "ALLOW": "LOW",
+    }.get(risk_action, "MEDIUM")
+    # Escalate (never downgrade) by how far the protective stop sits from spot —
+    # a WIDER stop means more capital at risk per trade. Only a REAL thesis stop
+    # may drive this; the synthetic 10%-below fallback must not (it would pin
+    # every fallback run to HIGH). Thresholds account for EGX's ±10% daily band,
+    # so a ~10% stop is normal, not extreme.
+    if current_price and stop_loss and not stop_loss_is_default:
+        stop_dist_pct = abs((stop_loss - current_price) / current_price) * 100
+        if stop_dist_pct >= 12:
+            risk_profile = "HIGH"
+        elif stop_dist_pct >= 7 and risk_profile == "LOW":
+            risk_profile = "MEDIUM"
+
+    # Time horizon — from the trader's thesis time-stop when available; None
+    # (rendered as "—") rather than a fabricated "2–4 weeks" when it isn't.
+    time_horizon = None
+    if isinstance(plan, dict):
+        exit_logic = plan.get("exit_logic") or {}
+        ts = exit_logic.get("time_stop")
+        if isinstance(ts, str) and ts.strip() and "[" not in ts:
+            time_horizon = ts.strip()
+
     recommendation = {
         "signal": signal,
         "confidence": confidence,
         "target_price": target_price,
         "stop_loss": stop_loss,
-        "risk": "MEDIUM",
+        "risk": risk_profile,
+        "time_horizon": time_horizon,
         "bull_case": bull_case or "No bullish thesis was returned for this run.",
         "bear_case": bear_case or "No bearish thesis was returned for this run.",
         "neutral_case": judge_decision or "",
         "rationale": judge_decision or "",
         "recommendation": final_decision_text or judge_decision or "",
         "full_text": final_decision_text,
+        # Per-trading-style recommendations (Swing / Position / Long-Term) from
+        # the Trader. Dashboard-only; not part of the live decision path.
+        "styled_recommendations": final_state.get("styled_recommendations"),
     }
 
     return {
         **base,
+        "session_id": run_id,
         "recommendation": recommendation,
         "llm_error": None,
         "status": "ok",
         "pipeline": "full",
         "_final_state_keys": list(final_state.keys()),
     }
+
+
+@app.get("/api/technical-panel/{ticker}")
+async def get_technical_panel_endpoint(ticker: str, as_of: Optional[str] = None):
+    """Full Investing-style technical panel for a ticker (live, or as-of a date).
+
+    Returns the 12 indicators + Buy/Sell/Neutral verdicts + SMA/EMA grid + summary
+    tallies + 5 pivot systems, computed deterministically from OHLCV by the same engine
+    the backtest dataset uses (look-ahead-safe). ``as_of`` (YYYY-MM-DD) is optional;
+    defaults to the latest available trading day.
+    """
+    if not ticker.upper().endswith(".CA"):
+        ticker = f"{ticker.upper()}.CA"
+    try:
+        from tradingagents.dataflows.technical_panel import get_live_panel
+        return await asyncio.to_thread(get_live_panel, ticker, as_of)
+    except Exception as exc:
+        return {"ticker": ticker, "as_of": as_of, "error": str(exc), "panel": None}
 
 
 @app.get("/api/test/egx-tickers")
