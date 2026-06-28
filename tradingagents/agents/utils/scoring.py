@@ -4,6 +4,24 @@ Unified Scoring Engine for TradingAgents
 Normalizes outputs from all agents into a common scale (-1.0 to 1.0)
 and aggregates them using a confidence-weighted mean with a quorum rule.
 
+ROLE — DETERMINISTIC VALIDATION / EXPLAINABILITY ENGINE (NOT the live decider).
+------------------------------------------------------------------------------
+The executed BUY/SELL/HOLD in the compiled graph is produced by the LLM nodes
+(Research Manager + Risk Judge), bracketed by the deterministic Risk Scorer /
+final gate. ``calculate_unified_score`` below is a SEPARATE deterministic engine
+that maps the same structured analyst outputs to a decision; it is **not consulted
+anywhere in the graph**. Its only caller is ``scripts/system_validation.py``.
+
+It is maintained for: (1) validation — a reproducible sanity oracle for the
+validation harness; (2) auditability/explainability — a deterministic,
+decomposable cross-check that can be shown alongside the LLM decision; and
+(3) future research — a calibration target for any evidence-gated promotion to a
+formal guardrail/ensemble member. Product decision (2026-06): it stays a
+validator; it does NOT veto or prompt-influence the LLM without calibration +
+backtest + sign-off. See CLAUDE.md §12. The ``propagate_confidence`` reuse of
+this module's quorum/blend primitives is for position-SIZE confidence only,
+never for direction.
+
 Phase 3 sentiment redesign principles:
 - Sentiment NEVER changes the directional score — only confidence × and position size ×.
 - ≥2 non-absent directional analysts required for a valid decision (quorum rule).
@@ -324,6 +342,13 @@ def calculate_unified_score(
     sentiment_blend: Optional[SentimentBlend] = None,
 ) -> Tuple[str, float, str, dict, str]:
     """Calculate the final unified trading decision and blended confidence.
+
+    NOT IN THE LIVE DECISION PATH (verified 2026-06-18). The compiled graph derives
+    BUY/SELL/HOLD from the LLM Research Manager + Risk Manager, post-processed by
+    ``SignalProcessor``. This deterministic aggregator is currently exercised only by
+    ``scripts/system_validation.py``. ``propagate_confidence()`` reuses this module's
+    quorum/blend primitives for *sizing*, but does not call this function. Keep this in
+    mind before treating its output as the system's decision.
 
     Parameters
     ----------
