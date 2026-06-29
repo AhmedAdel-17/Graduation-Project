@@ -311,6 +311,212 @@ def test_decision_priority_json_action_extraction() -> None:
     assert path == "judge_json"
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# P5 — trader_fallback risk-judge confidence gate
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_fallback_blocked_when_risk_judge_confidence_zero() -> None:
+    """When the risk judge explicitly gives confidence 0.0, the trader
+    fallback must be blocked even though the deterministic gate is green."""
+    final_state = {
+        "final_trade_decision": "HOLD",
+        "risk_action": "CONTINUE",
+        "risk_assessment": {"approved": None, "critical_violations": 0},
+        "execution_plan": {"decision": "BUY"},
+        "risk_debate_state": {
+            "judge_decision": (
+                '4. **Final decision**:\n\n'
+                '```json\n{"action": "HOLD", "confidence": 0.0}\n```'
+            ),
+        },
+    }
+    decision, path = BacktestingEngine._resolve_decision(
+        final_state, final_state["execution_plan"]
+    )
+    assert decision == "HOLD"
+    assert path == "fallback_blocked_risk_confidence"
+
+
+def test_fallback_blocked_when_risk_judge_confidence_near_zero() -> None:
+    """Confidence 0.01 (below 0.05 threshold) must also block fallback."""
+    final_state = {
+        "final_trade_decision": "HOLD",
+        "risk_action": "CONTINUE",
+        "risk_assessment": {"approved": None, "critical_violations": 0},
+        "execution_plan": {"decision": "BUY"},
+        "risk_debate_state": {
+            "judge_decision": '{"action": "HOLD", "confidence": 0.01}',
+        },
+    }
+    decision, path = BacktestingEngine._resolve_decision(
+        final_state, final_state["execution_plan"]
+    )
+    assert decision == "HOLD"
+    assert path == "fallback_blocked_risk_confidence"
+
+
+def test_fallback_allowed_when_risk_judge_confidence_nonzero() -> None:
+    """Confidence 0.3 (above threshold) must allow fallback as before."""
+    final_state = {
+        "final_trade_decision": "HOLD",
+        "risk_action": "CONTINUE",
+        "risk_assessment": {"approved": None, "critical_violations": 0},
+        "execution_plan": {"decision": "BUY"},
+        "risk_debate_state": {
+            "judge_decision": '{"action": "HOLD", "confidence": 0.3}',
+        },
+    }
+    decision, path = BacktestingEngine._resolve_decision(
+        final_state, final_state["execution_plan"]
+    )
+    assert decision == "BUY"
+    assert path == "trader_fallback"
+
+
+def test_fallback_allowed_when_risk_judge_confidence_missing() -> None:
+    """When risk_debate_state is absent, fallback must proceed (no false
+    blocks from missing data)."""
+    final_state = {
+        "final_trade_decision": "HOLD",
+        "risk_action": "CONTINUE",
+        "risk_assessment": {"approved": None, "critical_violations": 0},
+        "execution_plan": {"decision": "BUY"},
+    }
+    decision, path = BacktestingEngine._resolve_decision(
+        final_state, final_state["execution_plan"]
+    )
+    assert decision == "BUY"
+    assert path == "trader_fallback"
+
+
+def test_fallback_allowed_when_risk_judge_text_is_unparseable_prose() -> None:
+    """Prose with no JSON confidence block must not block fallback."""
+    final_state = {
+        "final_trade_decision": "HOLD",
+        "risk_action": "CONTINUE",
+        "risk_assessment": {"approved": None, "critical_violations": 0},
+        "execution_plan": {"decision": "SELL"},
+        "risk_debate_state": {
+            "judge_decision": (
+                "The trade looks risky due to leverage concerns. "
+                "I recommend caution but defer to the trader's plan."
+            ),
+        },
+    }
+    decision, path = BacktestingEngine._resolve_decision(
+        final_state, final_state["execution_plan"]
+    )
+    assert decision == "SELL"
+    assert path == "trader_fallback"
+
+
+def test_deterministic_veto_still_overrides_fallback_with_confidence() -> None:
+    """Deterministic veto must take priority even when risk judge confidence
+    is high — the safety floor is never bypassed."""
+    final_state = {
+        "final_trade_decision": "HOLD",
+        "risk_action": "VETO",
+        "risk_assessment": {"approved": True, "critical_violations": 0},
+        "execution_plan": {"decision": "BUY"},
+        "risk_debate_state": {
+            "judge_decision": '{"action": "BUY", "confidence": 0.9}',
+        },
+    }
+    decision, path = BacktestingEngine._resolve_decision(
+        final_state, final_state["execution_plan"]
+    )
+    assert decision == "HOLD"
+    assert path == "deterministic_veto"
+
+
+def test_fallback_blocked_path_label() -> None:
+    """The decision path must be 'fallback_blocked_risk_confidence' when
+    the gate fires — not 'trader_fallback' or 'default_hold'."""
+    final_state = {
+        "final_trade_decision": "HOLD",
+        "risk_action": "CONTINUE",
+        "risk_assessment": {"approved": None, "critical_violations": 0},
+        "execution_plan": {"decision": "SELL"},
+        "risk_debate_state": {
+            "judge_decision": (
+                "Some analysis text.\n\n"
+                '```json\n{"action": "HOLD", "confidence": 0.0}\n```\n'
+            ),
+        },
+    }
+    decision, path = BacktestingEngine._resolve_decision(
+        final_state, final_state["execution_plan"]
+    )
+    assert decision == "HOLD"
+    assert path == "fallback_blocked_risk_confidence"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# P5 — _extract_risk_judge_confidence unit tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_extract_confidence_from_json_code_block() -> None:
+    state = {
+        "risk_debate_state": {
+            "judge_decision": (
+                'Analysis here.\n\n'
+                '```json\n{"action": "HOLD", "confidence": 0.85}\n```'
+            ),
+        },
+    }
+    assert BacktestingEngine._extract_risk_judge_confidence(state) == 0.85
+
+
+def test_extract_confidence_from_inline_json() -> None:
+    state = {
+        "risk_debate_state": {
+            "judge_decision": '{"action": "BUY", "confidence": 0.6}',
+        },
+    }
+    assert BacktestingEngine._extract_risk_judge_confidence(state) == 0.6
+
+
+def test_extract_confidence_returns_last_match() -> None:
+    """When multiple JSON blocks exist, return the last one (the final
+    decision, not intermediate analysis)."""
+    state = {
+        "risk_debate_state": {
+            "judge_decision": (
+                'Preliminary: {"action": "BUY", "confidence": 0.9}\n\n'
+                'Final: {"action": "HOLD", "confidence": 0.0}'
+            ),
+        },
+    }
+    assert BacktestingEngine._extract_risk_judge_confidence(state) == 0.0
+
+
+def test_extract_confidence_returns_none_on_missing_state() -> None:
+    assert BacktestingEngine._extract_risk_judge_confidence({}) is None
+    assert BacktestingEngine._extract_risk_judge_confidence(
+        {"risk_debate_state": None}
+    ) is None
+
+
+def test_extract_confidence_returns_none_on_prose() -> None:
+    state = {
+        "risk_debate_state": {
+            "judge_decision": "I think this trade is risky.",
+        },
+    }
+    assert BacktestingEngine._extract_risk_judge_confidence(state) is None
+
+
+def test_extract_confidence_zero() -> None:
+    state = {
+        "risk_debate_state": {
+            "judge_decision": '{"action": "HOLD", "confidence": 0.0}',
+        },
+    }
+    assert BacktestingEngine._extract_risk_judge_confidence(state) == 0.0
+
+
 def test_partial_checkpoint_roundtrip(tmp_path, monkeypatch) -> None:
     """Per-ticker partial write/read should restore engine state and the
     set of completed dates."""

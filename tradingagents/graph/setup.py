@@ -9,6 +9,7 @@ from tradingagents.agents import *
 from tradingagents.agents.utils.agent_states import AgentState
 
 from .conditional_logic import ConditionalLogic
+from tradingagents.observability.node_metrics import metered_node
 
 
 class PerAnalystToolNode:
@@ -169,27 +170,28 @@ class GraphSetup:
         # Create workflow
         workflow = StateGraph(AgentState)
 
-        # Add analyst nodes to the graph
+        # Add analyst nodes to the graph (wrapped with metered_node for observability)
         for analyst_type, node in analyst_nodes.items():
-            workflow.add_node(f"{analyst_type.capitalize()} Analyst", node)
+            _node_name = f"{analyst_type.capitalize()} Analyst"
+            workflow.add_node(_node_name, metered_node(node, _node_name.lower().replace(" ", "_")))
             workflow.add_node(
                 f"Msg Clear {analyst_type.capitalize()}", delete_nodes[analyst_type]
             )
             workflow.add_node(f"tools_{analyst_type}", tool_nodes[analyst_type])
 
-        # Add other nodes
-        workflow.add_node("Bull Researcher", bull_researcher_node)
-        workflow.add_node("Bear Researcher", bear_researcher_node)
-        workflow.add_node("Research Manager", research_manager_node)
-        workflow.add_node("Trader", trader_node)
+        # Add other nodes (wrapped with metered_node for observability)
+        workflow.add_node("Bull Researcher", metered_node(bull_researcher_node, "bull_researcher"))
+        workflow.add_node("Bear Researcher", metered_node(bear_researcher_node, "bear_researcher"))
+        workflow.add_node("Research Manager", metered_node(research_manager_node, "research_manager"))
+        workflow.add_node("Trader", metered_node(trader_node, "trader"))
         # Phase 3: Three-layer risk pipeline
         #   Risk Scorer (deterministic, pre-LLM)
         #   -> Risk Veto (hard reject, no LLM) | Merged Risk Debate (LLM debate)
         #   -> Risk Judge (Constitutional LLM manager + final gate)
-        workflow.add_node("Risk Scorer", risk_scorer_node)
-        workflow.add_node("Risk Veto", risk_veto_node)
-        workflow.add_node("Merged Risk Debate", merged_risk_node)
-        workflow.add_node("Risk Judge", risk_manager_node)
+        workflow.add_node("Risk Scorer", metered_node(risk_scorer_node, "risk_scorer"))
+        workflow.add_node("Risk Veto", metered_node(risk_veto_node, "risk_veto"))
+        workflow.add_node("Merged Risk Debate", metered_node(merged_risk_node, "merged_risk_debate"))
+        workflow.add_node("Risk Judge", metered_node(risk_manager_node, "risk_judge"))
 
         # ── Parallel analyst fan-out ──────────────────────────────────────────
         # All analysts start simultaneously from START and run in the same

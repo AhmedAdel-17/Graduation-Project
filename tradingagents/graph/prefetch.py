@@ -109,6 +109,22 @@ class DataPrefetcher:
             logger.warning("Prefetch macro context failed: %s", e)
             return None
 
+    def _fetch_market_breadth(self, trade_date: str) -> Any:
+        """Fetch market breadth data for regime classification (Fix C, P8)."""
+        if self.target_market != "EGX":
+            return None
+        try:
+            from tradingagents.dataflows.macro_provider import compute_market_breadth
+            return compute_market_breadth(
+                as_of_date=str(trade_date),
+                lookback_days=self.config.get("market_breadth_lookback_days", 20),
+                rally_threshold=self.config.get("market_breadth_rally_threshold", 0.70),
+                downturn_threshold=self.config.get("market_breadth_downturn_threshold", 0.30),
+            )
+        except Exception as e:
+            logger.warning("Prefetch market breadth failed: %s", e)
+            return None
+
     def fetch_all(self, ticker: str, trade_date: str) -> Dict[str, Any]:
         """
         Fetch all data sources in parallel.
@@ -148,6 +164,11 @@ class DataPrefetcher:
                     self._fetch_macro_context, ticker, str(trade_date)
                 ),
             }
+
+            # Fix C (P8): market breadth is computed synchronously (not in
+            # prefetch futures) because the 15-ticker yfinance batch download
+            # is too slow for the 30s prefetch timeout.  It runs once per
+            # trade_date and is diskcached, so subsequent tickers are instant.
 
             results = {}
             for key, future in futures.items():

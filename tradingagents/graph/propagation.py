@@ -161,6 +161,8 @@ class Propagator:
             QUORUM_MINIMUM,
             blend_from_dict,
         )
+        from tradingagents.dataflows.config import get_config
+        config = get_config()
 
         # ── Market / Technical analyst ─────────────────────────────────────
         tech_conf: float | None = None
@@ -247,8 +249,13 @@ class Propagator:
         all_valid = [s for s in [tech_conf, fund_conf, sent_conf] if s is not None]
         min_conf = min(all_valid)
         avg_conf = sum(all_valid) / len(all_valid)
-        # 30% weight on weakest signal, 70% on average
-        overall = 0.30 * min_conf + 0.70 * avg_conf
+        # P7: reduced from 30/70 to 15/85 — weakest-link was over-dampening
+        # the reported confidence when one analyst (typically news) had low
+        # confidence.  This metric is used for audit/logging and injected into
+        # the Research Manager prompt (P7 confidence context), not for sizing.
+        # B1 (P8): further reduce to 5/95 when enabled.
+        wl_weight = 0.05 if config.get("b1_weakest_link_enabled") else 0.15
+        overall = wl_weight * min_conf + (1 - wl_weight) * avg_conf
 
         # Data-quality penalty
         data_quality = state.get("data_quality") or {}
@@ -265,11 +272,27 @@ class Propagator:
         else:
             pos_size_mult = 1.0
 
+        # ── Fix C (P8): Market breadth confidence modulation ──────────────
+        # Adjusts confidence based on broad market regime. NOT a hard gate.
+        # Rally → slight confidence boost (tailwind), downturn → dampen.
+        if config.get("market_breadth_enabled"):
+            breadth = state.get("market_breadth") or {}
+            regime = breadth.get("regime", "sideways")
+            dampening = config.get("market_breadth_dampening_factor", 0.75)
+            if regime == "rally":
+                overall *= 1.0 + (1.0 - dampening)  # e.g. 1.25x in rally
+            elif regime == "downturn":
+                overall *= dampening  # e.g. 0.75x in downturn
+            # sideways: no change
+
+        # B3 (P8): lower hard confidence floor when enabled
+        conf_floor = 0.01 if config.get("b3_confidence_floor_enabled") else 0.10
+
         return {
             "technical": round(tech_conf, 3) if tech_conf is not None else None,
             "fundamental": round(fund_conf, 3) if fund_conf is not None else None,
             "sentiment": round(sent_conf, 3) if sent_conf is not None else None,
-            "overall": round(max(0.10, min(1.0, overall)), 3),
+            "overall": round(max(conf_floor, min(1.0, overall)), 3),
             "overall_status": "OK",
             "position_size_multiplier": round(max(0.0, min(1.0, pos_size_mult)), 4),
         }

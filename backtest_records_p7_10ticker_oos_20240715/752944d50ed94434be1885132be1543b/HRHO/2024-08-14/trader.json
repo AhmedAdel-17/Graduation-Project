@@ -1,0 +1,117 @@
+{
+  "run_id": "752944d50ed94434be1885132be1543b",
+  "ticker": "HRHO",
+  "trade_date": "2024-08-14",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "b0d7fc23ba27ad1a0ef380c0fd7a46c0181f04b4fb0143c86230e1e84ec259f0",
+  "raw_output": "# EXECUTION PLAN: HRHO.CA\n\n## Analysis & Decision Framework\n\n### Signal Assessment\n\n| Signal Source | Direction | Conviction | Weight |\n|---|---|---|---|\n| **Fundamental** | Bearish | High | 40% |\n| **Technical** | Neutral | Low | 25% |\n| **Sentiment** | Bearish | Low | 15% |\n| **Macro** | Mixed (bullish EGX30, bearish rates) | Moderate | 20% |\n\n### Key Decision Factors\n\n**BEAR CASE DOMINATES:**\n1. **Solvency risk is real and stock-specific**: D/E 3.45x with interest costs consuming 41% of revenue at 27.25% rates — this is not a macro artifact\n2. **Current ratio 0.83x**: Below 1.0 means the company cannot cover short-term obligations with current assets\n3. **Net margin compression**: -12.5% YoY despite 58% revenue growth — operational inefficiency is structural\n4. **Technical distribution pattern**: 7% drop on 2.85x volume after 32% rally = institutional selling, not healthy pullback\n5. **Negative 19.5% earnings yield spread**: Stock needs 40-50% correction to restore fair value vs risk-free rate\n\n**BULL CASE WEAKNESSES:**\n- Revenue growth is impressive but margin compression erodes value creation\n- IMF catalyst is generic — doesn't address company-specific leverage\n- Beta-1.6 amplifies downside as aggressively as upside\n\n### Decision: **HOLD** — Stay in cash\n\nThe research team's HOLD recommendation is correct. The bear thesis identifies concrete, stock-specific blockers that override the positive macro tailwinds. The 85% confidence level is appropriate.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"HRHO.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"No entry at current levels. Re-evaluate only if bear thesis invalidates.\",\n            \"conditions\": [\n                \"Net margin improves to 15%+ (from 11.6%)\",\n                \"Debt-to-equity falls below 2.0x\",\n                \"CBE policy rate cut to 20% or below\",\n                \"Price breaks above EGP 22.00 with volume >3x average\",\n                \"Positive management guidance or institutional buying disclosed\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position\",\n                \"note\": \"No position to exit. Monitor for invalidation triggers.\"\n            },\n            \"time_stop\": \"Re-evaluate after next earnings release or if CBE cuts rates below 20%\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A — no position\",\n            \"price_limit_risk\": \"If considering entry in future, avoid buying into +10% limit-up days. If price gaps down -10%, wait for stabilization before any entry.\",\n            \"liquidity_exit_plan\": \"N/A — no position. If entering in future, use limit orders only, never market orders.\"\n        },\n        \"invalidation_triggers\": [\n            \"Net margin improves to 15%+ — proves margin compression was temporary\",\n            \"Debt-to-equity falls below 2.0x — leverage risk materially reduced\",\n            \"CBE policy rate cut to 20% or below — changes entire valuation framework\",\n            \"Price breaks above EGP 22.00 with volume >3x average — confirms trend continuation\",\n            \"Positive management guidance or dividend announcement emerges\",\n            \"Institutional buying disclosed in regulatory filings\",\n            \"IMF program successfully completed with disbursement\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Monitoring Plan\n\n### What to Watch (Weekly Review)\n\n| Trigger | Current Value | Target for Re-entry | Status |\n|---|---|---|---|\n| Net margin | 11.6% | >15% | ❌ Deteriorating |\n| D/E ratio | 3.45x | <2.0x | ❌ Elevated |\n| CBE policy rate | 27.25% | <20% | ❌ Tight |\n| Price vs EGP 22.00 | ~EGP 19.50 | Break above with 3x volume | ❌ Below |\n| News flow | None | Positive guidance | ❌ Silent |\n\n### Re-evaluation Schedule\n- **Next earnings release**: Primary catalyst for re-assessment\n- **CBE rate decision**: If rates drop below 20%, re-run valuation\n- **Monthly**: Check if any invalidation triggers have been met\n\n### Risk Note\nThe 2.0x ATR stop-loss lesson from past trades is noted but irrelevant here — we have no position to protect. If entering in the future (after invalidation), use 3.0x ATR pre-earnings to avoid premature stop-out as learned from prior HRHO trades.\n\n---\n\n**FINAL TRANSACTION PROPOSAL: **HOLD****",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN: HRHO.CA\\n\\n## Analysis & Decision Framework\\n\\n### Signal Assessment\\n\\n| Signal Source | Direction | Conviction | Weight |\\n|---|---|---|---|\\n| **Fundamental** | Bearish | High | 40% |\\n| **Technical** | Neutral | Low | 25% |\\n| **Sentiment** | Bearish | Low | 15% |\\n| **Macro** | Mixed (bullish EGX30, bearish rates) | Moderate | 20% |\\n\\n### Key Decision Factors\\n\\n**BEAR CASE DOMINATES:**\\n1. **Solvency risk is real and stock-specific**: D/E 3.45x with interest costs consuming 41% of revenue at 27.25% rates — this is not a macro artifact\\n2. **Current ratio 0.83x**: Below 1.0 means the company cannot cover short-term obligations with current assets\\n3. **Net margin compression**: -12.5% YoY despite 58% revenue growth — operational inefficiency is structural\\n4. **Technical distribution pattern**: 7% drop on 2.85x volume after 32% rally = institutional selling, not healthy pullback\\n5. **Negative 19.5% earnings yield spread**: Stock needs 40-50% correction to restore fair value vs risk-free rate\\n\\n**BULL CASE WEAKNESSES:**\\n- Revenue growth is impressive but margin compression erodes value creation\\n- IMF catalyst is generic — doesn\\'t address company-specific leverage\\n- Beta-1.6 amplifies downside as aggressively as upside\\n\\n### Decision: **HOLD** — Stay in cash\\n\\nThe research team\\'s HOLD recommendation is correct. The bear thesis identifies concrete, stock-specific blockers that override the positive macro tailwinds. The 85% confidence level is appropriate.\\n\\n---\\n\\n## Structured Execution Plan\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"HRHO.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A — no entry\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": null,\\n                \"price_range_high\": null\\n            },\\n            \"timing\": \"No entry at current levels. Re-evaluate only if bear thesis invalidates.\",\\n            \"conditions\": [\\n                \"Net margin improves to 15%+ (from 11.6%)\",\\n                \"Debt-to-equity falls below 2.0x\",\\n                \"CBE policy rate cut to 20% or below\",\\n                \"Price breaks above EGP 22.00 with volume >3x average\",\\n                \"Positive management guidance or institutional buying disclosed\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A — no position\",\\n                \"note\": \"No position to exit. Monitor for invalidation triggers.\"\\n            },\\n            \"time_stop\": \"Re-evaluate after next earnings release or if CBE cuts rates below 20%\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"N/A — no position\",\\n            \"max_daily_execution\": \"N/A — no position\",\\n            \"price_limit_risk\": \"If considering entry in future, avoid buying into +10% limit-up days. If price gaps down -10%, wait for stabilization before any entry.\",\\n            \"liquidity_exit_plan\": \"N/A — no position. If entering in future, use limit orders only, never market orders.\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"Net margin improves to 15%+ — proves margin compression was temporary\",\\n            \"Debt-to-equity falls below 2.0x — leverage risk materially reduced\",\\n            \"CBE policy rate cut to 20% or below — changes entire valuation framework\",\\n            \"Price breaks above EGP 22.00 with volume >3x average — confirms trend continuation\",\\n            \"Positive management guidance or dividend announcement emerges\",\\n            \"Institutional buying disclosed in regulatory filings\",\\n            \"IMF program successfully completed with disbursement\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```\\n\\n---\\n\\n## Monitoring Plan\\n\\n### What to Watch (Weekly Review)\\n\\n| Trigger | Current Value | Target for Re-entry | Status |\\n|---|---|---|---|\\n| Net margin | 11.6% | >15% | ❌ Deteriorating |\\n| D/E ratio | 3.45x | <2.0x | ❌ Elevated |\\n| CBE policy rate | 27.25% | <20% | ❌ Tight |\\n| Price vs EGP 22.00 | ~EGP 19.50 | Break above with 3x volume | ❌ Below |\\n| News flow | None | Positive guidance | ❌ Silent |\\n\\n### Re-evaluation Schedule\\n- **Next earnings release**: Primary catalyst for re-assessment\\n- **CBE rate decision**: If rates drop below 20%, re-run valuation\\n- **Monthly**: Check if any invalidation triggers have been met\\n\\n### Risk Note\\nThe 2.0x ATR stop-loss lesson from past trades is noted but irrelevant here — we have no position to protect. If entering in the future (after invalidation), use 3.0x ATR pre-earnings to avoid premature stop-out as learned from prior HRHO trades.\\n\\n---\\n\\n**FINAL TRANSACTION PROPOSAL: **HOLD****', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1323, 'prompt_tokens': 9549, 'total_tokens': 10872, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9549}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'be74c7b7-e8f1-40e3-8000-cd9780147a91', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee057-355d-7c13-bcfb-076bd0f67cbe-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9549, 'output_tokens': 1323, 'total_tokens': 10872, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN: HRHO.CA\n\n## Analysis & Decision Framework\n\n### Signal Assessment\n\n| Signal Source | Direction | Conviction | Weight |\n|---|---|---|---|\n| **Fundamental** | Bearish | High | 40% |\n| **Technical** | Neutral | Low | 25% |\n| **Sentiment** | Bearish | Low | 15% |\n| **Macro** | Mixed (bullish EGX30, bearish rates) | Moderate | 20% |\n\n### Key Decision Factors\n\n**BEAR CASE DOMINATES:**\n1. **Solvency risk is real and stock-specific**: D/E 3.45x with interest costs consuming 41% of revenue at 27.25% rates — this is not a macro artifact\n2. **Current ratio 0.83x**: Below 1.0 means the company cannot cover short-term obligations with current assets\n3. **Net margin compression**: -12.5% YoY despite 58% revenue growth — operational inefficiency is structural\n4. **Technical distribution pattern**: 7% drop on 2.85x volume after 32% rally = institutional selling, not healthy pullback\n5. **Negative 19.5% earnings yield spread**: Stock needs 40-50% correction to restore fair value vs risk-free rate\n\n**BULL CASE WEAKNESSES:**\n- Revenue growth is impressive but margin compression erodes value creation\n- IMF catalyst is generic — doesn't address company-specific leverage\n- Beta-1.6 amplifies downside as aggressively as upside\n\n### Decision: **HOLD** — Stay in cash\n\nThe research team's HOLD recommendation is correct. The bear thesis identifies concrete, stock-specific blockers that override the positive macro tailwinds. The 85% confidence level is appropriate.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"HRHO.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"No entry at current levels. Re-evaluate only if bear thesis invalidates.\",\n            \"conditions\": [\n                \"Net margin improves to 15%+ (from 11.6%)\",\n                \"Debt-to-equity falls below 2.0x\",\n                \"CBE policy rate cut to 20% or below\",\n                \"Price breaks above EGP 22.00 with volume >3x average\",\n                \"Positive management guidance or institutional buying disclosed\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position\",\n                \"note\": \"No position to exit. Monitor for invalidation triggers.\"\n            },\n            \"time_stop\": \"Re-evaluate after next earnings release or if CBE cuts rates below 20%\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A — no position\",\n            \"price_limit_risk\": \"If considering entry in future, avoid buying into +10% limit-up days. If price gaps down -10%, wait for stabilization before any entry.\",\n            \"liquidity_exit_plan\": \"N/A — no position. If entering in future, use limit orders only, never market orders.\"\n        },\n        \"invalidation_triggers\": [\n            \"Net margin improves to 15%+ — proves margin compression was temporary\",\n            \"Debt-to-equity falls below 2.0x — leverage risk materially reduced\",\n            \"CBE policy rate cut to 20% or below — changes entire valuation framework\",\n            \"Price breaks above EGP 22.00 with volume >3x average — confirms trend continuation\",\n            \"Positive management guidance or dividend announcement emerges\",\n            \"Institutional buying disclosed in regulatory filings\",\n            \"IMF program successfully completed with disbursement\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Monitoring Plan\n\n### What to Watch (Weekly Review)\n\n| Trigger | Current Value | Target for Re-entry | Status |\n|---|---|---|---|\n| Net margin | 11.6% | >15% | ❌ Deteriorating |\n| D/E ratio | 3.45x | <2.0x | ❌ Elevated |\n| CBE policy rate | 27.25% | <20% | ❌ Tight |\n| Price vs EGP 22.00 | ~EGP 19.50 | Break above with 3x volume | ❌ Below |\n| News flow | None | Positive guidance | ❌ Silent |\n\n### Re-evaluation Schedule\n- **Next earnings release**: Primary catalyst for re-assessment\n- **CBE rate decision**: If rates drop below 20%, re-run valuation\n- **Monthly**: Check if any invalidation triggers have been met\n\n### Risk Note\nThe 2.0x ATR stop-loss lesson from past trades is noted but irrelevant here — we have no position to protect. If entering in the future (after invalidation), use 3.0x ATR pre-earnings to avoid premature stop-out as learned from prior HRHO trades.\n\n---\n\n**FINAL TRANSACTION PROPOSAL: **HOLD****",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "HRHO.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — remain 100% cash"
+        },
+        "entry_logic": {
+          "order_type": "N/A — no entry",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": null,
+            "price_range_high": null
+          },
+          "timing": "No entry at current levels. Re-evaluate only if bear thesis invalidates.",
+          "conditions": [
+            "Net margin improves to 15%+ (from 11.6%)",
+            "Debt-to-equity falls below 2.0x",
+            "CBE policy rate cut to 20% or below",
+            "Price breaks above EGP 22.00 with volume >3x average",
+            "Positive management guidance or institutional buying disclosed"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": null
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A — no position",
+            "note": "No position to exit. Monitor for invalidation triggers."
+          },
+          "time_stop": "Re-evaluate after next earnings release or if CBE cuts rates below 20%"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "N/A — no position",
+          "max_daily_execution": "N/A — no position",
+          "price_limit_risk": "If considering entry in future, avoid buying into +10% limit-up days. If price gaps down -10%, wait for stabilization before any entry.",
+          "liquidity_exit_plan": "N/A — no position. If entering in future, use limit orders only, never market orders."
+        },
+        "invalidation_triggers": [
+          "Net margin improves to 15%+ — proves margin compression was temporary",
+          "Debt-to-equity falls below 2.0x — leverage risk materially reduced",
+          "CBE policy rate cut to 20% or below — changes entire valuation framework",
+          "Price breaks above EGP 22.00 with volume >3x average — confirms trend continuation",
+          "Positive management guidance or dividend announcement emerges",
+          "Institutional buying disclosed in regulatory filings",
+          "IMF program successfully completed with disbursement"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "a5d3874265e6c736361069b3548a275ee149b662e7260770ad88c651928ccdea",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 14534.042624989524,
+  "timestamp_utc": "2026-06-19T14:44:46.756123+00:00",
+  "context_items": []
+}

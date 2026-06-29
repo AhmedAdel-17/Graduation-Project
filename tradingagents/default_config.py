@@ -8,7 +8,11 @@ EGX_TICKERS: list[str] = [
     # Real Estate
     "TMGH.CA", "HELI.CA", "PHDC.CA", "OCDI.CA", "ORAS.CA", "EMFD.CA",
     # Industry
-    "EAST.CA", "ESRS.CA", "SWDY.CA", "ABUK.CA", "MFPC.CA", "EGAL.CA", "EGCH.CA", "EFIC.CA",
+    "EAST.CA", "SWDY.CA", "ABUK.CA", "MFPC.CA", "EGAL.CA", "EGCH.CA", "EFIC.CA",
+    # ESRS.CA (Ezz Steel) excluded: yfinance returns no income/balance data,
+    # Mubasher scraper returned MANUAL_ENTRY_REQUIRED stubs with no values,
+    # no EGX Annex 5 PDFs available. Re-add when a data source is secured.
+    # See ESRS remediation (2026-05-29).
     # Telecom / Tech
     "ETEL.CA", "FWRY.CA", "EFIH.CA", "RAYA.CA",
     # Financial Services
@@ -64,7 +68,41 @@ DEFAULT_CONFIG = {
     "auto_refresh_fundamentals": True,    # Set False to disable EGX auto-download
     "fundamentals_max_age_days": 90,      # Trigger refresh if data is older than this
     "use_fundamental_memory": False,      # Phase 3 memory/reflection is opt-in and local
+    "use_hybrid_fundamental_analyst": True,  # Hybrid (deterministic + 3-stage CoT) for EGX fundamentals; False = deterministic-only (no LLM calls)
+    "thesis_cot_mode": "3call",           # "single" = original 1-call H&P, "3call" = competing-hypotheses H&P (default after A/B validation 2026-05-24)
     "egx_risk_free_rate": 0.275,          # CBE policy rate proxy (late 2024); used for earnings_yield_spread
+
+    # ─── Fundamentals pipeline domain constants ─────────────────────────────
+    # Filing lag: days after period_end_date before data is assumed public.
+    # Used by data_loader.py when publish_date column is unavailable.
+    "filing_lag_annual_days": 120,        # Annual financials: ~4 months after fiscal year-end
+    "filing_lag_quarterly_days": 45,      # Quarterly financials: ~45 days after quarter-end
+
+    # Leverage alert threshold for non-bank sectors (sector_config.py).
+    # D/E above this triggers HIGH_LEVERAGE_ALERT distress flag.
+    "leverage_alert_threshold": 5.0,
+
+    # Calibration: D/E above this forces "up" direction (calibration.py).
+    # Highly leveraged EGX firms tend to refinance rather than report lower earnings.
+    "calibration_max_de_for_down": 4.0,
+
+    # Calibration: confidence assigned when a non-up signal is overridden to "up".
+    # Capped at naive-baseline level so Brier score stays competitive with always-up.
+    "calibration_up_confidence": 60,
+
+    # Data confidence scoring weights (scoring.py).
+    # Must sum to 1.0. Controls relative importance of data quality dimensions.
+    "data_confidence_weights": {
+        "field_coverage": 0.45,       # Required fields populated (7 fields)
+        "optional_coverage": 0.15,    # Optional fields populated
+        "staleness": 0.25,            # How recent is the last filing
+        "period_depth": 0.15,         # How many annual periods available
+    },
+
+    # Manifest-based fundamentals freshness pre-flight check.
+    # When False (default): log freshness failures as warnings, do not block.
+    # When True: fail fast before analysis starts if manifest freshness fails.
+    "enforce_fundamentals_manifest_freshness": False,
 
     # Backtest mode flag — set True when running single-ticker backtests.
     # Relaxes single-stock concentration limits that would otherwise veto most
@@ -115,6 +153,14 @@ DEFAULT_CONFIG = {
     # Empty string ⇒ fail-closed to identity (size_multiplier=1.0).
     "rl_model_path": os.environ.get("RL_MODEL_PATH", ""),
 
+    # ─── Backtest recording (write-only audit trail) ───────────────────────────
+    # When True, each LLM-backed graph node writes a JSON record per invocation
+    # to backtest_records_dir. Zero behavior change — record-only, no replay.
+    # Enable via backtester --record flag or set in config.
+    "backtest_record_outputs": False,
+    "record_full_prompts": False,  # save full prompt text (large); False = prompt_hash only
+    "backtest_records_dir": "./backtest_records",
+
     # ─── Pre-fetch optimisation ──────────────────────────────────────────────
     # Pre-fetch data before graph execution (Phase 2a optimisation).
     # When True, DataPrefetcher fetches news and social data in parallel before
@@ -122,6 +168,29 @@ DEFAULT_CONFIG = {
     # analysts (~2 LLM calls, ~6K tokens, ~30-60s saved per trade date).
     # Set False only for ablation experiments (ABLATION_NO_PREFETCH) or debugging.
     "prefetch_data": True,
+
+    # ─── Regime-robust improvements (P8) ─────────────────────────────────────
+    # All default to OFF — P7 baseline is untouched unless explicitly enabled.
+
+    # Fix A: Anti-churn reversal gating
+    "anti_churn_enabled": os.environ.get("ANTI_CHURN_ENABLED", "1").strip() in ("1", "true"),
+    "anti_churn_variant": os.environ.get("ANTI_CHURN_VARIANT", "A2"),  # A1|A2|A3|A4
+    "anti_churn_min_hold_days": int(os.environ.get("ANTI_CHURN_MIN_HOLD_DAYS", "20")),
+    "anti_churn_reversal_confidence_threshold": float(os.environ.get("ANTI_CHURN_REVERSAL_CONF", "0.55")),
+    "anti_churn_partial_exit_frac": float(os.environ.get("ANTI_CHURN_PARTIAL_EXIT", "0.50")),
+
+    # Fix B: Confidence decompression — each sub-fix independently toggleable
+    "b1_weakest_link_enabled": os.environ.get("B1_WEAKEST_LINK", "0").strip() in ("1", "true"),
+    "b2_news_neutral_enabled": os.environ.get("B2_NEWS_NEUTRAL", "0").strip() in ("1", "true"),
+    "b3_confidence_floor_enabled": os.environ.get("B3_CONF_FLOOR", "0").strip() in ("1", "true"),
+    "b4_sizing_floor_enabled": os.environ.get("B4_SIZING_FLOOR", "0").strip() in ("1", "true"),
+
+    # Fix C: Market breadth overlay (confidence modulation, not hard gate)
+    "market_breadth_enabled": os.environ.get("MARKET_BREADTH_ENABLED", "0").strip() in ("1", "true"),
+    "market_breadth_lookback_days": int(os.environ.get("BREADTH_LOOKBACK_DAYS", "20")),
+    "market_breadth_rally_threshold": float(os.environ.get("BREADTH_RALLY_PCT", "0.70")),
+    "market_breadth_downturn_threshold": float(os.environ.get("BREADTH_DOWNTURN_PCT", "0.30")),
+    "market_breadth_dampening_factor": float(os.environ.get("BREADTH_DAMPENING", "0.75")),
 
     # Target market identifier - determines which market rules apply
     # EGX = Egyptian Exchange, the primary stock exchange in Egypt

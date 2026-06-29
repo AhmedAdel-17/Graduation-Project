@@ -1,0 +1,173 @@
+{
+  "run_id": "c9a6be067ff64f2d9d517e5d2f28b0c9",
+  "ticker": "SWDY",
+  "trade_date": "2024-01-22",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "32759d497428b1591a9cc4c46168aa6a0d1ecbd64e05f97bdb8cbb32f75e2e33",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for SWDY.CA in the specified date range\",\n        \"No market-level news available to provide broader context\",\n        \"Silence in news flow reduces confidence and suggests low market attention or no material developments\",\n        \"Data source errors indicate potential data retrieval issues, not necessarily true absence of news\"\n    ],\n    \"explanation\": \"No news articles were found for SWDY.CA between January 15-22, 2024, and no market-level EGX news was available. The lack of coverage significantly reduces confidence in any directional sentiment, as silence itself is a signal of low information flow. Without any headlines, risks, or catalysts, the sentiment is assessed as neutral with weak strength.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-01-15 to 2024-01-22\"\n    },\n    \"risks_from_news\": [\"No risks identified due to absence of news coverage\"],\n    \"catalysts_from_news\": [\"No catalysts identified due to absence of news coverage\"]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for SWDY.CA in the specified date range\",\\n        \"No market-level news available to provide broader context\",\\n        \"Silence in news flow reduces confidence and suggests low market attention or no material developments\",\\n        \"Data source errors indicate potential data retrieval issues, not necessarily true absence of news\"\\n    ],\\n    \"explanation\": \"No news articles were found for SWDY.CA between January 15-22, 2024, and no market-level EGX news was available. The lack of coverage significantly reduces confidence in any directional sentiment, as silence itself is a signal of low information flow. Without any headlines, risks, or catalysts, the sentiment is assessed as neutral with weak strength.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-01-15 to 2024-01-22\"\\n    },\\n    \"risks_from_news\": [\"No risks identified due to absence of news coverage\"],\\n    \"catalysts_from_news\": [\"No catalysts identified due to absence of news coverage\"]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 295, 'prompt_tokens': 664, 'total_tokens': 959, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 640}, 'prompt_cache_hit_tokens': 640, 'prompt_cache_miss_tokens': 24}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '4289ae00-a225-4f28-b61c-071be6854b7d', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edcc4-e4bd-7733-8d8d-2b66403ace87-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 664, 'output_tokens': 295, 'total_tokens': 959, 'input_token_details': {'cache_read': 640}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for SWDY.CA in the specified date range\",\n        \"No market-level news available to provide broader context\",\n        \"Silence in news flow reduces confidence and suggests low market attention or no material developments\",\n        \"Data source errors indicate potential data retrieval issues, not necessarily true absence of news\"\n    ],\n    \"explanation\": \"No news articles were found for SWDY.CA between January 15-22, 2024, and no market-level EGX news was available. The lack of coverage significantly reduces confidence in any directional sentiment, as silence itself is a signal of low information flow. Without any headlines, risks, or catalysts, the sentiment is assessed as neutral with weak strength.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-01-15 to 2024-01-22\"\n    },\n    \"risks_from_news\": [\"No risks identified due to absence of news coverage\"],\n    \"catalysts_from_news\": [\"No catalysts identified due to absence of news coverage\"]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for SWDY.CA in the specified date range",
+        "No market-level news available to provide broader context",
+        "Silence in news flow reduces confidence and suggests low market attention or no material developments",
+        "Data source errors indicate potential data retrieval issues, not necessarily true absence of news",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for SWDY.CA between January 15-22, 2024, and no market-level EGX news was available. The lack of coverage significantly reduces confidence in any directional sentiment, as silence itself is a signal of low information flow. Without any headlines, risks, or catalysts, the sentiment is assessed as neutral with weak strength.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-01-15 to 2024-01-22"
+      },
+      "risks_from_news": [
+        "No risks identified due to absence of news coverage"
+      ],
+      "catalysts_from_news": [
+        "No catalysts identified due to absence of news coverage"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.3483,
+        "label": "bearish",
+        "confidence": 0.6169,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for SWDY.CA in the specified date range",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9214,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market-level news available to provide broader context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9366,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence in news flow reduces confidence and suggests low market attention or no material development",
+            "source": "quoted_in_report",
+            "score": -0.9622,
+            "label": "bearish",
+            "confidence": 0.9622,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data source errors indicate potential data retrieval issues, not necessarily true absence of news",
+            "source": "quoted_in_report",
+            "score": -0.853,
+            "label": "bearish",
+            "confidence": 0.853,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for SWDY.CA between January 15-22, 2024, and no market-level EGX news wa",
+            "source": "quoted_in_report",
+            "score": -0.9616,
+            "label": "bearish",
+            "confidence": 0.9616,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-01-15 to 2024-01-22",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9377,
+            "model": "finbert"
+          },
+          {
+            "headline": "No risks identified due to absence of news coverage",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8124,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No catalysts identified due to absence of news coverage",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.818,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.2264,
+        "label": "bearish",
+        "confidence": 0.5101
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "c1d9ca980ec7ddf5c28c784a11114d6547be8cdf34f5b461e102b917dae25dec",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 4041.5877080522478,
+  "timestamp_utc": "2026-06-18T22:05:55.862332+00:00",
+  "context_items": []
+}

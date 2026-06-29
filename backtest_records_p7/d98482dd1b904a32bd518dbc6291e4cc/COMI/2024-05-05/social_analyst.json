@@ -1,0 +1,41 @@
+{
+  "run_id": "d98482dd1b904a32bd518dbc6291e4cc",
+  "ticker": "COMI",
+  "trade_date": "2024-05-05",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "639b24b8262711b18c0747c612fa46b1c5aac02b7e04bca2e55f574d1a60661e",
+  "raw_output": "```json\n{\n    \"narrative\": \"No retail investor discussions were detected for COMI.CA on Reddit within the analysis window. There are no Arabic or English social media signals to assess tone or themes. The absence of posts suggests low retail engagement or coverage for this ticker during the period.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No retail investor discussions were detected for COMI.CA on Reddit within the analysis window. There are no Arabic or English social media signals to assess tone or themes. The absence of posts suggests low retail engagement or coverage for this ticker during the period.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 71, 'prompt_tokens': 612, 'total_tokens': 683, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 100}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'd2917813-0a26-4a82-9ecd-f70a23ba745c', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edc90-8973-7173-8453-ff7d3321080f-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 612, 'output_tokens': 71, 'total_tokens': 683, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for COMI.CA]\nNo retail investor discussions were detected for COMI.CA on Reddit within the analysis window. There are no Arabic or English social media signals to assess tone or themes. The absence of posts suggests low retail engagement or coverage for this ticker during the period.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"COMI.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No retail investor discussions were detected for COMI.CA on Reddit within the analysis window. There are no Arabic or English social media signals to assess tone or themes. The absence of posts suggests low retail engagement or coverage for this ticker during the period.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "8f573836353294b9d84766553f4ffb5af62ca53fa498c85f5f4da17074c2414c",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 1548.4811249189079,
+  "timestamp_utc": "2026-06-18T21:08:41.984529+00:00",
+  "context_items": []
+}

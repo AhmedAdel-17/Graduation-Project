@@ -50,7 +50,16 @@ CRITICAL RULES:
 4. EGX-specific context: EGP currency exposure, ±10% daily price limits, no short selling.
 5. If PRIOR FUNDAMENTAL MEMORY CONTEXT is present, use it only as prior context.
    Do not treat memory as current-period evidence and do not let it override the evidence pack.
-6. Output ONLY valid JSON — no prose before or after the JSON block.
+6. HIGH-RATE REGIME: When the evidence pack shows Rate Regime: HIGH (CBE > 15%),
+   negative earnings yield spread is regime-driven (structurally common for most EGX equities),
+   not company-specific overvaluation. Your valuation_read should reflect this — do not label
+   a stock "expensive" solely because EY < CBE rate in a high-rate environment.
+7. Output ONLY valid JSON — no prose before or after the JSON block.
+8. MOMENTUM CONTEXT: If the evidence pack includes price momentum and
+   relative strength data, incorporate it into your growth_signal
+   assessment. Strong momentum with strong fundamentals = "positive".
+   Divergence (strong momentum but weak fundamentals, or vice versa) =
+   "mixed" and warrants a coherence_note.
 
 OUTPUT FORMAT (strict JSON):
 {

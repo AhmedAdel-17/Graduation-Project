@@ -19,6 +19,38 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
+class FundamentalsQualityStatus(BaseModel):
+    """
+    Degradation status of the fundamentals analysis.
+
+    Levels:
+      full              — deterministic + all 3 CoT stages succeeded
+      partial           — deterministic + some CoT stages succeeded (e.g. data_cot + concept_cot)
+      deterministic_only — ratios/flags computed, no interpretive enrichment
+      unavailable       — no financial data found for this ticker
+    """
+    level: str = Field(
+        default="deterministic_only",
+        description="'full' | 'partial' | 'deterministic_only' | 'unavailable'",
+    )
+    reasons: List[str] = Field(
+        default_factory=list,
+        description="Why enrichment failed, was skipped, or data is missing.",
+    )
+    data_available: bool = Field(
+        default=True,
+        description="Whether any financial statement data was found.",
+    )
+    enrichment_attempted: bool = Field(
+        default=False,
+        description="Whether CoT/LLM enrichment was attempted.",
+    )
+    enrichment_succeeded: bool = Field(
+        default=False,
+        description="Whether all attempted CoT stages succeeded.",
+    )
+
+
 class FundamentalAnalysisReport(BaseModel):
     """
     Structured output of the EGX Fundamental Analyst.
@@ -211,6 +243,28 @@ class FundamentalAnalysisReport(BaseModel):
         description="Key risks identified. Deterministic: EGX structural risks only. CoT: analyst-identified risks.",
     )
 
+    # ── Competing-hypotheses audit trail (3-call H&P mode only) ────────────────
+    competing_hypotheses: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "All hypotheses generated in Call 1 of the 3-call H&P pipeline. "
+            "Each dict has: id, direction, statement, rationale. "
+            "Empty when thesis_cot_mode='single'."
+        ),
+    )
+    scored_hypotheses: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Evidence mapping and scores for each hypothesis from Call 2. "
+            "Each dict has: id, evidence_for, evidence_against, evidence_support_score, score_rationale. "
+            "Empty when thesis_cot_mode='single'."
+        ),
+    )
+    selected_hypothesis_id: str = Field(
+        default="",
+        description="ID of the hypothesis selected in Call 3 (e.g. 'H1'). Empty when thesis_cot_mode='single'.",
+    )
+
     # ── Pipeline metadata ─────────────────────────────────────────────────────
     pipeline_mode: str = Field(
         default="deterministic",
@@ -219,6 +273,22 @@ class FundamentalAnalysisReport(BaseModel):
     stages_completed: List[str] = Field(
         default_factory=list,
         description="Which CoT stages completed: ['data_cot', 'concept_cot', 'thesis_cot']",
+    )
+
+    # ── Quality status (degradation tracking) ────────────────────────────────
+    quality_status: FundamentalsQualityStatus = Field(
+        default_factory=FundamentalsQualityStatus,
+        description="Degradation status: full, partial, deterministic_only, or unavailable.",
+    )
+    effective_confidence: int = Field(
+        default=0,
+        ge=0,
+        le=100,
+        description=(
+            "Usable confidence for downstream agents. Equals data_confidence when "
+            "enrichment succeeded or was not attempted. Reduced when enrichment was "
+            "attempted but failed (interpretive layer missing). 0 when data unavailable."
+        ),
     )
 
     model_config = {"extra": "allow"}

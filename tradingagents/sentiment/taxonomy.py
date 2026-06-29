@@ -30,7 +30,7 @@ _SECTOR_MEMBERS: dict[SectorEnum, frozenset[str]] = {
     SectorEnum.BANKS: frozenset({"COMI", "ADIB", "CIEB", "EXPA", "HDBK", "QNBA", "SAUD"}),
     SectorEnum.REAL_ESTATE: frozenset({"TMGH", "HELI", "PHDC", "OCDI", "ORAS", "EMFD"}),
     SectorEnum.INDUSTRY: frozenset(
-        {"EAST", "ESRS", "SWDY", "ABUK", "MFPC", "EGAL", "EGCH", "EFIC"}
+        {"EAST", "SWDY", "ABUK", "MFPC", "EGAL", "EGCH", "EFIC"}
     ),
     SectorEnum.TELECOM_TECH: frozenset({"ETEL", "FWRY", "EFIH", "RAYA"}),
     SectorEnum.FINANCIAL_SERVICES: frozenset({"HRHO", "BTFH", "CICH"}),

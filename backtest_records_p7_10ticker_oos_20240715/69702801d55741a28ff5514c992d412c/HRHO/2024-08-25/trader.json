@@ -1,0 +1,118 @@
+{
+  "run_id": "69702801d55741a28ff5514c992d412c",
+  "ticker": "HRHO",
+  "trade_date": "2024-08-25",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "e2048e85102852ed4156e3e01d1441d7cc0d695f45c98be5b22e9b216bfb7ba2",
+  "raw_output": "# EXECUTION PLAN: HRHO.CA\n\n## Analysis Summary\n\nAfter reviewing all available data, I concur with the research team's **HOLD** recommendation. The balance sheet fragility (0.83x current ratio, 3.45x D/E) in a 27.25% rate environment creates a legitimate liquidity/solvency blocker that overrides the positive momentum and growth signals. The 39% rally in 60 days on 2.38x average volume suggests climactic momentum exhaustion, not a sustainable trend.\n\n### Key Risk Factors Confirming HOLD:\n1. **Current ratio 0.83x**: Current liabilities exceed current assets by 17% — working capital distress risk\n2. **Debt-to-equity 3.45x**: Extreme leverage in a 27.25% rate environment means interest expense will accelerate\n3. **Earnings yield 7.03% vs 27.25% risk-free rate**: Massive negative carry — opportunity cost is extreme\n4. **No dividend yield**: Zero income vs 27.25% T-bills\n5. **39% rally in 60 days**: Climactic move on elevated volume — mean reversion highly probable\n6. **Revenue growth 58% is price-driven**: Will collapse when inflation moderates — not sustainable\n\n### Why Not BUY:\n- The bull case relies on continued macro tailwinds (IMF, EGP stability) but ignores company-specific balance sheet risks\n- PEG ratio of 0.24x is misleading when earnings growth is inflation-driven and debt costs are rising\n- Piotroski Score of 6 is moderate, not strong — net margin deteriorating despite revenue growth\n\n### Why Not SELL:\n- No position exists — portfolio is 100% cash\n- EGX does not permit short selling\n- The stock may still have short-term momentum, but entering now is poor risk/reward\n\n### Entry Conditions to Monitor (for future re-evaluation):\n1. Debt-to-equity falls below 2.0x\n2. Current ratio rises above 1.2x\n3. 20-30% pullback from current levels resets risk/reward\n4. CBE rate cut below 20% reduces interest burden\n5. Revenue growth shows volume expansion, not just price-driven growth\n\n---\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"HRHO.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Do not initiate position. Monitor for pullback of 20-30% from current levels OR improvement in balance sheet metrics (D/E < 2.0x, current ratio > 1.2x)\",\n            \"conditions\": [\n                \"Debt-to-equity falls below 2.0x\",\n                \"Current ratio rises above 1.2x\",\n                \"CBE policy rate cut below 20%\",\n                \"Revenue growth shows volume expansion (not just price-driven)\",\n                \"20-30% pullback from current levels resets risk/reward\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position\",\n                \"note\": \"If position were held, use 3.0x ATR stop pre-earnings per lesson learned\"\n            },\n            \"time_stop\": \"Re-evaluate at next earnings release or if CBE cuts rates below 20%\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"0 shares — no execution\",\n            \"price_limit_risk\": \"N/A — no position. If monitoring, note that ±10% daily limit could trap sellers\",\n            \"liquidity_exit_plan\": \"N/A — no position. If entering in future, use limit orders only, avoid first/last 30 min of session\"\n        },\n        \"invalidation_triggers\": [\n            \"Debt-to-equity falls below 2.0x (genuine deleveraging)\",\n            \"Current ratio rises above 1.2x (liquidity concerns resolved)\",\n            \"CBE policy rate cut to below 15% (interest burden reduced)\",\n            \"Revenue growth >20% with volume expansion (not price-driven)\",\n            \"Dividend initiated at >5% yield (management confidence signal)\",\n            \"Net margin expands above 15% (pricing power confirmed)\",\n            \"Piotroski Score rises to 8+ (genuine financial health improvement)\",\n            \"EGP strengthens >10% vs USD and holds for 6 months (currency risk removed)\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN: HRHO.CA\\n\\n## Analysis Summary\\n\\nAfter reviewing all available data, I concur with the research team\\'s **HOLD** recommendation. The balance sheet fragility (0.83x current ratio, 3.45x D/E) in a 27.25% rate environment creates a legitimate liquidity/solvency blocker that overrides the positive momentum and growth signals. The 39% rally in 60 days on 2.38x average volume suggests climactic momentum exhaustion, not a sustainable trend.\\n\\n### Key Risk Factors Confirming HOLD:\\n1. **Current ratio 0.83x**: Current liabilities exceed current assets by 17% — working capital distress risk\\n2. **Debt-to-equity 3.45x**: Extreme leverage in a 27.25% rate environment means interest expense will accelerate\\n3. **Earnings yield 7.03% vs 27.25% risk-free rate**: Massive negative carry — opportunity cost is extreme\\n4. **No dividend yield**: Zero income vs 27.25% T-bills\\n5. **39% rally in 60 days**: Climactic move on elevated volume — mean reversion highly probable\\n6. **Revenue growth 58% is price-driven**: Will collapse when inflation moderates — not sustainable\\n\\n### Why Not BUY:\\n- The bull case relies on continued macro tailwinds (IMF, EGP stability) but ignores company-specific balance sheet risks\\n- PEG ratio of 0.24x is misleading when earnings growth is inflation-driven and debt costs are rising\\n- Piotroski Score of 6 is moderate, not strong — net margin deteriorating despite revenue growth\\n\\n### Why Not SELL:\\n- No position exists — portfolio is 100% cash\\n- EGX does not permit short selling\\n- The stock may still have short-term momentum, but entering now is poor risk/reward\\n\\n### Entry Conditions to Monitor (for future re-evaluation):\\n1. Debt-to-equity falls below 2.0x\\n2. Current ratio rises above 1.2x\\n3. 20-30% pullback from current levels resets risk/reward\\n4. CBE rate cut below 20% reduces interest burden\\n5. Revenue growth shows volume expansion, not just price-driven growth\\n\\n---\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"HRHO.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A — no entry\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": null,\\n                \"price_range_high\": null\\n            },\\n            \"timing\": \"Do not initiate position. Monitor for pullback of 20-30% from current levels OR improvement in balance sheet metrics (D/E < 2.0x, current ratio > 1.2x)\",\\n            \"conditions\": [\\n                \"Debt-to-equity falls below 2.0x\",\\n                \"Current ratio rises above 1.2x\",\\n                \"CBE policy rate cut below 20%\",\\n                \"Revenue growth shows volume expansion (not just price-driven)\",\\n                \"20-30% pullback from current levels resets risk/reward\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A — no position\",\\n                \"note\": \"If position were held, use 3.0x ATR stop pre-earnings per lesson learned\"\\n            },\\n            \"time_stop\": \"Re-evaluate at next earnings release or if CBE cuts rates below 20%\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"N/A — no position\",\\n            \"max_daily_execution\": \"0 shares — no execution\",\\n            \"price_limit_risk\": \"N/A — no position. If monitoring, note that ±10% daily limit could trap sellers\",\\n            \"liquidity_exit_plan\": \"N/A — no position. If entering in future, use limit orders only, avoid first/last 30 min of session\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"Debt-to-equity falls below 2.0x (genuine deleveraging)\",\\n            \"Current ratio rises above 1.2x (liquidity concerns resolved)\",\\n            \"CBE policy rate cut to below 15% (interest burden reduced)\",\\n            \"Revenue growth >20% with volume expansion (not price-driven)\",\\n            \"Dividend initiated at >5% yield (management confidence signal)\",\\n            \"Net margin expands above 15% (pricing power confirmed)\",\\n            \"Piotroski Score rises to 8+ (genuine financial health improvement)\",\\n            \"EGP strengthens >10% vs USD and holds for 6 months (currency risk removed)\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1213, 'prompt_tokens': 9398, 'total_tokens': 10611, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9398}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '57464f91-b5bb-4c34-a011-c769af8c54b2', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee059-90c8-7b13-a389-6159d5720c6d-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9398, 'output_tokens': 1213, 'total_tokens': 10611, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN: HRHO.CA\n\n## Analysis Summary\n\nAfter reviewing all available data, I concur with the research team's **HOLD** recommendation. The balance sheet fragility (0.83x current ratio, 3.45x D/E) in a 27.25% rate environment creates a legitimate liquidity/solvency blocker that overrides the positive momentum and growth signals. The 39% rally in 60 days on 2.38x average volume suggests climactic momentum exhaustion, not a sustainable trend.\n\n### Key Risk Factors Confirming HOLD:\n1. **Current ratio 0.83x**: Current liabilities exceed current assets by 17% — working capital distress risk\n2. **Debt-to-equity 3.45x**: Extreme leverage in a 27.25% rate environment means interest expense will accelerate\n3. **Earnings yield 7.03% vs 27.25% risk-free rate**: Massive negative carry — opportunity cost is extreme\n4. **No dividend yield**: Zero income vs 27.25% T-bills\n5. **39% rally in 60 days**: Climactic move on elevated volume — mean reversion highly probable\n6. **Revenue growth 58% is price-driven**: Will collapse when inflation moderates — not sustainable\n\n### Why Not BUY:\n- The bull case relies on continued macro tailwinds (IMF, EGP stability) but ignores company-specific balance sheet risks\n- PEG ratio of 0.24x is misleading when earnings growth is inflation-driven and debt costs are rising\n- Piotroski Score of 6 is moderate, not strong — net margin deteriorating despite revenue growth\n\n### Why Not SELL:\n- No position exists — portfolio is 100% cash\n- EGX does not permit short selling\n- The stock may still have short-term momentum, but entering now is poor risk/reward\n\n### Entry Conditions to Monitor (for future re-evaluation):\n1. Debt-to-equity falls below 2.0x\n2. Current ratio rises above 1.2x\n3. 20-30% pullback from current levels resets risk/reward\n4. CBE rate cut below 20% reduces interest burden\n5. Revenue growth shows volume expansion, not just price-driven growth\n\n---\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"HRHO.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Do not initiate position. Monitor for pullback of 20-30% from current levels OR improvement in balance sheet metrics (D/E < 2.0x, current ratio > 1.2x)\",\n            \"conditions\": [\n                \"Debt-to-equity falls below 2.0x\",\n                \"Current ratio rises above 1.2x\",\n                \"CBE policy rate cut below 20%\",\n                \"Revenue growth shows volume expansion (not just price-driven)\",\n                \"20-30% pullback from current levels resets risk/reward\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position\",\n                \"note\": \"If position were held, use 3.0x ATR stop pre-earnings per lesson learned\"\n            },\n            \"time_stop\": \"Re-evaluate at next earnings release or if CBE cuts rates below 20%\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"0 shares — no execution\",\n            \"price_limit_risk\": \"N/A — no position. If monitoring, note that ±10% daily limit could trap sellers\",\n            \"liquidity_exit_plan\": \"N/A — no position. If entering in future, use limit orders only, avoid first/last 30 min of session\"\n        },\n        \"invalidation_triggers\": [\n            \"Debt-to-equity falls below 2.0x (genuine deleveraging)\",\n            \"Current ratio rises above 1.2x (liquidity concerns resolved)\",\n            \"CBE policy rate cut to below 15% (interest burden reduced)\",\n            \"Revenue growth >20% with volume expansion (not price-driven)\",\n            \"Dividend initiated at >5% yield (management confidence signal)\",\n            \"Net margin expands above 15% (pricing power confirmed)\",\n            \"Piotroski Score rises to 8+ (genuine financial health improvement)\",\n            \"EGP strengthens >10% vs USD and holds for 6 months (currency risk removed)\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "HRHO.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — remain 100% cash"
+        },
+        "entry_logic": {
+          "order_type": "N/A — no entry",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": null,
+            "price_range_high": null
+          },
+          "timing": "Do not initiate position. Monitor for pullback of 20-30% from current levels OR improvement in balance sheet metrics (D/E < 2.0x, current ratio > 1.2x)",
+          "conditions": [
+            "Debt-to-equity falls below 2.0x",
+            "Current ratio rises above 1.2x",
+            "CBE policy rate cut below 20%",
+            "Revenue growth shows volume expansion (not just price-driven)",
+            "20-30% pullback from current levels resets risk/reward"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": null
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A — no position",
+            "note": "If position were held, use 3.0x ATR stop pre-earnings per lesson learned"
+          },
+          "time_stop": "Re-evaluate at next earnings release or if CBE cuts rates below 20%"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "N/A — no position",
+          "max_daily_execution": "0 shares — no execution",
+          "price_limit_risk": "N/A — no position. If monitoring, note that ±10% daily limit could trap sellers",
+          "liquidity_exit_plan": "N/A — no position. If entering in future, use limit orders only, avoid first/last 30 min of session"
+        },
+        "invalidation_triggers": [
+          "Debt-to-equity falls below 2.0x (genuine deleveraging)",
+          "Current ratio rises above 1.2x (liquidity concerns resolved)",
+          "CBE policy rate cut to below 15% (interest burden reduced)",
+          "Revenue growth >20% with volume expansion (not price-driven)",
+          "Dividend initiated at >5% yield (management confidence signal)",
+          "Net margin expands above 15% (pricing power confirmed)",
+          "Piotroski Score rises to 8+ (genuine financial health improvement)",
+          "EGP strengthens >10% vs USD and holds for 6 months (currency risk removed)"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "b822e464e5896e66f3b8691a79d91609389b8a26873c1c29cb2f5d64241221ba",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 11817.865915945731,
+  "timestamp_utc": "2026-06-19T14:47:18.515198+00:00",
+  "context_items": []
+}

@@ -1,0 +1,124 @@
+{
+  "run_id": "4d6cae05bbb24ed290c5c3f5a7309765",
+  "ticker": "FWRY",
+  "trade_date": "2024-01-22",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "ec008a59b0fcb3570341f653cfda9de603374339276d6632aabdb4e99ee904b1",
+  "raw_output": "# EXECUTION PLAN — FWRY.CA\n\n## Analysis Summary\n\nAfter thorough review of all available data, I concur with the Investment Committee's **HOLD** recommendation. The evidence against initiating a position is overwhelming:\n\n### Critical Red Flags\n\n1. **Extreme Valuation**: P/E of 72.4x with earnings yield of 1.38% vs. risk-free rate of 19.25% — a negative carry of -17.87%. This is not a market-wide phenomenon; it's stock-specific overvaluation.\n\n2. **Deteriorating Momentum**: 20-day return of -1.2%, 120-day relative strength of -54.7% vs. EGX30. The stock is systematically underperforming the market.\n\n3. **Information Vacuum**: Zero news coverage, zero institutional coverage, zero social sentiment. No catalysts to drive re-rating.\n\n4. **Leveraged Balance Sheet**: Debt-to-equity of 1.48x in a 19.25% rate environment. Interest expense will continue to pressure earnings.\n\n5. **No Dividend Yield**: Zero income compensation for waiting — pure speculation on price appreciation.\n\n### Why the Bear Case Wins\n\nThe bull thesis relies entirely on macro hopes (rate cuts, index rebalancing) rather than stock-specific fundamentals. The bear thesis identifies concrete, measurable risks: negative carry, leverage costs, information vacuum, and deteriorating relative performance. The 2.3:1 risk/reward ratio assumes 15% upside vs. 15% downside, but the bear's downside scenarios (20-60%) are more credible given the valuation extreme.\n\n### Position Sizing Rationale\n\nSince the decision is **HOLD**, position sizing is not applicable. We remain 100% cash.\n\n### Entry Logic\n\nNo entry is warranted at current levels. The stock would need to decline significantly (P/E compression below 40x) or demonstrate fundamental improvement (revenue growth >15%, debt-to-equity <0.5x) before reconsideration.\n\n### Exit Logic\n\nNot applicable — no position to exit.\n\n### Risk Controls\n\nThe primary risk is **opportunity cost** of holding cash vs. deploying into better opportunities. The EGX30 is bullish, and there are likely better risk-adjusted opportunities in large-cap banks or diversified ETFs.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"FWRY.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Do not initiate. Re-evaluate if P/E compresses below 40x, or if company reports >15% revenue growth with margin expansion, or if debt-to-equity falls below 0.5x.\",\n            \"conditions\": [\n                \"P/E ratio below 40x (from current 72x)\",\n                \"Revenue growth >15% YoY confirmed over multiple quarters\",\n                \"Debt-to-equity below 0.5x\",\n                \"Dividend yield >5% initiated\",\n                \"Sustained breakout above 120-day high with volume >2x average\",\n                \"Relative strength turns positive vs market\",\n                \"CBE cuts rates below 15%\",\n                \"Analyst initiation with buy rating from major investment bank\",\n                \"Insider buying detected\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A\",\n                \"note\": \"No position to exit\"\n            },\n            \"time_stop\": \"Review in 90 days or upon next earnings release. Set price alert at 20% decline from current level for potential re-evaluation.\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A\",\n            \"price_limit_risk\": \"N/A — not holding position\",\n            \"liquidity_exit_plan\": \"N/A\"\n        },\n        \"invalidation_triggers\": [\n            \"P/E ratio compresses below 30x (from current 72x)\",\n            \"Revenue growth >15% YoY confirmed over multiple quarters\",\n            \"Debt-to-equity falls below 0.5x\",\n            \"Dividend yield >5% initiated\",\n            \"Sustained breakout above 120-day high with volume >2x average\",\n            \"Relative strength turns positive vs market\",\n            \"CBE cuts rates below 15%\",\n            \"EGP stabilizes for 6+ months\",\n            \"Analyst initiation with buy rating from major investment bank\",\n            \"Insider buying detected\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n## Monitoring Plan\n\n| Trigger | Action |\n|---------|--------|\n| P/E compresses below 40x | Re-evaluate entry |\n| Revenue growth >15% with margin expansion | Re-evaluate entry |\n| Debt-to-equity falls below 0.5x | Re-evaluate entry |\n| 20% price decline from current level | Set price alert — potential entry if fundamentals improve |\n| Next earnings release | Review fundamentals |\n| 90 days from now | Scheduled review |\n\n## Alternative Recommendation\n\nIf seeking EGX exposure, consider:\n- **EGX30 ETF**: Diversified exposure with lower single-stock risk\n- **Large-cap banks** (e.g., CIB, QNB ALAHLI): NIM expansion potential in high-rate environment, P/E typically <15x\n- **Commercial International Bank (COMI.CA)**: Strong franchise, reasonable valuation, dividend yield\n\nThese alternatives offer better risk-adjusted returns than FWRY.CA at current extreme valuation levels.",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN — FWRY.CA\\n\\n## Analysis Summary\\n\\nAfter thorough review of all available data, I concur with the Investment Committee\\'s **HOLD** recommendation. The evidence against initiating a position is overwhelming:\\n\\n### Critical Red Flags\\n\\n1. **Extreme Valuation**: P/E of 72.4x with earnings yield of 1.38% vs. risk-free rate of 19.25% — a negative carry of -17.87%. This is not a market-wide phenomenon; it\\'s stock-specific overvaluation.\\n\\n2. **Deteriorating Momentum**: 20-day return of -1.2%, 120-day relative strength of -54.7% vs. EGX30. The stock is systematically underperforming the market.\\n\\n3. **Information Vacuum**: Zero news coverage, zero institutional coverage, zero social sentiment. No catalysts to drive re-rating.\\n\\n4. **Leveraged Balance Sheet**: Debt-to-equity of 1.48x in a 19.25% rate environment. Interest expense will continue to pressure earnings.\\n\\n5. **No Dividend Yield**: Zero income compensation for waiting — pure speculation on price appreciation.\\n\\n### Why the Bear Case Wins\\n\\nThe bull thesis relies entirely on macro hopes (rate cuts, index rebalancing) rather than stock-specific fundamentals. The bear thesis identifies concrete, measurable risks: negative carry, leverage costs, information vacuum, and deteriorating relative performance. The 2.3:1 risk/reward ratio assumes 15% upside vs. 15% downside, but the bear\\'s downside scenarios (20-60%) are more credible given the valuation extreme.\\n\\n### Position Sizing Rationale\\n\\nSince the decision is **HOLD**, position sizing is not applicable. We remain 100% cash.\\n\\n### Entry Logic\\n\\nNo entry is warranted at current levels. The stock would need to decline significantly (P/E compression below 40x) or demonstrate fundamental improvement (revenue growth >15%, debt-to-equity <0.5x) before reconsideration.\\n\\n### Exit Logic\\n\\nNot applicable — no position to exit.\\n\\n### Risk Controls\\n\\nThe primary risk is **opportunity cost** of holding cash vs. deploying into better opportunities. The EGX30 is bullish, and there are likely better risk-adjusted opportunities in large-cap banks or diversified ETFs.\\n\\n---\\n\\n## Structured Execution Plan\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"FWRY.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": null,\\n                \"price_range_high\": null\\n            },\\n            \"timing\": \"Do not initiate. Re-evaluate if P/E compresses below 40x, or if company reports >15% revenue growth with margin expansion, or if debt-to-equity falls below 0.5x.\",\\n            \"conditions\": [\\n                \"P/E ratio below 40x (from current 72x)\",\\n                \"Revenue growth >15% YoY confirmed over multiple quarters\",\\n                \"Debt-to-equity below 0.5x\",\\n                \"Dividend yield >5% initiated\",\\n                \"Sustained breakout above 120-day high with volume >2x average\",\\n                \"Relative strength turns positive vs market\",\\n                \"CBE cuts rates below 15%\",\\n                \"Analyst initiation with buy rating from major investment bank\",\\n                \"Insider buying detected\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A\",\\n                \"note\": \"No position to exit\"\\n            },\\n            \"time_stop\": \"Review in 90 days or upon next earnings release. Set price alert at 20% decline from current level for potential re-evaluation.\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"N/A — no position\",\\n            \"max_daily_execution\": \"N/A\",\\n            \"price_limit_risk\": \"N/A — not holding position\",\\n            \"liquidity_exit_plan\": \"N/A\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"P/E ratio compresses below 30x (from current 72x)\",\\n            \"Revenue growth >15% YoY confirmed over multiple quarters\",\\n            \"Debt-to-equity falls below 0.5x\",\\n            \"Dividend yield >5% initiated\",\\n            \"Sustained breakout above 120-day high with volume >2x average\",\\n            \"Relative strength turns positive vs market\",\\n            \"CBE cuts rates below 15%\",\\n            \"EGP stabilizes for 6+ months\",\\n            \"Analyst initiation with buy rating from major investment bank\",\\n            \"Insider buying detected\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```\\n\\n## Monitoring Plan\\n\\n| Trigger | Action |\\n|---------|--------|\\n| P/E compresses below 40x | Re-evaluate entry |\\n| Revenue growth >15% with margin expansion | Re-evaluate entry |\\n| Debt-to-equity falls below 0.5x | Re-evaluate entry |\\n| 20% price decline from current level | Set price alert — potential entry if fundamentals improve |\\n| Next earnings release | Review fundamentals |\\n| 90 days from now | Scheduled review |\\n\\n## Alternative Recommendation\\n\\nIf seeking EGX exposure, consider:\\n- **EGX30 ETF**: Diversified exposure with lower single-stock risk\\n- **Large-cap banks** (e.g., CIB, QNB ALAHLI): NIM expansion potential in high-rate environment, P/E typically <15x\\n- **Commercial International Bank (COMI.CA)**: Strong franchise, reasonable valuation, dividend yield\\n\\nThese alternatives offer better risk-adjusted returns than FWRY.CA at current extreme valuation levels.', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1399, 'prompt_tokens': 8237, 'total_tokens': 9636, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 896}, 'prompt_cache_hit_tokens': 896, 'prompt_cache_miss_tokens': 7341}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '012559e5-0ce8-4a08-a718-cde566fc07b0', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edcb0-e74a-7bb0-857e-16d0dd388e1a-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 8237, 'output_tokens': 1399, 'total_tokens': 9636, 'input_token_details': {'cache_read': 896}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN — FWRY.CA\n\n## Analysis Summary\n\nAfter thorough review of all available data, I concur with the Investment Committee's **HOLD** recommendation. The evidence against initiating a position is overwhelming:\n\n### Critical Red Flags\n\n1. **Extreme Valuation**: P/E of 72.4x with earnings yield of 1.38% vs. risk-free rate of 19.25% — a negative carry of -17.87%. This is not a market-wide phenomenon; it's stock-specific overvaluation.\n\n2. **Deteriorating Momentum**: 20-day return of -1.2%, 120-day relative strength of -54.7% vs. EGX30. The stock is systematically underperforming the market.\n\n3. **Information Vacuum**: Zero news coverage, zero institutional coverage, zero social sentiment. No catalysts to drive re-rating.\n\n4. **Leveraged Balance Sheet**: Debt-to-equity of 1.48x in a 19.25% rate environment. Interest expense will continue to pressure earnings.\n\n5. **No Dividend Yield**: Zero income compensation for waiting — pure speculation on price appreciation.\n\n### Why the Bear Case Wins\n\nThe bull thesis relies entirely on macro hopes (rate cuts, index rebalancing) rather than stock-specific fundamentals. The bear thesis identifies concrete, measurable risks: negative carry, leverage costs, information vacuum, and deteriorating relative performance. The 2.3:1 risk/reward ratio assumes 15% upside vs. 15% downside, but the bear's downside scenarios (20-60%) are more credible given the valuation extreme.\n\n### Position Sizing Rationale\n\nSince the decision is **HOLD**, position sizing is not applicable. We remain 100% cash.\n\n### Entry Logic\n\nNo entry is warranted at current levels. The stock would need to decline significantly (P/E compression below 40x) or demonstrate fundamental improvement (revenue growth >15%, debt-to-equity <0.5x) before reconsideration.\n\n### Exit Logic\n\nNot applicable — no position to exit.\n\n### Risk Controls\n\nThe primary risk is **opportunity cost** of holding cash vs. deploying into better opportunities. The EGX30 is bullish, and there are likely better risk-adjusted opportunities in large-cap banks or diversified ETFs.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"FWRY.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Do not initiate. Re-evaluate if P/E compresses below 40x, or if company reports >15% revenue growth with margin expansion, or if debt-to-equity falls below 0.5x.\",\n            \"conditions\": [\n                \"P/E ratio below 40x (from current 72x)\",\n                \"Revenue growth >15% YoY confirmed over multiple quarters\",\n                \"Debt-to-equity below 0.5x\",\n                \"Dividend yield >5% initiated\",\n                \"Sustained breakout above 120-day high with volume >2x average\",\n                \"Relative strength turns positive vs market\",\n                \"CBE cuts rates below 15%\",\n                \"Analyst initiation with buy rating from major investment bank\",\n                \"Insider buying detected\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A\",\n                \"note\": \"No position to exit\"\n            },\n            \"time_stop\": \"Review in 90 days or upon next earnings release. Set price alert at 20% decline from current level for potential re-evaluation.\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A\",\n            \"price_limit_risk\": \"N/A — not holding position\",\n            \"liquidity_exit_plan\": \"N/A\"\n        },\n        \"invalidation_triggers\": [\n            \"P/E ratio compresses below 30x (from current 72x)\",\n            \"Revenue growth >15% YoY confirmed over multiple quarters\",\n            \"Debt-to-equity falls below 0.5x\",\n            \"Dividend yield >5% initiated\",\n            \"Sustained breakout above 120-day high with volume >2x average\",\n            \"Relative strength turns positive vs market\",\n            \"CBE cuts rates below 15%\",\n            \"EGP stabilizes for 6+ months\",\n            \"Analyst initiation with buy rating from major investment bank\",\n            \"Insider buying detected\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n## Monitoring Plan\n\n| Trigger | Action |\n|---------|--------|\n| P/E compresses below 40x | Re-evaluate entry |\n| Revenue growth >15% with margin expansion | Re-evaluate entry |\n| Debt-to-equity falls below 0.5x | Re-evaluate entry |\n| 20% price decline from current level | Set price alert — potential entry if fundamentals improve |\n| Next earnings release | Review fundamentals |\n| 90 days from now | Scheduled review |\n\n## Alternative Recommendation\n\nIf seeking EGX exposure, consider:\n- **EGX30 ETF**: Diversified exposure with lower single-stock risk\n- **Large-cap banks** (e.g., CIB, QNB ALAHLI): NIM expansion potential in high-rate environment, P/E typically <15x\n- **Commercial International Bank (COMI.CA)**: Strong franchise, reasonable valuation, dividend yield\n\nThese alternatives offer better risk-adjusted returns than FWRY.CA at current extreme valuation levels.",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "FWRY.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — remain 100% cash"
+        },
+        "entry_logic": {
+          "order_type": "N/A",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": null,
+            "price_range_high": null
+          },
+          "timing": "Do not initiate. Re-evaluate if P/E compresses below 40x, or if company reports >15% revenue growth with margin expansion, or if debt-to-equity falls below 0.5x.",
+          "conditions": [
+            "P/E ratio below 40x (from current 72x)",
+            "Revenue growth >15% YoY confirmed over multiple quarters",
+            "Debt-to-equity below 0.5x",
+            "Dividend yield >5% initiated",
+            "Sustained breakout above 120-day high with volume >2x average",
+            "Relative strength turns positive vs market",
+            "CBE cuts rates below 15%",
+            "Analyst initiation with buy rating from major investment bank",
+            "Insider buying detected"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": null
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A",
+            "note": "No position to exit"
+          },
+          "time_stop": "Review in 90 days or upon next earnings release. Set price alert at 20% decline from current level for potential re-evaluation."
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "N/A — no position",
+          "max_daily_execution": "N/A",
+          "price_limit_risk": "N/A — not holding position",
+          "liquidity_exit_plan": "N/A"
+        },
+        "invalidation_triggers": [
+          "P/E ratio compresses below 30x (from current 72x)",
+          "Revenue growth >15% YoY confirmed over multiple quarters",
+          "Debt-to-equity falls below 0.5x",
+          "Dividend yield >5% initiated",
+          "Sustained breakout above 120-day high with volume >2x average",
+          "Relative strength turns positive vs market",
+          "CBE cuts rates below 15%",
+          "EGP stabilizes for 6+ months",
+          "Analyst initiation with buy rating from major investment bank",
+          "Insider buying detected"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "61cbf4b259fce28f11e288f1069d4a8ec6607dd79a77d2f36f64f5f4cae2504f",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 11881.380417034961,
+  "timestamp_utc": "2026-06-18T21:44:13.492344+00:00",
+  "context_items": []
+}

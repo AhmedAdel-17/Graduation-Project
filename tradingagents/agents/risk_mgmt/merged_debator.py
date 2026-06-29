@@ -12,8 +12,10 @@ Savings: 2 LLM calls, ~10,000-14,000 tokens, ~60-90s per trade date.
 
 import json
 import logging
+import time
 from tradingagents.dataflows.config import get_config
 from tradingagents.agents.utils.llm_failover import safe_invoke
+from tradingagents.graph.node_record import get_recorder, hash_state_slice, hash_string
 
 logger = logging.getLogger("tradingagents.merged_debator")
 
@@ -145,12 +147,33 @@ Be specific with prices, percentages, and timeframes. Output conversationally, n
                 "Risk debate unavailable due to LLM failure. Risk Manager should default to HOLD."
             )
         })()
+
+        # ── Recording: capture input state and prompt ────────────────────
+        recorder = get_recorder(state)
+        _input_keys = [
+            "risk_debate_state", "execution_plan", "technical_analysis",
+            "fundamental_analysis", "sentiment_analysis",
+            "investment_debate_state", "investment_plan",
+            "trader_investment_plan", "low_liquidity", "company_of_interest",
+        ]
+        _input_hash = hash_state_slice(state, _input_keys) if recorder else ""
+        _prompt_hash = hash_string(prompt) if recorder else ""
+
+        t0 = time.monotonic()
         response = safe_invoke(
             llm, prompt,
             fallback=_fallback_debate,
             agent_name="Merged Risk Debate",
         )
+        _elapsed_ms = (time.monotonic() - t0) * 1000
         debate_text = response.content
+
+        # Detect if fallback was used (safe_invoke returns the fallback object)
+        _record_status = "success"
+        _fallback_source = None
+        if response is _fallback_debate:
+            _record_status = "error"
+            _fallback_source = "safe_invoke_fallback"
 
         # Parse out individual perspective sections for state compatibility
         import re
@@ -177,7 +200,25 @@ Be specific with prices, percentages, and timeframes. Output conversationally, n
             # count=3 so Risk Manager sees a "completed" debate
             "count": risk_debate_state.get("count", 0) + 3,
         }
+        _return = {"risk_debate_state": new_risk_debate_state}
 
-        return {"risk_debate_state": new_risk_debate_state}
+        # ── Recording: write record ──────────────────────────────────────
+        if recorder:
+            recorder.record(
+                node_name="merged_risk_debate",
+                trade_date=state.get("trade_date", ""),
+                input_state_keys=_input_keys,
+                input_hash=_input_hash,
+                prompt_hash=_prompt_hash,
+                prompt_text=prompt,
+                raw_output=debate_text,
+                state_update=_return,
+                state_update_keys=["risk_debate_state"],
+                wall_clock_ms=_elapsed_ms,
+                status=_record_status,
+                fallback_source=_fallback_source,
+            )
+
+        return _return
 
     return merged_risk_node

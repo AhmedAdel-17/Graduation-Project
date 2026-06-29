@@ -19,6 +19,7 @@ Pipeline:
 import json
 import logging
 import re
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -29,6 +30,7 @@ from tradingagents.agents.utils.social_media_tools import (
     get_social_sentiment,
 )
 from tradingagents.dataflows.config import get_config
+from tradingagents.graph.node_record import get_recorder, hash_state_slice, hash_string
 
 logger = logging.getLogger("tradingagents.social_media_analyst")
 
@@ -334,12 +336,21 @@ def create_social_media_analyst(llm):
         current_date = state["trade_date"]
         ticker = state["company_of_interest"]
 
+        # ── Recording: prepare context ────────────────────────────────────
+        recorder = get_recorder(state)
+        _input_keys = [
+            "trade_date", "company_of_interest",
+            "prefetched_stock_datapoints", "prefetched_social_sentiment",
+            "prefetched_social_posts", "social_messages",
+        ]
+        _input_hash = hash_state_slice(state, _input_keys) if recorder else ""
+
         # ── Phase 3 (PR 5): Layer C pre-LLM gate ─────────────────────────────
         stock_datapoints_raw = state.get("prefetched_stock_datapoints")
         if stock_datapoints_raw:
             if _try_layer_c_gate(ticker, stock_datapoints_raw, current_date):
                 blend_result = _compute_blend_result(state, ticker)
-                return {
+                _return_skipped = {
                     "social_messages": [],
                     "sentiment_report": _NO_SIGNAL_TEMPLATE,
                     "social_sentiment_analysis": json.dumps(
@@ -354,6 +365,19 @@ def create_social_media_analyst(llm):
                     ),
                     "sentiment_blend_result": blend_result,
                 }
+                # ── Recording: skipped ───────────────────────────────────
+                if recorder:
+                    recorder.record(
+                        node_name="social_analyst",
+                        trade_date=current_date,
+                        input_state_keys=_input_keys,
+                        input_hash=_input_hash,
+                        state_update=_return_skipped,
+                        state_update_keys=["social_messages", "sentiment_report", "social_sentiment_analysis", "sentiment_blend_result"],
+                        status="skipped",
+                        skip_reason="layer_c_no_signal",
+                    )
+                return _return_skipped
 
         tools = [get_social_sentiment, get_social_media_posts]
 
@@ -385,7 +409,10 @@ def create_social_media_analyst(llm):
                 f"```\n\n"
                 f"Current date: {current_date} | Ticker: {ticker}"
             )
+            _prompt_for_record = prefetch_prompt
+            _t0 = time.monotonic()
             result = llm.invoke(prefetch_prompt)
+            _invoke_ms = (time.monotonic() - _t0) * 1000
         else:
             system_message = (
                 "You are a Social Media Analyst for the Egyptian Stock Exchange (EGX) "
@@ -421,9 +448,12 @@ def create_social_media_analyst(llm):
             prompt = prompt.partial(ticker=ticker)
 
             chain = prompt | llm.bind_tools(tools)
+            _prompt_for_record = system_message
+            _t0 = time.monotonic()
             result = chain.invoke(
                 state.get("social_messages") or [("human", ticker)]
             )
+            _invoke_ms = (time.monotonic() - _t0) * 1000
 
         report_text = ""
         social_analysis: Dict[str, Any] = {}
@@ -449,7 +479,7 @@ def create_social_media_analyst(llm):
 
         sentiment_report = _build_sentiment_report(ticker, extracted["narrative"], blend_result)
 
-        return {
+        _return = {
             "social_messages": [result],
             "sentiment_report": sentiment_report,
             "social_sentiment_analysis": json.dumps(
@@ -457,5 +487,23 @@ def create_social_media_analyst(llm):
             ),
             "sentiment_blend_result": blend_result,
         }
+
+        # ── Recording: write record (only on final response, not tool loops) ──
+        if recorder:
+            recorder.record(
+                node_name="social_analyst",
+                trade_date=current_date,
+                input_state_keys=_input_keys,
+                input_hash=_input_hash,
+                prompt_hash=hash_string(_prompt_for_record),
+                prompt_text=_prompt_for_record,
+                raw_output=result.content if hasattr(result, "content") else str(result),
+                state_update=_return,
+                state_update_keys=["social_messages", "sentiment_report", "social_sentiment_analysis", "sentiment_blend_result"],
+                wall_clock_ms=_invoke_ms,
+                status="success",
+            )
+
+        return _return
 
     return social_media_analyst_node

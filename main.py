@@ -5,6 +5,7 @@ load_dotenv()
 from datetime import date, timedelta
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
+from tradingagents.observability import setup_logging
 
 
 def last_trading_day() -> str:
@@ -25,6 +26,7 @@ def last_trading_day() -> str:
 
 
 def main() -> None:
+    setup_logging()
     # EGX market analysis config
     config = DEFAULT_CONFIG.copy()
     config["deep_think_llm"] = "deepseek-chat"

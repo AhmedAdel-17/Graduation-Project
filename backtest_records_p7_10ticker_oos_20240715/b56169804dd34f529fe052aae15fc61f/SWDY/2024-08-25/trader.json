@@ -1,0 +1,114 @@
+{
+  "run_id": "b56169804dd34f529fe052aae15fc61f",
+  "ticker": "SWDY",
+  "trade_date": "2024-08-25",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "89472e72fca14e1270aa96447a0e6382fc940eb35501a9f3bd7f713078393f63",
+  "raw_output": "# EXECUTION PLAN: SWDY.CA\n\n## Analysis & Decision Framework\n\n### Signal Assessment\n| Signal | Direction | Confidence | Weight |\n|--------|-----------|------------|--------|\n| Technical | Neutral | 40% | 0.25 |\n| Fundamental | Bullish (but stale) | 82% | 0.50 |\n| Sentiment | Neutral/Bearish | 35% | 0.25 |\n\n**Key Conflict**: The fundamental analysis shows healthy financials (ROE 26.5%, improving margins, Piotroski 6/10) BUT the data is from 2023-12-31 — over 8 months stale. No quarterly filings exist to verify current trajectory. The 2.97x debt-to-equity ratio in a 27.25% rate environment means interest expense (growing 184% YoY) is consuming 3.2% of revenue — this is a ticking time bomb if rates stay high.\n\n### The Critical Asymmetry\n- **Bull case requires**: Rate cuts, EGP stability, steel prices, earnings momentum — all macro conditions breaking perfectly\n- **Bear case requires**: Nothing new — the balance sheet strain and information vacuum already exist\n- **Expected return**: Bull's own base case (10x P/E) = EGP 42.6 → 24% downside from current EGP 56.0\n- **Risk-free alternative**: 27.25% on T-bills with zero information risk\n\n### Decision: HOLD\nDo not initiate a position. The information vacuum (no filings since Dec 2023) combined with 2.97x leverage in a 27% rate environment creates unacceptable asymmetry. The 80% rally on declining volume (0.62 ratio) suggests momentum exhaustion, not fundamental re-rating.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"SWDY.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"moderate\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry at current levels\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": 38.0,\n                \"price_range_high\": 42.0\n            },\n            \"timing\": \"Re-evaluate ONLY if price corrects to EGP 38-42 (10x P/E on normalized earnings of EGP 4.26 EPS) AND at least two of the following conditions are met\",\n            \"conditions\": [\n                \"Quarterly filing released (verifies current earnings trajectory)\",\n                \"Debt-to-equity falls below 2.0x (balance sheet de-risking)\",\n                \"Price corrects to EGP 38-42 range (10x P/E entry point)\",\n                \"CBE cuts policy rate by 500+ bps (macro environment improves)\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position to exit\",\n                \"note\": \"If position were held, mental stop at EGP 48.0 (SMA50 support breakdown)\"\n            },\n            \"time_stop\": \"Review in 3 months (Nov 2024) or upon quarterly filing release — whichever comes first\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A — no position\",\n            \"price_limit_risk\": \"If considering entry, use limit orders only — never chase a limit-up day. If stock gaps +10%, wait for pullback.\",\n            \"liquidity_exit_plan\": \"N/A — no position. If entering in future, use VWAP/TWAP over 5-10 days, max 10% of ADV per day\"\n        },\n        \"invalidation_triggers\": [\n            \"Breakout above EGP 62 with volume ratio > 1.0 (technical confirmation of new leg)\",\n            \"Debt-to-equity falls below 2.0x in next filing\",\n            \"CBE cuts rates by 500+ bps\",\n            \"Quarterly filing shows revenue growth >30% YoY AND interest coverage ratio > 3.0x\",\n            \"Price corrects to EGP 38-42 range (10x P/E entry opportunity)\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Monitoring Checklist (No Position)\n\n| Trigger | Current Status | Action if Triggered |\n|---------|---------------|-------------------|\n| Quarterly filing released | ❌ Not available | Re-run fundamental analysis |\n| Price corrects to EGP 38-42 | ❌ At EGP 56.0 | Evaluate entry if other conditions met |\n| Debt-to-equity < 2.0x | ❌ At 2.97x | Positive signal — re-evaluate |\n| CBE rate cut > 500 bps | ❌ At 27.25% | Improves macro backdrop |\n| Volume ratio > 1.0 on breakout | ❌ At 0.62 | Could signal renewed momentum |\n\n**Next Review Date**: 2024-11-25 (3 months) or upon quarterly filing release\n\n**Opportunity Cost Note**: While SWDY.CA may continue rallying on momentum, the 27.25% risk-free rate provides a superior risk-adjusted return with zero information risk. Missing further upside is acceptable given the balance sheet and transparency risks identified.",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN: SWDY.CA\\n\\n## Analysis & Decision Framework\\n\\n### Signal Assessment\\n| Signal | Direction | Confidence | Weight |\\n|--------|-----------|------------|--------|\\n| Technical | Neutral | 40% | 0.25 |\\n| Fundamental | Bullish (but stale) | 82% | 0.50 |\\n| Sentiment | Neutral/Bearish | 35% | 0.25 |\\n\\n**Key Conflict**: The fundamental analysis shows healthy financials (ROE 26.5%, improving margins, Piotroski 6/10) BUT the data is from 2023-12-31 — over 8 months stale. No quarterly filings exist to verify current trajectory. The 2.97x debt-to-equity ratio in a 27.25% rate environment means interest expense (growing 184% YoY) is consuming 3.2% of revenue — this is a ticking time bomb if rates stay high.\\n\\n### The Critical Asymmetry\\n- **Bull case requires**: Rate cuts, EGP stability, steel prices, earnings momentum — all macro conditions breaking perfectly\\n- **Bear case requires**: Nothing new — the balance sheet strain and information vacuum already exist\\n- **Expected return**: Bull\\'s own base case (10x P/E) = EGP 42.6 → 24% downside from current EGP 56.0\\n- **Risk-free alternative**: 27.25% on T-bills with zero information risk\\n\\n### Decision: HOLD\\nDo not initiate a position. The information vacuum (no filings since Dec 2023) combined with 2.97x leverage in a 27% rate environment creates unacceptable asymmetry. The 80% rally on declining volume (0.62 ratio) suggests momentum exhaustion, not fundamental re-rating.\\n\\n---\\n\\n## Structured Execution Plan\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"SWDY.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"moderate\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A — no entry at current levels\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": 38.0,\\n                \"price_range_high\": 42.0\\n            },\\n            \"timing\": \"Re-evaluate ONLY if price corrects to EGP 38-42 (10x P/E on normalized earnings of EGP 4.26 EPS) AND at least two of the following conditions are met\",\\n            \"conditions\": [\\n                \"Quarterly filing released (verifies current earnings trajectory)\",\\n                \"Debt-to-equity falls below 2.0x (balance sheet de-risking)\",\\n                \"Price corrects to EGP 38-42 range (10x P/E entry point)\",\\n                \"CBE cuts policy rate by 500+ bps (macro environment improves)\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A — no position to exit\",\\n                \"note\": \"If position were held, mental stop at EGP 48.0 (SMA50 support breakdown)\"\\n            },\\n            \"time_stop\": \"Review in 3 months (Nov 2024) or upon quarterly filing release — whichever comes first\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"N/A — no position\",\\n            \"max_daily_execution\": \"N/A — no position\",\\n            \"price_limit_risk\": \"If considering entry, use limit orders only — never chase a limit-up day. If stock gaps +10%, wait for pullback.\",\\n            \"liquidity_exit_plan\": \"N/A — no position. If entering in future, use VWAP/TWAP over 5-10 days, max 10% of ADV per day\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"Breakout above EGP 62 with volume ratio > 1.0 (technical confirmation of new leg)\",\\n            \"Debt-to-equity falls below 2.0x in next filing\",\\n            \"CBE cuts rates by 500+ bps\",\\n            \"Quarterly filing shows revenue growth >30% YoY AND interest coverage ratio > 3.0x\",\\n            \"Price corrects to EGP 38-42 range (10x P/E entry opportunity)\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```\\n\\n---\\n\\n## Monitoring Checklist (No Position)\\n\\n| Trigger | Current Status | Action if Triggered |\\n|---------|---------------|-------------------|\\n| Quarterly filing released | ❌ Not available | Re-run fundamental analysis |\\n| Price corrects to EGP 38-42 | ❌ At EGP 56.0 | Evaluate entry if other conditions met |\\n| Debt-to-equity < 2.0x | ❌ At 2.97x | Positive signal — re-evaluate |\\n| CBE rate cut > 500 bps | ❌ At 27.25% | Improves macro backdrop |\\n| Volume ratio > 1.0 on breakout | ❌ At 0.62 | Could signal renewed momentum |\\n\\n**Next Review Date**: 2024-11-25 (3 months) or upon quarterly filing release\\n\\n**Opportunity Cost Note**: While SWDY.CA may continue rallying on momentum, the 27.25% risk-free rate provides a superior risk-adjusted return with zero information risk. Missing further upside is acceptable given the balance sheet and transparency risks identified.', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1332, 'prompt_tokens': 9222, 'total_tokens': 10554, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9222}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'b918f97a-ebf3-46b4-b87a-eae0b2f62c59', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edf60-7cfa-78b2-99e7-8709f3c08229-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9222, 'output_tokens': 1332, 'total_tokens': 10554, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN: SWDY.CA\n\n## Analysis & Decision Framework\n\n### Signal Assessment\n| Signal | Direction | Confidence | Weight |\n|--------|-----------|------------|--------|\n| Technical | Neutral | 40% | 0.25 |\n| Fundamental | Bullish (but stale) | 82% | 0.50 |\n| Sentiment | Neutral/Bearish | 35% | 0.25 |\n\n**Key Conflict**: The fundamental analysis shows healthy financials (ROE 26.5%, improving margins, Piotroski 6/10) BUT the data is from 2023-12-31 — over 8 months stale. No quarterly filings exist to verify current trajectory. The 2.97x debt-to-equity ratio in a 27.25% rate environment means interest expense (growing 184% YoY) is consuming 3.2% of revenue — this is a ticking time bomb if rates stay high.\n\n### The Critical Asymmetry\n- **Bull case requires**: Rate cuts, EGP stability, steel prices, earnings momentum — all macro conditions breaking perfectly\n- **Bear case requires**: Nothing new — the balance sheet strain and information vacuum already exist\n- **Expected return**: Bull's own base case (10x P/E) = EGP 42.6 → 24% downside from current EGP 56.0\n- **Risk-free alternative**: 27.25% on T-bills with zero information risk\n\n### Decision: HOLD\nDo not initiate a position. The information vacuum (no filings since Dec 2023) combined with 2.97x leverage in a 27% rate environment creates unacceptable asymmetry. The 80% rally on declining volume (0.62 ratio) suggests momentum exhaustion, not fundamental re-rating.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"SWDY.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"moderate\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry at current levels\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": 38.0,\n                \"price_range_high\": 42.0\n            },\n            \"timing\": \"Re-evaluate ONLY if price corrects to EGP 38-42 (10x P/E on normalized earnings of EGP 4.26 EPS) AND at least two of the following conditions are met\",\n            \"conditions\": [\n                \"Quarterly filing released (verifies current earnings trajectory)\",\n                \"Debt-to-equity falls below 2.0x (balance sheet de-risking)\",\n                \"Price corrects to EGP 38-42 range (10x P/E entry point)\",\n                \"CBE cuts policy rate by 500+ bps (macro environment improves)\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position to exit\",\n                \"note\": \"If position were held, mental stop at EGP 48.0 (SMA50 support breakdown)\"\n            },\n            \"time_stop\": \"Review in 3 months (Nov 2024) or upon quarterly filing release — whichever comes first\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A — no position\",\n            \"price_limit_risk\": \"If considering entry, use limit orders only — never chase a limit-up day. If stock gaps +10%, wait for pullback.\",\n            \"liquidity_exit_plan\": \"N/A — no position. If entering in future, use VWAP/TWAP over 5-10 days, max 10% of ADV per day\"\n        },\n        \"invalidation_triggers\": [\n            \"Breakout above EGP 62 with volume ratio > 1.0 (technical confirmation of new leg)\",\n            \"Debt-to-equity falls below 2.0x in next filing\",\n            \"CBE cuts rates by 500+ bps\",\n            \"Quarterly filing shows revenue growth >30% YoY AND interest coverage ratio > 3.0x\",\n            \"Price corrects to EGP 38-42 range (10x P/E entry opportunity)\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Monitoring Checklist (No Position)\n\n| Trigger | Current Status | Action if Triggered |\n|---------|---------------|-------------------|\n| Quarterly filing released | ❌ Not available | Re-run fundamental analysis |\n| Price corrects to EGP 38-42 | ❌ At EGP 56.0 | Evaluate entry if other conditions met |\n| Debt-to-equity < 2.0x | ❌ At 2.97x | Positive signal — re-evaluate |\n| CBE rate cut > 500 bps | ❌ At 27.25% | Improves macro backdrop |\n| Volume ratio > 1.0 on breakout | ❌ At 0.62 | Could signal renewed momentum |\n\n**Next Review Date**: 2024-11-25 (3 months) or upon quarterly filing release\n\n**Opportunity Cost Note**: While SWDY.CA may continue rallying on momentum, the 27.25% risk-free rate provides a superior risk-adjusted return with zero information risk. Missing further upside is acceptable given the balance sheet and transparency risks identified.",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "SWDY.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "moderate",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — remain 100% cash"
+        },
+        "entry_logic": {
+          "order_type": "N/A — no entry at current levels",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": 38.0,
+            "price_range_high": 42.0
+          },
+          "timing": "Re-evaluate ONLY if price corrects to EGP 38-42 (10x P/E on normalized earnings of EGP 4.26 EPS) AND at least two of the following conditions are met",
+          "conditions": [
+            "Quarterly filing released (verifies current earnings trajectory)",
+            "Debt-to-equity falls below 2.0x (balance sheet de-risking)",
+            "Price corrects to EGP 38-42 range (10x P/E entry point)",
+            "CBE cuts policy rate by 500+ bps (macro environment improves)"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": null
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A — no position to exit",
+            "note": "If position were held, mental stop at EGP 48.0 (SMA50 support breakdown)"
+          },
+          "time_stop": "Review in 3 months (Nov 2024) or upon quarterly filing release — whichever comes first"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "N/A — no position",
+          "max_daily_execution": "N/A — no position",
+          "price_limit_risk": "If considering entry, use limit orders only — never chase a limit-up day. If stock gaps +10%, wait for pullback.",
+          "liquidity_exit_plan": "N/A — no position. If entering in future, use VWAP/TWAP over 5-10 days, max 10% of ADV per day"
+        },
+        "invalidation_triggers": [
+          "Breakout above EGP 62 with volume ratio > 1.0 (technical confirmation of new leg)",
+          "Debt-to-equity falls below 2.0x in next filing",
+          "CBE cuts rates by 500+ bps",
+          "Quarterly filing shows revenue growth >30% YoY AND interest coverage ratio > 3.0x",
+          "Price corrects to EGP 38-42 range (10x P/E entry opportunity)"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "44594fe8f8a200294f0718620129b66d9512f116f7a45b0fb26d33182913bafd",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 14649.6132920729,
+  "timestamp_utc": "2026-06-19T10:15:17.812668+00:00",
+  "context_items": []
+}

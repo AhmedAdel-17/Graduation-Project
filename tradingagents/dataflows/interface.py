@@ -1,7 +1,15 @@
 import logging
+import time
 from typing import Annotated
 
 logger = logging.getLogger("tradingagents.dataflows.interface")
+
+# Observability — data fetch metrics
+try:
+    from tradingagents.observability.metrics import data_fetch_total, data_fetch_latency_seconds
+    _HAS_METRICS = True
+except ImportError:
+    _HAS_METRICS = False
 
 # Import from vendor-specific modules
 from .local import get_YFin_data, get_finnhub_news, get_finnhub_company_insider_sentiment, get_finnhub_company_insider_transactions, get_simfin_balance_sheet, get_simfin_cashflow, get_simfin_income_statements, get_reddit_global_news, get_reddit_company_news
@@ -200,13 +208,20 @@ def route_to_vendor(method: str, *args, **kwargs):
         for impl_func, vendor_name in vendor_methods:
             try:
                 logger.debug(f"Calling {impl_func.__name__} from vendor '{vendor_name}'...")
+                _t0 = time.perf_counter()
                 result = impl_func(*args, **kwargs)
+                _elapsed = time.perf_counter() - _t0
                 vendor_results.append(result)
                 logger.info(f"SUCCESS: {impl_func.__name__} from vendor '{vendor_name}' completed successfully")
-                    
+                if _HAS_METRICS:
+                    data_fetch_total.labels(data_type=category, source=vendor_name, status="success").inc()
+                    data_fetch_latency_seconds.labels(data_type=category, source=vendor_name).observe(_elapsed)
+
             except Exception as e:
                 # Log error but continue with other implementations
                 logger.warning(f"FAILED: {impl_func.__name__} from vendor '{vendor_name}' failed: {e}")
+                if _HAS_METRICS:
+                    data_fetch_total.labels(data_type=category, source=vendor_name, status="error").inc()
                 continue
 
         # Add this vendor's results

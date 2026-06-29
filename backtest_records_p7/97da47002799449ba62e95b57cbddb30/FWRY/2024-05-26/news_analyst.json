@@ -1,0 +1,182 @@
+{
+  "run_id": "97da47002799449ba62e95b57cbddb30",
+  "ticker": "FWRY",
+  "trade_date": "2024-05-26",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "1b2fa4c96f9e9680aceeb84429920790b1bb4dae1945d91b5ee79e64b2eea72b",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market-wide EGX news available for context\",\n        \"Silence reduces confidence and suggests no material public developments\",\n        \"Data source errors indicate potential data collection issues, not necessarily company inactivity\"\n    ],\n    \"explanation\": \"No news articles were found for FWRY.CA during the May 19-26, 2024 period, and market-level EGX news was also unavailable due to data source errors. The absence of news is a bearish signal for confidence but does not indicate negative company performance; it simply reflects a lack of publicly reported catalysts or risks. Sentiment is neutral with weak strength due to the information vacuum.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-05-19 to 2024-05-26\"\n    },\n    \"risks_from_news\": [\n        \"No news identified, but data gaps may hide undisclosed risks\",\n        \"Lack of coverage could indicate low market attention or liquidity concerns\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to absence of news\"\n    ]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for the period\",\\n        \"No market-wide EGX news available for context\",\\n        \"Silence reduces confidence and suggests no material public developments\",\\n        \"Data source errors indicate potential data collection issues, not necessarily company inactivity\"\\n    ],\\n    \"explanation\": \"No news articles were found for FWRY.CA during the May 19-26, 2024 period, and market-level EGX news was also unavailable due to data source errors. The absence of news is a bearish signal for confidence but does not indicate negative company performance; it simply reflects a lack of publicly reported catalysts or risks. Sentiment is neutral with weak strength due to the information vacuum.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-05-19 to 2024-05-26\"\\n    },\\n    \"risks_from_news\": [\\n        \"No news identified, but data gaps may hide undisclosed risks\",\\n        \"Lack of coverage could indicate low market attention or liquidity concerns\"\\n    ],\\n    \"catalysts_from_news\": [\\n        \"No positive catalysts identified due to absence of news\"\\n    ]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 316, 'prompt_tokens': 668, 'total_tokens': 984, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 640}, 'prompt_cache_hit_tokens': 640, 'prompt_cache_miss_tokens': 28}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'ac8192ee-1a5a-45f3-b32e-72d6039835f7', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edcbc-68a7-7ae3-9397-1abf9802a4d7-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 668, 'output_tokens': 316, 'total_tokens': 984, 'input_token_details': {'cache_read': 640}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market-wide EGX news available for context\",\n        \"Silence reduces confidence and suggests no material public developments\",\n        \"Data source errors indicate potential data collection issues, not necessarily company inactivity\"\n    ],\n    \"explanation\": \"No news articles were found for FWRY.CA during the May 19-26, 2024 period, and market-level EGX news was also unavailable due to data source errors. The absence of news is a bearish signal for confidence but does not indicate negative company performance; it simply reflects a lack of publicly reported catalysts or risks. Sentiment is neutral with weak strength due to the information vacuum.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-05-19 to 2024-05-26\"\n    },\n    \"risks_from_news\": [\n        \"No news identified, but data gaps may hide undisclosed risks\",\n        \"Lack of coverage could indicate low market attention or liquidity concerns\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to absence of news\"\n    ]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for the period",
+        "No market-wide EGX news available for context",
+        "Silence reduces confidence and suggests no material public developments",
+        "Data source errors indicate potential data collection issues, not necessarily company inactivity",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for FWRY.CA during the May 19-26, 2024 period, and market-level EGX news was also unavailable due to data source errors. The absence of news is a bearish signal for confidence but does not indicate negative company performance; it simply reflects a lack of publicly reported catalysts or risks. Sentiment is neutral with weak strength due to the information vacuum.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-05-19 to 2024-05-26"
+      },
+      "risks_from_news": [
+        "No news identified, but data gaps may hide undisclosed risks",
+        "Lack of coverage could indicate low market attention or liquidity concerns"
+      ],
+      "catalysts_from_news": [
+        "No positive catalysts identified due to absence of news"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.3659,
+        "label": "bearish",
+        "confidence": 0.6056,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for the period",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8298,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market-wide EGX news available for context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.928,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence reduces confidence and suggests no material public developments",
+            "source": "quoted_in_report",
+            "score": -0.6744,
+            "label": "bearish",
+            "confidence": 0.6744,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data source errors indicate potential data collection issues, not necessarily company inactivity",
+            "source": "quoted_in_report",
+            "score": -0.9203,
+            "label": "bearish",
+            "confidence": 0.9203,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for FWRY.CA during the May 19-26, 2024 period, and market-level EGX news",
+            "source": "quoted_in_report",
+            "score": -0.9423,
+            "label": "bearish",
+            "confidence": 0.9423,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-05-19 to 2024-05-26",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.937,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news identified, but data gaps may hide undisclosed risks",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.7357,
+            "model": "finbert"
+          },
+          {
+            "headline": "Lack of coverage could indicate low market attention or liquidity concerns",
+            "source": "quoted_in_report",
+            "score": -0.8311,
+            "label": "bearish",
+            "confidence": 0.8311,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No positive catalysts identified due to absence of news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8737,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.2378,
+        "label": "bearish",
+        "confidence": 0.5034
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "8f998fece0c27b038f973bc85fcef62683f3368f4bc85b6f097ad8657778e898",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 3929.777375073172,
+  "timestamp_utc": "2026-06-18T21:56:39.715661+00:00",
+  "context_items": []
+}

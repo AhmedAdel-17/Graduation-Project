@@ -491,26 +491,35 @@ def create_deterministic_market_analyst():
 
     # ── yfinance fallback helpers (used when EODHD is unavailable for .CA tickers) ──
     def _yf_fetch_closes_volumes(ticker: str, start: str, end: str):
-        """Return (closes_list, avg_volume, low_liq_flag) via yfinance, or ([], None, False)."""
+        """Return (closes_list, volumes_list, dates_list, avg_volume, low_liq_flag) via yfinance."""
         try:
             import yfinance as yf
+            import pandas as pd
             df = yf.download(
                 ticker, start=start, end=end,
                 progress=False, auto_adjust=True,
             )
-            if df is None or df.empty or "Close" not in df.columns:
-                return [], None, False
+            if df is None or df.empty:
+                return [], [], [], None, False
+            # Flatten multi-index columns (yfinance >= 0.2.31 returns MultiIndex)
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+            if "Close" not in df.columns:
+                return [], [], [], None, False
             closes_series = df["Close"].dropna()
             vols_series = df["Volume"].dropna() if "Volume" in df.columns else None
-            # Handle yfinance returning single-col DataFrames sometimes
-            closes = [float(v.iloc[0]) if hasattr(v, "iloc") else float(v) for v in closes_series.values]
-            avg_vol = float(vols_series.mean().iloc[0]) if vols_series is not None and len(vols_series) and hasattr(vols_series.mean(), "iloc") else (float(vols_series.mean()) if vols_series is not None and len(vols_series) else None)
+            closes = [float(v) for v in closes_series.values]
+            dates_list = [d.strftime("%Y-%m-%d") for d in closes_series.index]
+            volumes_list = []
+            if vols_series is not None and len(vols_series):
+                volumes_list = [float(v) for v in vols_series.values]
+            avg_vol = float(vols_series.mean()) if vols_series is not None and len(vols_series) else None
             # EGX low-liquidity threshold (default 50k shares/day)
             low_liq = bool(avg_vol is not None and avg_vol < 50_000)
-            return closes, avg_vol, low_liq
+            return closes, volumes_list, dates_list, avg_vol, low_liq
         except Exception as e:
             _ma_logger.warning("yfinance fallback failed for %s: %s", ticker, e)
-            return [], None, False
+            return [], [], [], None, False
 
     def _local_rsi(closes, period: int = 14):
         """Compute RSI(14) from a list of closes. Returns latest value or None."""
@@ -555,18 +564,22 @@ def create_deterministic_market_analyst():
         low_liquidity = state.get("low_liquidity", False)
         volume_missing = state.get("volume_missing", False)
 
-        # ── 1. Fetch price data (120 days lookback for indicators) ─────────────
+        # ── 1. Fetch price data (252 days lookback for P3 momentum + SMA200) ──
         start_date = (
-            datetime.strptime(trade_date, "%Y-%m-%d") - relativedelta(days=120)
+            datetime.strptime(trade_date, "%Y-%m-%d") - relativedelta(days=252)
         ).strftime("%Y-%m-%d")
 
         # Try EODHD first (paid tier supports .CA), fall back to yfinance.
         price_result = get_eodhd_stock_data(ticker, start_date, trade_date)
 
         closes = []
+        volumes = []
+        ohlcv_dates = []
         data_source = "none"
         if price_result and price_result.get("data"):
             closes = [bar["close"] for bar in price_result["data"]]
+            volumes = [bar.get("volume", 0) for bar in price_result["data"]]
+            ohlcv_dates = [bar.get("date", "") for bar in price_result["data"]]
             data_source = "eodhd"
             if not low_liquidity:
                 low_liquidity = price_result.get("low_liquidity", False)
@@ -575,11 +588,13 @@ def create_deterministic_market_analyst():
 
         # Fallback to yfinance when EODHD returned nothing (e.g. free tier on .CA)
         if not closes:
-            yf_closes, yf_avg_vol, yf_low_liq = _yf_fetch_closes_volumes(
+            yf_closes, yf_volumes, yf_dates, yf_avg_vol, yf_low_liq = _yf_fetch_closes_volumes(
                 ticker, start_date, trade_date
             )
             if yf_closes:
                 closes = yf_closes
+                volumes = yf_volumes
+                ohlcv_dates = yf_dates
                 data_source = "yfinance(fallback)"
                 if not low_liquidity:
                     low_liquidity = yf_low_liq
@@ -632,6 +647,23 @@ def create_deterministic_market_analyst():
             signals["bollinger"] = _compute_bollinger_signal(closes)
             signals["trend_sma"] = _compute_sma_signal(closes)
 
+        # ── P3: Compute momentum pack ────────────────────────────────────────
+        momentum_pack = None
+        if closes and ohlcv_dates:
+            try:
+                from tradingagents.agents.analysts.fundamentals.momentum import compute_momentum_pack
+                from tradingagents.dataflows.egx30_loader import load_egx30_csv
+                egx30_map = load_egx30_csv()
+                momentum_pack = compute_momentum_pack(
+                    closes=closes,
+                    volumes=volumes,
+                    dates=ohlcv_dates,
+                    trade_date=trade_date,
+                    egx30_map=egx30_map,
+                )
+            except Exception as e:
+                _ma_logger.warning("P3 momentum computation failed for %s: %s", ticker, e)
+
         confidence = calculate_confidence_score(
             signals,
             low_liquidity=low_liquidity,
@@ -657,14 +689,26 @@ def create_deterministic_market_analyst():
                 "sufficient_history": len(closes) >= 50,
                 "total_bars": len(closes),
             },
+            # P3: momentum and relative strength pack
+            "momentum": momentum_pack,
         }
 
         # Build a compact text report for backward-compatible `market_report`
+        # Include EGX30 relative strength so downstream agents see it in text
+        _rs_line = ""
+        if momentum_pack:
+            _mp = momentum_pack if isinstance(momentum_pack, dict) else momentum_pack.__dict__ if hasattr(momentum_pack, '__dict__') else {}
+            _rs_label = _mp.get("rs_label", "n/a")
+            _mom_label = _mp.get("momentum_label", "n/a")
+            _rs_60d = _mp.get("rs_60d")
+            _rs_60d_str = f"{_rs_60d:+.1%}" if _rs_60d is not None else "n/a"
+            _rs_line = f"\nEGX30 Relative Strength: {_rs_label} (60d excess: {_rs_60d_str}) | Momentum: {_mom_label}"
         report = (
             f"Deterministic Technical Analysis for {ticker} on {trade_date}:\n"
             f"Trend: {trend['direction']} ({trend['strength']})\n"
             f"RSI: {indicator_results['rsi']} | MACD: {indicator_results['macd']}\n"
             f"Confidence: {confidence:.2f}"
+            f"{_rs_line}"
         )
 
         return {

@@ -102,6 +102,21 @@ Adhere strictly to these instructions, and ensure your output is detailed, accur
         if returns_losses:
             verdict = returns_losses.get("verdict")
             forward_ret = returns_losses.get("forward_return")
+            horizon_days = returns_losses.get("forward_horizon_days") or 30
+
+            # Temporal safety: this reflection incorporates outcome knowledge
+            # that was only available after trade_date + horizon_days.
+            # It must NOT be retrievable for decisions before that date.
+            if trade_date:
+                from datetime import datetime, timedelta
+                try:
+                    dt = datetime.strptime(str(trade_date), "%Y-%m-%d")
+                    meta["valid_after_date"] = (
+                        dt + timedelta(days=int(horizon_days))
+                    ).strftime("%Y-%m-%d")
+                except (ValueError, TypeError):
+                    pass
+
             if verdict or forward_ret is not None:
                 # Chroma metadata values must be scalar — JSON-encode the dict
                 # so retrieval can re-parse it. memory._build_metadata also

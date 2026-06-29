@@ -41,6 +41,9 @@ dependencies = [
     "uvicorn>=0.30.0",
     "vaderSentiment>=3.3.2",
     "yfinance>=0.2.63",
+    # Observability (Phase 1)
+    "prometheus-client>=0.21.0",
+    "python-json-logger>=3.1.0",
 ]
 
 [project.optional-dependencies]

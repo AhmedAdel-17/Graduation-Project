@@ -85,7 +85,39 @@ class FinancialSituationMemory:
         "agent_name",
         "outcome",  # optional JSON-serializable summary of realised result
         "confidence",  # optional float in [0, 1]
+        "valid_after_date",  # ISO date string in BM25 corpus / API surface;
+                             # stored as int YYYYMMDD in Chroma (Chroma $lte
+                             # only supports numeric operands).
     )
+
+    @staticmethod
+    def _date_to_int(iso_date: str) -> int:
+        """Convert ISO date string 'YYYY-MM-DD' to integer YYYYMMDD for Chroma."""
+        return int(iso_date.replace("-", ""))
+
+    @staticmethod
+    def _int_to_date(date_int: int) -> str:
+        """Convert integer YYYYMMDD back to ISO date string 'YYYY-MM-DD'."""
+        s = str(date_int)
+        return f"{s[:4]}-{s[4:6]}-{s[6:8]}"
+
+    @staticmethod
+    def _meta_for_chroma(meta: Dict) -> Dict:
+        """Convert metadata for Chroma storage: valid_after_date string → int."""
+        out = dict(meta)
+        vad = out.get("valid_after_date")
+        if isinstance(vad, str) and len(vad) == 10:  # "YYYY-MM-DD"
+            out["valid_after_date"] = FinancialSituationMemory._date_to_int(vad)
+        return out
+
+    @staticmethod
+    def _meta_from_chroma(meta: Dict) -> Dict:
+        """Convert metadata from Chroma retrieval: valid_after_date int → string."""
+        out = dict(meta)
+        vad = out.get("valid_after_date")
+        if isinstance(vad, (int, float)):
+            out["valid_after_date"] = FinancialSituationMemory._int_to_date(int(vad))
+        return out
 
     def _load_seed_corpus(self, config: Dict[str, Any]) -> None:
         """Bootstrap empty collections with the hand-curated EGX seed corpus.
@@ -140,7 +172,7 @@ class FinancialSituationMemory:
             for e in seeds:
                 meta = {k: e[k] for k in self.METADATA_KEYS if k in e and e[k] is not None}
                 meta["recommendation"] = e.get("recommendation", "")
-                metadatas.append(meta)
+                metadatas.append(self._meta_for_chroma(meta))
             embeddings = [self.get_embedding(doc) for doc in documents]
             self.situation_collection.add(
                 documents=documents,
@@ -172,6 +204,7 @@ class FinancialSituationMemory:
         n_matches: int,
         where: Optional[Dict] = None,
         min_similarity: Optional[float] = None,
+        as_of_date: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Keyword retrieval over the in-memory BM25 corpus.
 
@@ -183,6 +216,11 @@ class FinancialSituationMemory:
         the returned ``similarity_score`` lives in the same [0, 1] range as
         the cosine-similarity path — letting ``min_similarity`` thresholds
         behave consistently across backends.
+
+        Args:
+            as_of_date: optional ISO date string. When set, only memories with
+                ``valid_after_date <= as_of_date`` are returned. Memories
+                lacking ``valid_after_date`` are treated as always-valid.
         """
         if self._bm25_index is None:
             self._rebuild_bm25_index()
@@ -206,6 +244,11 @@ class FinancialSituationMemory:
             if where:
                 if not all(meta.get(k) == v for k, v in where.items()):
                     continue
+            # Temporal safety: exclude memories whose knowledge is from the future
+            if as_of_date:
+                mem_valid = meta.get("valid_after_date")
+                if mem_valid and mem_valid > as_of_date:
+                    continue
             similarity = math.tanh(float(raw_score) / 5.0)
             if min_similarity is not None and similarity < min_similarity:
                 continue
@@ -223,9 +266,47 @@ class FinancialSituationMemory:
             )
         return results
 
+    @staticmethod
+    def _build_chroma_where(
+        where: Optional[Dict], as_of_date: Optional[str]
+    ) -> Optional[Dict]:
+        """Compose a Chroma ``where`` clause combining user filter and temporal gate.
+
+        Uses explicit ``$and`` to avoid implicit multi-condition behaviour that
+        varies across Chroma versions.
+
+        ``valid_after_date`` is stored as integer YYYYMMDD in Chroma because
+        Chroma's ``$lte`` operator only supports numeric operands (not strings).
+        The ``as_of_date`` ISO string is converted to integer here.
+
+        Legacy memories that lack ``valid_after_date`` will NOT match the
+        ``$lte`` filter — Chroma excludes rows missing the filtered field.
+        To handle these, the caller should also apply a post-retrieval pass
+        or ensure all stored memories have the field (seed loading does this).
+        """
+        conditions = []
+        if where:
+            # Wrap each key-value pair as an individual condition
+            for k, v in where.items():
+                conditions.append({k: v})
+        if as_of_date:
+            date_int = FinancialSituationMemory._date_to_int(as_of_date)
+            conditions.append({"valid_after_date": {"$lte": date_int}})
+        if not conditions:
+            return None
+        if len(conditions) == 1:
+            return conditions[0]
+        return {"$and": conditions}
+
     def _build_metadata(self, recommendation, per_item, default):
         """Merge default + per-item metadata + recommendation. Chroma rejects
-        ``None`` values in metadatas, so we drop unset keys defensively."""
+        ``None`` values in metadatas, so we drop unset keys defensively.
+
+        If ``valid_after_date`` is not explicitly set, it defaults to
+        ``trade_date`` (knowledge was available on that date). Callers that
+        incorporate outcome/hindsight info (e.g. Reflector) must set
+        ``valid_after_date = trade_date + horizon_days`` explicitly.
+        """
         merged = {}
         if default:
             merged.update({k: v for k, v in default.items() if v is not None})
@@ -237,6 +318,10 @@ class FinancialSituationMemory:
             k: v for k, v in merged.items() if k in self.METADATA_KEYS and v is not None
         }
         whitelisted["recommendation"] = recommendation
+        # Default valid_after_date to trade_date if not explicitly provided.
+        # This ensures all memories have the field for temporal filtering.
+        if "valid_after_date" not in whitelisted and "trade_date" in whitelisted:
+            whitelisted["valid_after_date"] = whitelisted["trade_date"]
         return whitelisted
 
     def add_situations(
@@ -294,7 +379,9 @@ class FinancialSituationMemory:
             ids.append(str(offset + i))
             embeddings.append(self.get_embedding(situation))
             built_metadatas.append(
-                self._build_metadata(recommendation, per_item, default_metadata)
+                self._meta_for_chroma(
+                    self._build_metadata(recommendation, per_item, default_metadata)
+                )
             )
 
         self.situation_collection.add(
@@ -311,6 +398,7 @@ class FinancialSituationMemory:
         *,
         where=None,
         min_similarity=None,
+        as_of_date=None,
     ):
         """Find matching recommendations using vector similarity, with BM25
         keyword fallback for embedding-disabled backends or empty stores.
@@ -323,6 +411,13 @@ class FinancialSituationMemory:
             min_similarity: optional float in [0, 1]. Matches with
                 ``similarity_score`` strictly below this threshold are dropped.
                 ``None`` disables the filter; ``0.0`` keeps everything.
+            as_of_date: optional ISO date string (YYYY-MM-DD). When set, only
+                memories with ``valid_after_date <= as_of_date`` are returned.
+                This prevents look-ahead: memories encoding outcome information
+                from a date in the future relative to the current decision are
+                excluded. Memories lacking ``valid_after_date`` are treated as
+                always-valid (legacy/migration safety). ``None`` disables
+                temporal filtering entirely (backwards-compatible).
 
         Returns:
             list of dicts: ``{matched_situation, recommendation, similarity_score,
@@ -339,6 +434,7 @@ class FinancialSituationMemory:
                 n_matches=n_matches,
                 where=where,
                 min_similarity=min_similarity,
+                as_of_date=as_of_date,
             )
             if not results:
                 logger.info(
@@ -365,6 +461,7 @@ class FinancialSituationMemory:
                     n_matches=n_matches,
                     where=where,
                     min_similarity=min_similarity,
+                    as_of_date=as_of_date,
                 )
                 if not results:
                     logger.info(
@@ -376,13 +473,16 @@ class FinancialSituationMemory:
 
             query_embedding = self.get_embedding(current_situation)
 
+            # Build the Chroma where clause, combining user filter with temporal gate.
+            chroma_where = self._build_chroma_where(where, as_of_date)
+
             query_kwargs = {
                 "query_embeddings": [query_embedding],
                 "n_results": n_matches,
                 "include": ["metadatas", "documents", "distances"],
             }
-            if where:
-                query_kwargs["where"] = where
+            if chroma_where:
+                query_kwargs["where"] = chroma_where
 
             results = self.situation_collection.query(**query_kwargs)
         except Exception as exc:
@@ -396,6 +496,7 @@ class FinancialSituationMemory:
                 n_matches=n_matches,
                 where=where,
                 min_similarity=min_similarity,
+                as_of_date=as_of_date,
             )
 
         # When Chroma returns nothing matching the filter, "documents" can be
@@ -412,7 +513,8 @@ class FinancialSituationMemory:
 
         matched_results = []
         for i in range(len(docs[0])):
-            meta = metas[0][i] if metas and metas[0] else {}
+            raw_meta = metas[0][i] if metas and metas[0] else {}
+            meta = self._meta_from_chroma(raw_meta)
             similarity = 1 - dists[0][i] if dists and dists[0] else 0.0
             if min_similarity is not None and similarity < min_similarity:
                 continue

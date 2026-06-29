@@ -7,6 +7,7 @@ from typing import Dict, Any, List, Optional
 from tradingagents.agents.utils.agent_utils import get_news, get_global_news
 from tradingagents.agents.utils.news_data_tools import get_egx_company_news, get_egx_market_news
 from tradingagents.dataflows.config import get_config
+from tradingagents.graph.node_record import get_recorder, hash_state_slice, hash_string
 
 logger = logging.getLogger("tradingagents.news_analyst")
 
@@ -15,13 +16,39 @@ logger = logging.getLogger("tradingagents.news_analyst")
 # =============================================================================
 # Analyzes Arabic and English news for Egyptian stocks.
 # Uses transformer-based sentiment as PRIMARY signal, LLM as reasoning layer.
-# Silence (no news) reduces confidence — it's a signal, not absence of signal.
+# Silence (no news) is treated as NEUTRAL / uninformative for EGX mid-caps
+# where coverage is inherently sparse.  Previous versions zeroed confidence,
+# which the downstream weakest-link aggregation treated as a strong negative
+# and caused false HOLD signals.
 # =============================================================================
 
 # Confidence adjustment factors
-NO_NEWS_CONFIDENCE_PENALTY = 0.40
-SPARSE_NEWS_PENALTY = 0.20
-SINGLE_SOURCE_PENALTY = 0.15
+# NO_NEWS_NEUTRAL_CONFIDENCE: when zero articles are found, assign this
+# neutral default directly, ignoring the LLM's self-penalized value.
+# The LLM's confidence is meaningless with no articles to reason about.
+# 35 ≈ "low but uninformative" — not bullish, not bearish.
+def _get_no_news_confidence() -> int:
+    """Return the no-news neutral confidence level.
+
+    B2 (P8): returns 50 (neutral) in backtest mode when enabled.
+    In live mode or when B2 is off, returns 35 (cautious default).
+    Evaluated at call time, not import time, so config changes
+    between ablation runs in the same process are respected.
+    """
+    try:
+        from tradingagents.dataflows.config import get_config as _get_cfg
+        _cfg = _get_cfg()
+        if _cfg.get("b2_news_neutral_enabled") and _cfg.get("backtest_mode"):
+            return 50
+    except Exception:
+        pass
+    return 35
+
+# Legacy alias — kept for backward compatibility but new code should
+# call _get_no_news_confidence() directly for runtime evaluation.
+NO_NEWS_NEUTRAL_CONFIDENCE = 35
+SPARSE_NEWS_PENALTY = 0.10          # was 0.20 — softened for sparse EGX coverage
+SINGLE_SOURCE_PENALTY = 0.10        # was 0.15
 ARABIC_ONLY_ADJUSTMENT = 0.0
 
 
@@ -165,6 +192,14 @@ def create_news_analyst(llm):
         prefetched_market_news = state.get("prefetched_market_news", "")
         has_prefetched = bool(prefetched_company_news or prefetched_market_news)
 
+        # ── Recording: prepare context ────────────────────────────────────
+        recorder = get_recorder(state)
+        _input_keys = [
+            "trade_date", "company_of_interest",
+            "prefetched_company_news", "prefetched_market_news", "news_messages",
+        ]
+        _input_hash = hash_state_slice(state, _input_keys) if recorder else ""
+
         if has_prefetched:
             # Build a direct (non-tool) prompt with the pre-fetched data injected
             prefetch_prompt = f"""You are a News & Sentiment Analyst ("Journalist") specializing in {market_context}.
@@ -208,7 +243,10 @@ Analyze the above news for {ticker}. You MUST:
 Current date: {current_date} | Company: {ticker} | Market: {market_context}"""
 
             from langchain_core.messages import AIMessage
+            _prompt_for_record = prefetch_prompt
+            _t0 = time.monotonic()
             result = llm.invoke(prefetch_prompt)
+            _invoke_ms = (time.monotonic() - _t0) * 1000
         else:
             # Standard tool-calling path (fallback when no prefetch available)
             system_message = f"""You are a News & Sentiment Analyst ("Journalist") specializing in {market_context}.
@@ -280,9 +318,12 @@ First use the tools to retrieve news, then provide your analysis with the JSON s
             prompt = prompt.partial(market=market_context)
 
             chain = prompt | llm.bind_tools(tools)
+            _prompt_for_record = system_message  # best available prompt text for tool-calling path
+            _t0 = time.monotonic()
             result = chain.invoke(
                 state.get("news_messages") or [("human", ticker)]
             )
+            _invoke_ms = (time.monotonic() - _t0) * 1000
 
         report = ""
         sentiment_analysis = None
@@ -331,16 +372,21 @@ First use the tools to retrieve news, then provide your analysis with the JSON s
             adjustments = sentiment_analysis.setdefault("confidence_adjustments", [])
 
             if total_articles == 0:
-                # No news at all — heavy penalty
+                # No news — assign neutral default.  For EGX mid-caps, news
+                # absence is the default state, not a negative signal.
                 old_conf = sentiment_analysis.get("confidence_score", 50)
-                new_conf = max(0, old_conf - int(NO_NEWS_CONFIDENCE_PENALTY * 100))
+                new_conf = _get_no_news_confidence()
                 sentiment_analysis["confidence_score"] = new_conf
+                sentiment_analysis["news_absent"] = True
                 adjustments.append(
-                    f"Silence penalty applied: no articles found "
-                    f"(confidence reduced from {old_conf} → {new_conf})"
+                    f"No news coverage available — confidence set to "
+                    f"neutral default {new_conf} "
+                    f"(LLM returned {old_conf}, ignored — no articles to "
+                    f"reason about). News absence is uninformative for "
+                    f"EGX mid-caps, not a negative signal."
                 )
                 logger.info(
-                    "Silence penalty applied for %s: confidence %d → %d",
+                    "News absent for %s: confidence %d → %d (neutral default)",
                     ticker, old_conf, new_conf,
                 )
             elif total_articles < 3:
@@ -420,10 +466,44 @@ First use the tools to retrieve news, then provide your analysis with the JSON s
                 "confidence": round(combined_conf, 4),
             }
 
-        return {
+        _return = {
             "news_messages": [result],
             "news_report": report,
             "sentiment_analysis": sentiment_analysis,
         }
+
+        # ── Recording: write record (only on final response, not tool loops) ──
+        if recorder and report:
+            _record_status = "success"
+            _fallback_source = None
+            # Detect if we fell through to the neutral fallback
+            if (sentiment_analysis and
+                    sentiment_analysis.get("explanation", "").startswith("Unable to parse")):
+                _record_status = "fallback"
+                _fallback_source = "json_parse_failure"
+            _signal_label = None
+            if sentiment_analysis and isinstance(sentiment_analysis, dict):
+                cs = sentiment_analysis.get("combined_sentiment")
+                if isinstance(cs, dict):
+                    _signal_label = cs.get("label")
+                else:
+                    _signal_label = sentiment_analysis.get("sentiment")
+            recorder.record(
+                node_name="news_analyst",
+                trade_date=current_date,
+                input_state_keys=_input_keys,
+                input_hash=_input_hash,
+                prompt_hash=hash_string(_prompt_for_record),
+                prompt_text=_prompt_for_record,
+                raw_output=result.content,
+                state_update=_return,
+                state_update_keys=["news_messages", "news_report", "sentiment_analysis"],
+                signal=_signal_label,
+                wall_clock_ms=_invoke_ms,
+                status=_record_status,
+                fallback_source=_fallback_source,
+            )
+
+        return _return
 
     return news_analyst_node

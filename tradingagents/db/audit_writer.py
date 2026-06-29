@@ -88,16 +88,22 @@ def build_model_fingerprint(config: Dict[str, Any]) -> Dict[str, Any]:
     """Snapshot of the LLM config that produced the agent outputs.
 
     Captures provider + model identifiers + temperature/seed at the time of
-    the run. The seed entry is ``None`` until MEMORY.md §B (determinism) is
-    fully wired — recording the absence is itself the audit signal.
+    the run. The seed value is the hardcoded constant used at LLM construction
+    in ``TradingAgentsGraph.__init__`` (seed=42 for OpenAI-compatible providers).
+    Anthropic and Google providers do not support the seed parameter.
     """
+    # The seed is set at LLM construction time in trading_graph.py, not in
+    # DEFAULT_CONFIG. Record the actual value used by the OpenAI-compatible path.
+    provider = (config.get("llm_provider") or "").lower()
+    seed = 42 if provider in ("openai", "ollama", "openrouter") else None
+
     return {
         "llm_provider": config.get("llm_provider"),
         "deep_think_llm": config.get("deep_think_llm"),
         "quick_think_llm": config.get("quick_think_llm"),
         "backend_url": config.get("backend_url"),
-        "temperature": config.get("llm_temperature", 0),
-        "seed": config.get("llm_seed"),  # currently None — see MEMORY.md §B
+        "temperature": 0,
+        "seed": seed,
         "target_market": config.get("target_market"),
     }
 

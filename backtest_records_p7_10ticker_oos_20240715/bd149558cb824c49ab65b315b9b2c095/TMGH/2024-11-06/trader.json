@@ -1,0 +1,115 @@
+{
+  "run_id": "bd149558cb824c49ab65b315b9b2c095",
+  "ticker": "TMGH",
+  "trade_date": "2024-11-06",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "68a25413fc59d9b32ad59b0c55a56ce4fd4973d58a1ee270668185ac23cb73d6",
+  "raw_output": "# EXECUTION PLAN — TMGH.CA\n\n## Analysis Summary\n\n### Investment Committee Decision: **HOLD** (75% confidence)\nThe research team has clearly recommended against opening a position. The bear case is decisive:\n\n**Key reasons to stay out:**\n1. **Extreme valuation**: 40x P/E with 2.5% earnings yield vs 27.25% risk-free rate = -24.75% negative spread\n2. **Deteriorating fundamentals**: Gross margins -3.2% YoY, operating margins -8.9% YoY, debt-to-equity at 4.18x and worsening 22% YoY\n3. **Leverage risk**: Interest expense growing 64% vs operating income growth of 30% — coverage ratio compressing\n4. **Single-catalyst dependency**: Entire bull case rests on EGP devaluation — fragile thesis\n5. **Zero institutional attention**: No news coverage, no analyst coverage, no catalyst generation\n\n### Signal Alignment Assessment\n| Signal | Direction | Confidence |\n|--------|-----------|------------|\n| Technical | Neutral | 40% |\n| Fundamental | Bearish | 80% |\n| Sentiment | Neutral/Bearish | 35% |\n| **Overall** | **Bearish** | **75%** |\n\nThe multi-signal alignment does NOT support a BUY. The extreme valuation guardrail overrides any positive momentum signals.\n\n### Position Status\n- **Current position**: 0 shares (100% cash)\n- **Actionable options**: Only BUY or HOLD (no short selling on EGX)\n- **Decision**: **HOLD** — maintain cash position\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"TMGH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — maintain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry at current levels\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": 35.00,\n                \"price_range_high\": 40.00\n            },\n            \"timing\": \"Re-evaluate only if price corrects to EGP 35-40 range (25-30x P/E) AND at least one of: (a) gross margin stabilizes above 30% for two quarters, (b) debt-to-equity falls below 3.5x, or (c) concrete EGP devaluation event occurs\",\n            \"conditions\": [\n                \"Price must reach EGP 35-40 range (25-30x P/E)\",\n                \"Gross margin must stabilize above 30% for two consecutive quarters\",\n                \"Debt-to-equity must fall below 3.5x\",\n                \"OR a confirmed EGP devaluation event that resets risk calculus\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position to exit\",\n                \"note\": \"If position were held, mental stop at EGP 45 (-15% from current) would be appropriate\"\n            },\n            \"time_stop\": \"Reassess in 3 months after Q3 2024 earnings and next CBE rate decision\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A — no execution planned\",\n            \"price_limit_risk\": \"If considering entry, use limit orders at -2% to -3% from VWAP to avoid chasing +5% days. Near-breaker days: tighten limit to +/-9.0% and split execution\",\n            \"liquidity_exit_plan\": \"If position were held and exit needed: sell 1/3 per day over 5-7 trading days using limit orders at market price. Do not attempt to exit in a single day if position exceeds 10% of 20-day ADV\"\n        },\n        \"invalidation_triggers\": [\n            \"Price corrects to EGP 35-40 range (25-30x P/E)\",\n            \"Gross margin stabilizes above 30% for two consecutive quarters\",\n            \"Debt-to-equity falls below 3.5x\",\n            \"CBE rate cut below 20% without prior devaluation (removes catalyst thesis)\",\n            \"Revenue growth slows below 15% YoY\",\n            \"Daily volume drops below 50% of 20-day ADV for 2 consecutive weeks (liquidity trap)\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Key Monitoring Triggers\n\n### What would change the HOLD decision to BUY?\n1. **Price correction**: Stock reaches EGP 35-40 range (25-30x P/E)\n2. **Fundamental improvement**: Two consecutive quarters of gross margin stabilization above 30%\n3. **De-leveraging**: Debt-to-equity falls below 3.5x\n4. **Catalyst event**: Confirmed EGP devaluation that resets the risk/reward calculus\n\n### What would change the HOLD decision to a stronger SELL (if we had a position)?\n- Gross margin drops below 25%\n- Debt-to-equity exceeds 5.5x\n- Revenue growth slows below 15% YoY\n- Daily volume drops below 50% of 20-day ADV for 2 consecutive weeks\n\n### Next review date\n**3 months from now** — after Q3 2024 earnings release and next CBE rate decision. At that point, reassess whether any of the invalidation conditions have been met or if the fundamental trajectory has improved.\n\n---\n\n**FINAL TRANSACTION PROPOSAL: **HOLD****",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN — TMGH.CA\\n\\n## Analysis Summary\\n\\n### Investment Committee Decision: **HOLD** (75% confidence)\\nThe research team has clearly recommended against opening a position. The bear case is decisive:\\n\\n**Key reasons to stay out:**\\n1. **Extreme valuation**: 40x P/E with 2.5% earnings yield vs 27.25% risk-free rate = -24.75% negative spread\\n2. **Deteriorating fundamentals**: Gross margins -3.2% YoY, operating margins -8.9% YoY, debt-to-equity at 4.18x and worsening 22% YoY\\n3. **Leverage risk**: Interest expense growing 64% vs operating income growth of 30% — coverage ratio compressing\\n4. **Single-catalyst dependency**: Entire bull case rests on EGP devaluation — fragile thesis\\n5. **Zero institutional attention**: No news coverage, no analyst coverage, no catalyst generation\\n\\n### Signal Alignment Assessment\\n| Signal | Direction | Confidence |\\n|--------|-----------|------------|\\n| Technical | Neutral | 40% |\\n| Fundamental | Bearish | 80% |\\n| Sentiment | Neutral/Bearish | 35% |\\n| **Overall** | **Bearish** | **75%** |\\n\\nThe multi-signal alignment does NOT support a BUY. The extreme valuation guardrail overrides any positive momentum signals.\\n\\n### Position Status\\n- **Current position**: 0 shares (100% cash)\\n- **Actionable options**: Only BUY or HOLD (no short selling on EGX)\\n- **Decision**: **HOLD** — maintain cash position\\n\\n---\\n\\n## Structured Execution Plan\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"TMGH.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — maintain 100% cash\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A — no entry at current levels\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": 35.00,\\n                \"price_range_high\": 40.00\\n            },\\n            \"timing\": \"Re-evaluate only if price corrects to EGP 35-40 range (25-30x P/E) AND at least one of: (a) gross margin stabilizes above 30% for two quarters, (b) debt-to-equity falls below 3.5x, or (c) concrete EGP devaluation event occurs\",\\n            \"conditions\": [\\n                \"Price must reach EGP 35-40 range (25-30x P/E)\",\\n                \"Gross margin must stabilize above 30% for two consecutive quarters\",\\n                \"Debt-to-equity must fall below 3.5x\",\\n                \"OR a confirmed EGP devaluation event that resets risk calculus\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A — no position to exit\",\\n                \"note\": \"If position were held, mental stop at EGP 45 (-15% from current) would be appropriate\"\\n            },\\n            \"time_stop\": \"Reassess in 3 months after Q3 2024 earnings and next CBE rate decision\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"N/A — no position\",\\n            \"max_daily_execution\": \"N/A — no execution planned\",\\n            \"price_limit_risk\": \"If considering entry, use limit orders at -2% to -3% from VWAP to avoid chasing +5% days. Near-breaker days: tighten limit to +/-9.0% and split execution\",\\n            \"liquidity_exit_plan\": \"If position were held and exit needed: sell 1/3 per day over 5-7 trading days using limit orders at market price. Do not attempt to exit in a single day if position exceeds 10% of 20-day ADV\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"Price corrects to EGP 35-40 range (25-30x P/E)\",\\n            \"Gross margin stabilizes above 30% for two consecutive quarters\",\\n            \"Debt-to-equity falls below 3.5x\",\\n            \"CBE rate cut below 20% without prior devaluation (removes catalyst thesis)\",\\n            \"Revenue growth slows below 15% YoY\",\\n            \"Daily volume drops below 50% of 20-day ADV for 2 consecutive weeks (liquidity trap)\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```\\n\\n---\\n\\n## Key Monitoring Triggers\\n\\n### What would change the HOLD decision to BUY?\\n1. **Price correction**: Stock reaches EGP 35-40 range (25-30x P/E)\\n2. **Fundamental improvement**: Two consecutive quarters of gross margin stabilization above 30%\\n3. **De-leveraging**: Debt-to-equity falls below 3.5x\\n4. **Catalyst event**: Confirmed EGP devaluation that resets the risk/reward calculus\\n\\n### What would change the HOLD decision to a stronger SELL (if we had a position)?\\n- Gross margin drops below 25%\\n- Debt-to-equity exceeds 5.5x\\n- Revenue growth slows below 15% YoY\\n- Daily volume drops below 50% of 20-day ADV for 2 consecutive weeks\\n\\n### Next review date\\n**3 months from now** — after Q3 2024 earnings release and next CBE rate decision. At that point, reassess whether any of the invalidation conditions have been met or if the fundamental trajectory has improved.\\n\\n---\\n\\n**FINAL TRANSACTION PROPOSAL: **HOLD****', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1383, 'prompt_tokens': 9496, 'total_tokens': 10879, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9496}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '554d29f5-1878-48e8-86d8-078cea6344a4', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edf98-19da-73a3-bbd5-3a7447173ea7-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9496, 'output_tokens': 1383, 'total_tokens': 10879, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN — TMGH.CA\n\n## Analysis Summary\n\n### Investment Committee Decision: **HOLD** (75% confidence)\nThe research team has clearly recommended against opening a position. The bear case is decisive:\n\n**Key reasons to stay out:**\n1. **Extreme valuation**: 40x P/E with 2.5% earnings yield vs 27.25% risk-free rate = -24.75% negative spread\n2. **Deteriorating fundamentals**: Gross margins -3.2% YoY, operating margins -8.9% YoY, debt-to-equity at 4.18x and worsening 22% YoY\n3. **Leverage risk**: Interest expense growing 64% vs operating income growth of 30% — coverage ratio compressing\n4. **Single-catalyst dependency**: Entire bull case rests on EGP devaluation — fragile thesis\n5. **Zero institutional attention**: No news coverage, no analyst coverage, no catalyst generation\n\n### Signal Alignment Assessment\n| Signal | Direction | Confidence |\n|--------|-----------|------------|\n| Technical | Neutral | 40% |\n| Fundamental | Bearish | 80% |\n| Sentiment | Neutral/Bearish | 35% |\n| **Overall** | **Bearish** | **75%** |\n\nThe multi-signal alignment does NOT support a BUY. The extreme valuation guardrail overrides any positive momentum signals.\n\n### Position Status\n- **Current position**: 0 shares (100% cash)\n- **Actionable options**: Only BUY or HOLD (no short selling on EGX)\n- **Decision**: **HOLD** — maintain cash position\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"TMGH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — maintain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry at current levels\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": 35.00,\n                \"price_range_high\": 40.00\n            },\n            \"timing\": \"Re-evaluate only if price corrects to EGP 35-40 range (25-30x P/E) AND at least one of: (a) gross margin stabilizes above 30% for two quarters, (b) debt-to-equity falls below 3.5x, or (c) concrete EGP devaluation event occurs\",\n            \"conditions\": [\n                \"Price must reach EGP 35-40 range (25-30x P/E)\",\n                \"Gross margin must stabilize above 30% for two consecutive quarters\",\n                \"Debt-to-equity must fall below 3.5x\",\n                \"OR a confirmed EGP devaluation event that resets risk calculus\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position to exit\",\n                \"note\": \"If position were held, mental stop at EGP 45 (-15% from current) would be appropriate\"\n            },\n            \"time_stop\": \"Reassess in 3 months after Q3 2024 earnings and next CBE rate decision\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A — no execution planned\",\n            \"price_limit_risk\": \"If considering entry, use limit orders at -2% to -3% from VWAP to avoid chasing +5% days. Near-breaker days: tighten limit to +/-9.0% and split execution\",\n            \"liquidity_exit_plan\": \"If position were held and exit needed: sell 1/3 per day over 5-7 trading days using limit orders at market price. Do not attempt to exit in a single day if position exceeds 10% of 20-day ADV\"\n        },\n        \"invalidation_triggers\": [\n            \"Price corrects to EGP 35-40 range (25-30x P/E)\",\n            \"Gross margin stabilizes above 30% for two consecutive quarters\",\n            \"Debt-to-equity falls below 3.5x\",\n            \"CBE rate cut below 20% without prior devaluation (removes catalyst thesis)\",\n            \"Revenue growth slows below 15% YoY\",\n            \"Daily volume drops below 50% of 20-day ADV for 2 consecutive weeks (liquidity trap)\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Key Monitoring Triggers\n\n### What would change the HOLD decision to BUY?\n1. **Price correction**: Stock reaches EGP 35-40 range (25-30x P/E)\n2. **Fundamental improvement**: Two consecutive quarters of gross margin stabilization above 30%\n3. **De-leveraging**: Debt-to-equity falls below 3.5x\n4. **Catalyst event**: Confirmed EGP devaluation that resets the risk/reward calculus\n\n### What would change the HOLD decision to a stronger SELL (if we had a position)?\n- Gross margin drops below 25%\n- Debt-to-equity exceeds 5.5x\n- Revenue growth slows below 15% YoY\n- Daily volume drops below 50% of 20-day ADV for 2 consecutive weeks\n\n### Next review date\n**3 months from now** — after Q3 2024 earnings release and next CBE rate decision. At that point, reassess whether any of the invalidation conditions have been met or if the fundamental trajectory has improved.\n\n---\n\n**FINAL TRANSACTION PROPOSAL: **HOLD****",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "TMGH.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — maintain 100% cash"
+        },
+        "entry_logic": {
+          "order_type": "N/A — no entry at current levels",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": 35.0,
+            "price_range_high": 40.0
+          },
+          "timing": "Re-evaluate only if price corrects to EGP 35-40 range (25-30x P/E) AND at least one of: (a) gross margin stabilizes above 30% for two quarters, (b) debt-to-equity falls below 3.5x, or (c) concrete EGP devaluation event occurs",
+          "conditions": [
+            "Price must reach EGP 35-40 range (25-30x P/E)",
+            "Gross margin must stabilize above 30% for two consecutive quarters",
+            "Debt-to-equity must fall below 3.5x",
+            "OR a confirmed EGP devaluation event that resets risk calculus"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": null
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A — no position to exit",
+            "note": "If position were held, mental stop at EGP 45 (-15% from current) would be appropriate"
+          },
+          "time_stop": "Reassess in 3 months after Q3 2024 earnings and next CBE rate decision"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "N/A — no position",
+          "max_daily_execution": "N/A — no execution planned",
+          "price_limit_risk": "If considering entry, use limit orders at -2% to -3% from VWAP to avoid chasing +5% days. Near-breaker days: tighten limit to +/-9.0% and split execution",
+          "liquidity_exit_plan": "If position were held and exit needed: sell 1/3 per day over 5-7 trading days using limit orders at market price. Do not attempt to exit in a single day if position exceeds 10% of 20-day ADV"
+        },
+        "invalidation_triggers": [
+          "Price corrects to EGP 35-40 range (25-30x P/E)",
+          "Gross margin stabilizes above 30% for two consecutive quarters",
+          "Debt-to-equity falls below 3.5x",
+          "CBE rate cut below 20% without prior devaluation (removes catalyst thesis)",
+          "Revenue growth slows below 15% YoY",
+          "Daily volume drops below 50% of 20-day ADV for 2 consecutive weeks (liquidity trap)"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "35a4e4a8d8fe0dd1ebac230cc429d4cb48bfd97dcd35f64625fb7b859c8e7143",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 13826.167125022039,
+  "timestamp_utc": "2026-06-19T11:16:01.629111+00:00",
+  "context_items": []
+}

@@ -1,0 +1,41 @@
+{
+  "run_id": "e4664a57085d4fb4ba854d14715bd357",
+  "ticker": "TMGH",
+  "trade_date": "2024-08-04",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "b8f67bb0b44f56472f9a6ae1f98d99988bd5d1206a240d00a6b2889e30f4477b",
+  "raw_output": "```json\n{\n    \"narrative\": \"No retail investor discussions were detected for TMGH.CA across the monitored social platforms during the analysis window. There are no Arabic or English posts to analyze, indicating a complete absence of social media chatter for this ticker at this time.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No retail investor discussions were detected for TMGH.CA across the monitored social platforms during the analysis window. There are no Arabic or English posts to analyze, indicating a complete absence of social media chatter for this ticker at this time.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 66, 'prompt_tokens': 615, 'total_tokens': 681, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 103}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '809f2da3-32d2-4ab6-8ee6-c0ae718400e8', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edf7f-3294-7692-9617-7cb91d836fef-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 615, 'output_tokens': 66, 'total_tokens': 681, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for TMGH.CA]\nNo retail investor discussions were detected for TMGH.CA across the monitored social platforms during the analysis window. There are no Arabic or English posts to analyze, indicating a complete absence of social media chatter for this ticker at this time.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"TMGH.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No retail investor discussions were detected for TMGH.CA across the monitored social platforms during the analysis window. There are no Arabic or English posts to analyze, indicating a complete absence of social media chatter for this ticker at this time.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "74074a7addbfb2a83e5bbbe41d6e35bd6796d2f6eb2a706f0ee04d3f6feeffc5",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 2138.229208998382,
+  "timestamp_utc": "2026-06-19T10:48:37.871943+00:00",
+  "context_items": []
+}

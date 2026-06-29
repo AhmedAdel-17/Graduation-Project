@@ -1,0 +1,41 @@
+{
+  "run_id": "5a8e181135a84c1e84d423e091f522a6",
+  "ticker": "HRHO",
+  "trade_date": "2024-10-06",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "3ad7f3e4b3501e58c7af60b76485d703d1beeef52382980aefe657ecae2d5933",
+  "raw_output": "```json\n{\n    \"narrative\": \"No retail investor discussions were detected for HRHO.CA in the current window, with zero posts found across queried platforms. As a result, there are no themes, tone, or Arabic-language signals to report at this time.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No retail investor discussions were detected for HRHO.CA in the current window, with zero posts found across queried platforms. As a result, there are no themes, tone, or Arabic-language signals to report at this time.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 65, 'prompt_tokens': 614, 'total_tokens': 679, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 102}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'a2b51d69-bbf8-4bbf-963b-8ad35fd5ff1d', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee062-3af6-7033-aaad-460a2c9ea641-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 614, 'output_tokens': 65, 'total_tokens': 679, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for HRHO.CA]\nNo retail investor discussions were detected for HRHO.CA in the current window, with zero posts found across queried platforms. As a result, there are no themes, tone, or Arabic-language signals to report at this time.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"HRHO.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No retail investor discussions were detected for HRHO.CA in the current window, with zero posts found across queried platforms. As a result, there are no themes, tone, or Arabic-language signals to report at this time.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "c1a4a2aa23083f89c1995765f2bc5e7b4d59cf42410128cd7dd6f9e49b19f95d",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 1821.3000840041786,
+  "timestamp_utc": "2026-06-19T14:56:36.372277+00:00",
+  "context_items": []
+}

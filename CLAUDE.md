@@ -348,13 +348,13 @@ From `default_config.EGX_TICKERS`:
 ```
 Banks:          COMI.CA, ADIB.CA, CIEB.CA, EXPA.CA, HDBK.CA, QNBA.CA, SAUD.CA
 Real Estate:    TMGH.CA, HELI.CA, PHDC.CA, OCDI.CA, ORAS.CA, EMFD.CA
-Industry:       EAST.CA, ESRS.CA, SWDY.CA, ABUK.CA, MFPC.CA, EGAL.CA, EGCH.CA, EFIC.CA
+Industry:       EAST.CA, SWDY.CA, ABUK.CA, MFPC.CA, EGAL.CA, EGCH.CA, EFIC.CA
 Telecom/Tech:   ETEL.CA, FWRY.CA, EFIH.CA, RAYA.CA
 Financial Svc:  HRHO.CA, BTFH.CA, CIch.CA
 Food & Bev:     JUFO.CA, EFID.CA, DOMT.CA
 ```
 
-~30 names. EGX-30 + EGX-70 = ~100 listed; full main market is ~200+. Universe expansion is on the roadmap.
+~29 names. ESRS.CA (Ezz Steel) excluded — no data source available (yfinance empty, Mubasher empty, no Annex 5 PDFs). Re-add when data is secured. EGX-30 + EGX-70 = ~100 listed; full main market is ~200+. Universe expansion is on the roadmap.
 
 ---
 

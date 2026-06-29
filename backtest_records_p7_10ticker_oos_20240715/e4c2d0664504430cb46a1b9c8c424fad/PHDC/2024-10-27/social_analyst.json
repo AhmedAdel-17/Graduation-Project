@@ -1,0 +1,41 @@
+{
+  "run_id": "e4c2d0664504430cb46a1b9c8c424fad",
+  "ticker": "PHDC",
+  "trade_date": "2024-10-27",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "0016a915df8152ba6322f3d37f6d8e11c615655a21a4202c3841ecf3d9bcc95e",
+  "raw_output": "```json\n{\n    \"narrative\": \"No retail investor discussions were found on Reddit for PHDC.CA within the analysis window. As a result, there are no identifiable themes, tone, or Arabic-language signals to report for this period.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No retail investor discussions were found on Reddit for PHDC.CA within the analysis window. As a result, there are no identifiable themes, tone, or Arabic-language signals to report for this period.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 61, 'prompt_tokens': 618, 'total_tokens': 679, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 106}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '7e805fb7-28cc-4019-9cb9-fb397f889353', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee014-468c-7073-a02c-21896c7e7451-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 618, 'output_tokens': 61, 'total_tokens': 679, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for PHDC.CA]\nNo retail investor discussions were found on Reddit for PHDC.CA within the analysis window. As a result, there are no identifiable themes, tone, or Arabic-language signals to report for this period.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"PHDC.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No retail investor discussions were found on Reddit for PHDC.CA within the analysis window. As a result, there are no identifiable themes, tone, or Arabic-language signals to report for this period.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "5c5169a2b40b97252df009d42e505fbe1d6db8f40b588f59dc2286d955de59b1",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 1928.6375000374392,
+  "timestamp_utc": "2026-06-19T13:31:27.637847+00:00",
+  "context_items": []
+}

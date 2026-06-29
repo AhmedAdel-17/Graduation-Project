@@ -1,0 +1,116 @@
+{
+  "run_id": "fb1664d0ff9048fa8244df5b62ca1624",
+  "ticker": "EFIH",
+  "trade_date": "2024-08-25",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "fbca0c5d3d6025927479fd1c2f90a15a0ffba1ff2ebe802f64d5c9fb361f64ff",
+  "raw_output": "# EXECUTION PLAN ANALYSIS — EFIH.CA\n\n## Decision Rationale\n\nAfter thorough analysis of all available signals, I concur with the Investment Committee's **HOLD** recommendation. Here is my institutional perspective:\n\n### Why HOLD is the Correct Decision\n\n1. **Valuation Extremity**: At 66.2x P/E with a 1.51% earnings yield versus 27.25% risk-free rate, the negative spread of -25.7% is extreme even for EM markets. The risk-free alternative (T-bills at 27.5%) offers a superior risk-adjusted return with zero volatility.\n\n2. **Deteriorating Fundamentals**: The Piotroski Score of 4/9 is a concrete red flag. Key deteriorations:\n   - Current ratio down 23.4% YoY (liquidity weakening)\n   - Debt-to-equity up 29.1% YoY (leverage increasing)\n   - Operating margin deteriorating (efficiency declining)\n   - Liabilities growing 2x faster than assets (56% vs 28.6%)\n\n3. **Technical Confirmation**: Price below both SMA20 (-6.0%) and SMA50 (-0.86%), with -9.3% 20-day return. No bullish signals detected.\n\n4. **Sentiment Void**: Zero news coverage with weak confidence (35%). The market is not providing any positive catalysts.\n\n5. **Risk/Reward Asymmetry**: \n   - Bull case: 15-30% upside (requires multiple expansions from already extreme levels)\n   - Bear case: 15-39% downside (mean reversion to reasonable valuations)\n   - Risk/reward ratio of approximately 1:1.3 to 1:2.6 — unfavorable\n\n### Position Sizing Analysis (For Reference Only — Not Executing)\n\nIf we were to execute a BUY (which we are NOT), the constraints would be:\n- **Max shares per day**: 2,132,564 (10% of ADV)\n- **Max total position**: 46,835 shares (portfolio cap)\n- **Execution days**: ~1 day to accumulate full position\n- **Liquidity**: Normal — no adjustment needed\n\nHowever, given the HOLD decision, these limits are moot.\n\n### Risk Management Considerations\n\nThe key risk here is **opportunity cost**: holding cash at 27.5% risk-free while EFIH.CA trades at 66x P/E with deteriorating fundamentals. The T-bill yield provides a superior risk-adjusted return with zero volatility.\n\n### Watchlist Conditions for Re-evaluation\n\nI will monitor for these specific triggers before considering entry:\n\n1. **P/E compression below 40x** (from current 66x) — this would represent a 39% price decline\n2. **Piotroski score improvement to 7+** in next filing\n3. **Price breaks above 50-day SMA** with 2x+ volume\n4. **Revenue growth sustains above 30%** with stable/improving margins\n5. **CBE cuts rates by 300+ bps** (from 27.25% to 24.25%)\n\n### Alternative Deployment Strategy\n\nWhile holding EFIH.CA, I recommend screening for:\n- EGX stocks with P/E below 15x\n- Piotroski score above 7\n- Positive price momentum\n- These offer genuine risk/reward advantage over 27% risk-free rate\n\n---\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"EFIH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% in cash/T-bills\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"No entry at current levels. Re-evaluate when P/E compresses below 40x or Piotroski improves to 7+\",\n            \"conditions\": [\n                \"P/E ratio below 40x (from current 66x)\",\n                \"Piotroski score improves to 7+ in next filing\",\n                \"Price breaks above 50-day SMA with 2x+ volume\",\n                \"Revenue growth sustains above 30% with stable margins\",\n                \"CBE cuts policy rate by 300+ bps\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": 0},\n                \"target_2\": {\"price\": null, \"pct_of_position\": 0},\n                \"target_3\": {\"price\": null, \"pct_of_position\": 0}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position to exit\",\n                \"note\": \"No position held. Cash is the safe haven at 27.5% risk-free\"\n            },\n            \"time_stop\": \"Review quarterly. Next review trigger: next EFIH earnings release or CBE rate decision\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"0% — no capital at risk\",\n            \"max_daily_execution\": \"0 shares — no execution\",\n            \"price_limit_risk\": \"N/A — no position to be affected by ±10% circuit breakers\",\n            \"liquidity_exit_plan\": \"N/A — no position to exit. Cash is fully liquid\"\n        },\n        \"invalidation_triggers\": [\n            \"P/E compresses below 40x (39%+ price decline from current levels)\",\n            \"Piotroski score improves to 7+ in next annual filing\",\n            \"Price breaks above 50-day SMA with 2x+ average volume\",\n            \"CBE cuts policy rate by 300+ bps (from 27.25% to 24.25% or lower)\",\n            \"Company announces share buyback or special dividend (management confidence signal)\",\n            \"Revenue growth sustains above 30% for 2 consecutive quarters with stable margins\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN ANALYSIS — EFIH.CA\\n\\n## Decision Rationale\\n\\nAfter thorough analysis of all available signals, I concur with the Investment Committee\\'s **HOLD** recommendation. Here is my institutional perspective:\\n\\n### Why HOLD is the Correct Decision\\n\\n1. **Valuation Extremity**: At 66.2x P/E with a 1.51% earnings yield versus 27.25% risk-free rate, the negative spread of -25.7% is extreme even for EM markets. The risk-free alternative (T-bills at 27.5%) offers a superior risk-adjusted return with zero volatility.\\n\\n2. **Deteriorating Fundamentals**: The Piotroski Score of 4/9 is a concrete red flag. Key deteriorations:\\n   - Current ratio down 23.4% YoY (liquidity weakening)\\n   - Debt-to-equity up 29.1% YoY (leverage increasing)\\n   - Operating margin deteriorating (efficiency declining)\\n   - Liabilities growing 2x faster than assets (56% vs 28.6%)\\n\\n3. **Technical Confirmation**: Price below both SMA20 (-6.0%) and SMA50 (-0.86%), with -9.3% 20-day return. No bullish signals detected.\\n\\n4. **Sentiment Void**: Zero news coverage with weak confidence (35%). The market is not providing any positive catalysts.\\n\\n5. **Risk/Reward Asymmetry**: \\n   - Bull case: 15-30% upside (requires multiple expansions from already extreme levels)\\n   - Bear case: 15-39% downside (mean reversion to reasonable valuations)\\n   - Risk/reward ratio of approximately 1:1.3 to 1:2.6 — unfavorable\\n\\n### Position Sizing Analysis (For Reference Only — Not Executing)\\n\\nIf we were to execute a BUY (which we are NOT), the constraints would be:\\n- **Max shares per day**: 2,132,564 (10% of ADV)\\n- **Max total position**: 46,835 shares (portfolio cap)\\n- **Execution days**: ~1 day to accumulate full position\\n- **Liquidity**: Normal — no adjustment needed\\n\\nHowever, given the HOLD decision, these limits are moot.\\n\\n### Risk Management Considerations\\n\\nThe key risk here is **opportunity cost**: holding cash at 27.5% risk-free while EFIH.CA trades at 66x P/E with deteriorating fundamentals. The T-bill yield provides a superior risk-adjusted return with zero volatility.\\n\\n### Watchlist Conditions for Re-evaluation\\n\\nI will monitor for these specific triggers before considering entry:\\n\\n1. **P/E compression below 40x** (from current 66x) — this would represent a 39% price decline\\n2. **Piotroski score improvement to 7+** in next filing\\n3. **Price breaks above 50-day SMA** with 2x+ volume\\n4. **Revenue growth sustains above 30%** with stable/improving margins\\n5. **CBE cuts rates by 300+ bps** (from 27.25% to 24.25%)\\n\\n### Alternative Deployment Strategy\\n\\nWhile holding EFIH.CA, I recommend screening for:\\n- EGX stocks with P/E below 15x\\n- Piotroski score above 7\\n- Positive price momentum\\n- These offer genuine risk/reward advantage over 27% risk-free rate\\n\\n---\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"EFIH.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — remain 100% in cash/T-bills\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A — no entry\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": null,\\n                \"price_range_high\": null\\n            },\\n            \"timing\": \"No entry at current levels. Re-evaluate when P/E compresses below 40x or Piotroski improves to 7+\",\\n            \"conditions\": [\\n                \"P/E ratio below 40x (from current 66x)\",\\n                \"Piotroski score improves to 7+ in next filing\",\\n                \"Price breaks above 50-day SMA with 2x+ volume\",\\n                \"Revenue growth sustains above 30% with stable margins\",\\n                \"CBE cuts policy rate by 300+ bps\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": 0},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": 0},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": 0}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A — no position to exit\",\\n                \"note\": \"No position held. Cash is the safe haven at 27.5% risk-free\"\\n            },\\n            \"time_stop\": \"Review quarterly. Next review trigger: next EFIH earnings release or CBE rate decision\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"0% — no capital at risk\",\\n            \"max_daily_execution\": \"0 shares — no execution\",\\n            \"price_limit_risk\": \"N/A — no position to be affected by ±10% circuit breakers\",\\n            \"liquidity_exit_plan\": \"N/A — no position to exit. Cash is fully liquid\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"P/E compresses below 40x (39%+ price decline from current levels)\",\\n            \"Piotroski score improves to 7+ in next annual filing\",\\n            \"Price breaks above 50-day SMA with 2x+ average volume\",\\n            \"CBE cuts policy rate by 300+ bps (from 27.25% to 24.25% or lower)\",\\n            \"Company announces share buyback or special dividend (management confidence signal)\",\\n            \"Revenue growth sustains above 30% for 2 consecutive quarters with stable margins\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1411, 'prompt_tokens': 9417, 'total_tokens': 10828, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9417}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'dc63877c-c761-46cc-a9cc-815b8949049e', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee031-60a2-7b70-8348-3caf383c8446-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9417, 'output_tokens': 1411, 'total_tokens': 10828, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN ANALYSIS — EFIH.CA\n\n## Decision Rationale\n\nAfter thorough analysis of all available signals, I concur with the Investment Committee's **HOLD** recommendation. Here is my institutional perspective:\n\n### Why HOLD is the Correct Decision\n\n1. **Valuation Extremity**: At 66.2x P/E with a 1.51% earnings yield versus 27.25% risk-free rate, the negative spread of -25.7% is extreme even for EM markets. The risk-free alternative (T-bills at 27.5%) offers a superior risk-adjusted return with zero volatility.\n\n2. **Deteriorating Fundamentals**: The Piotroski Score of 4/9 is a concrete red flag. Key deteriorations:\n   - Current ratio down 23.4% YoY (liquidity weakening)\n   - Debt-to-equity up 29.1% YoY (leverage increasing)\n   - Operating margin deteriorating (efficiency declining)\n   - Liabilities growing 2x faster than assets (56% vs 28.6%)\n\n3. **Technical Confirmation**: Price below both SMA20 (-6.0%) and SMA50 (-0.86%), with -9.3% 20-day return. No bullish signals detected.\n\n4. **Sentiment Void**: Zero news coverage with weak confidence (35%). The market is not providing any positive catalysts.\n\n5. **Risk/Reward Asymmetry**: \n   - Bull case: 15-30% upside (requires multiple expansions from already extreme levels)\n   - Bear case: 15-39% downside (mean reversion to reasonable valuations)\n   - Risk/reward ratio of approximately 1:1.3 to 1:2.6 — unfavorable\n\n### Position Sizing Analysis (For Reference Only — Not Executing)\n\nIf we were to execute a BUY (which we are NOT), the constraints would be:\n- **Max shares per day**: 2,132,564 (10% of ADV)\n- **Max total position**: 46,835 shares (portfolio cap)\n- **Execution days**: ~1 day to accumulate full position\n- **Liquidity**: Normal — no adjustment needed\n\nHowever, given the HOLD decision, these limits are moot.\n\n### Risk Management Considerations\n\nThe key risk here is **opportunity cost**: holding cash at 27.5% risk-free while EFIH.CA trades at 66x P/E with deteriorating fundamentals. The T-bill yield provides a superior risk-adjusted return with zero volatility.\n\n### Watchlist Conditions for Re-evaluation\n\nI will monitor for these specific triggers before considering entry:\n\n1. **P/E compression below 40x** (from current 66x) — this would represent a 39% price decline\n2. **Piotroski score improvement to 7+** in next filing\n3. **Price breaks above 50-day SMA** with 2x+ volume\n4. **Revenue growth sustains above 30%** with stable/improving margins\n5. **CBE cuts rates by 300+ bps** (from 27.25% to 24.25%)\n\n### Alternative Deployment Strategy\n\nWhile holding EFIH.CA, I recommend screening for:\n- EGX stocks with P/E below 15x\n- Piotroski score above 7\n- Positive price momentum\n- These offer genuine risk/reward advantage over 27% risk-free rate\n\n---\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"EFIH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% in cash/T-bills\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"No entry at current levels. Re-evaluate when P/E compresses below 40x or Piotroski improves to 7+\",\n            \"conditions\": [\n                \"P/E ratio below 40x (from current 66x)\",\n                \"Piotroski score improves to 7+ in next filing\",\n                \"Price breaks above 50-day SMA with 2x+ volume\",\n                \"Revenue growth sustains above 30% with stable margins\",\n                \"CBE cuts policy rate by 300+ bps\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": 0},\n                \"target_2\": {\"price\": null, \"pct_of_position\": 0},\n                \"target_3\": {\"price\": null, \"pct_of_position\": 0}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position to exit\",\n                \"note\": \"No position held. Cash is the safe haven at 27.5% risk-free\"\n            },\n            \"time_stop\": \"Review quarterly. Next review trigger: next EFIH earnings release or CBE rate decision\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"0% — no capital at risk\",\n            \"max_daily_execution\": \"0 shares — no execution\",\n            \"price_limit_risk\": \"N/A — no position to be affected by ±10% circuit breakers\",\n            \"liquidity_exit_plan\": \"N/A — no position to exit. Cash is fully liquid\"\n        },\n        \"invalidation_triggers\": [\n            \"P/E compresses below 40x (39%+ price decline from current levels)\",\n            \"Piotroski score improves to 7+ in next annual filing\",\n            \"Price breaks above 50-day SMA with 2x+ average volume\",\n            \"CBE cuts policy rate by 300+ bps (from 27.25% to 24.25% or lower)\",\n            \"Company announces share buyback or special dividend (management confidence signal)\",\n            \"Revenue growth sustains above 30% for 2 consecutive quarters with stable margins\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "EFIH.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — remain 100% in cash/T-bills"
+        },
+        "entry_logic": {
+          "order_type": "N/A — no entry",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": null,
+            "price_range_high": null
+          },
+          "timing": "No entry at current levels. Re-evaluate when P/E compresses below 40x or Piotroski improves to 7+",
+          "conditions": [
+            "P/E ratio below 40x (from current 66x)",
+            "Piotroski score improves to 7+ in next filing",
+            "Price breaks above 50-day SMA with 2x+ volume",
+            "Revenue growth sustains above 30% with stable margins",
+            "CBE cuts policy rate by 300+ bps"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": 0
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": 0
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": 0
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A — no position to exit",
+            "note": "No position held. Cash is the safe haven at 27.5% risk-free"
+          },
+          "time_stop": "Review quarterly. Next review trigger: next EFIH earnings release or CBE rate decision"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "0% — no capital at risk",
+          "max_daily_execution": "0 shares — no execution",
+          "price_limit_risk": "N/A — no position to be affected by ±10% circuit breakers",
+          "liquidity_exit_plan": "N/A — no position to exit. Cash is fully liquid"
+        },
+        "invalidation_triggers": [
+          "P/E compresses below 40x (39%+ price decline from current levels)",
+          "Piotroski score improves to 7+ in next annual filing",
+          "Price breaks above 50-day SMA with 2x+ average volume",
+          "CBE cuts policy rate by 300+ bps (from 27.25% to 24.25% or lower)",
+          "Company announces share buyback or special dividend (management confidence signal)",
+          "Revenue growth sustains above 30% for 2 consecutive quarters with stable margins"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "598150578402ac1c5917fa566a15388471568d1b026da54bae7c0831d946c33f",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 15732.014624984004,
+  "timestamp_utc": "2026-06-19T14:03:28.662447+00:00",
+  "context_items": []
+}

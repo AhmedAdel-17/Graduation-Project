@@ -1,0 +1,42 @@
+{
+  "run_id": "01d9d63881074bb28356c458a3efc7e6",
+  "ticker": "COMI",
+  "trade_date": "2024-01-02",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "9ddb42d1b429a09e4c6656ba102e819617651386dffde1b6d69359001b78cfce",
+  "raw_output": "```json\n{\n    \"narrative\": \"No retail investor discussion was detected for COMI.CA on the monitored platforms during the analysis window. There are no Arabic or English social media posts to analyze, resulting in a neutral signal with no observable themes or tone. The absence of data suggests low retail engagement or off-platform activity for this period.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No retail investor discussion was detected for COMI.CA on the monitored platforms during the analysis window. There are no Arabic or English social media posts to analyze, resulting in a neutral signal with no observable themes or tone. The absence of data suggests low retail engagement or off-platform activity for this period.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 79, 'prompt_tokens': 612, 'total_tokens': 691, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 100}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'bd3c4f65-fafc-45d9-96bd-a281b2fe3e85', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edc34-ff3a-7413-8303-edf318f5fa4e-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 612, 'output_tokens': 79, 'total_tokens': 691, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for COMI.CA]\nNo retail investor discussion was detected for COMI.CA on the monitored platforms during the analysis window. There are no Arabic or English social media posts to analyze, resulting in a neutral signal with no observable themes or tone. The absence of data suggests low retail engagement or off-platform activity for this period.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"COMI.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No retail investor discussion was detected for COMI.CA on the monitored platforms during the analysis window. There are no Arabic or English social media posts to analyze, resulting in a neutral signal with no observable themes or tone. The absence of data suggests low retail engagement or off-platform activity for this period.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "bee5da0b546692cdb321c4f2495d26045625165295ecce4fa74cf1079768c0f1",
+  "prompt_text": "You are a Social Media Analyst for the Egyptian Stock Exchange (EGX). You specialize in bilingual Arabic (Egyptian dialect) + English content.\n\n## Pre-Fetched Social Data\nThe following data has already been retrieved.\n\n### Aggregated Sentiment Summary\n{\"ticker\": \"COMI.CA\", \"status\": \"NO_SIGNAL\", \"tier\": \"none\", \"reason\": \"historical_proxy_only — no archived social posts in window\", \"market_sentiment\": {\"status\": \"NO_SIGNAL\", \"score\": null, \"confidence\": 0.0, \"regime\": \"NO_SIGNAL\", \"n_posts\": 0, \"n_distinct_sources\": 0}, \"macro_sentiment\": {\"composite_regime\": \"NO_SIGNAL\"}, \"sector_sentiment\": {\"status\": \"NO_SIGNAL\", \"sector\": \"banks\", \"score\": null, \"confidence\": 0.0, \"n_posts\": 0, \"n_distinct_days\": 0, \"tier\": \"none\"}, \"per_stock_sentiment\": {}, \"metadata\": {\"gate\": \"backtest.no_archive\", \"data_quality_note\": \"historical_proxy_only — no archived social posts in window\", \"sentiment_tier\": \"none\"}}\n\n### Social Media Posts\n{\n  \"ticker\": \"COMI.CA\",\n  \"total_posts_found\": 0,\n  \"showing\": 0,\n  \"platforms_queried\": [\n    \"reddit\"\n  ],\n  \"language_distribution\": {\n    \"arabic\": 0,\n    \"english\": 0,\n    \"mixed\": 0\n  },\n  \"posts\": []\n}\n\n## IMPORTANT — YOUR ROLE IS EXPLAINER ONLY:\nDirectional scores (sentiment_score, confidence, direction) are computed by a deterministic pipeline OUTSIDE of your analysis. Your job is to describe in plain language what the social data says — NOT to assign a score. Do not include any numeric sentiment scores or directional labels in your JSON output.\nYour JSON block must contain exactly two fields:\n  \"narrative\": \"<2-3 sentences describing key themes and retail investor tone>\",\n  \"cited_post_ids\": [\"id1\", \"id2\", ...]  // empty list if no post IDs available\nDo not add any other fields.\n\nAnalyze the above data and produce only the JSON block shown.\nYour narrative must describe: (1) key retail discussion themes, (2) tone and intensity, (3) any Arabic-language signals or dialects noted. Do NOT include a direction score or confidence estimate.\n\n```json\n{\n    \"narrative\": \"<2-3 sentences describing what retail investors are saying>\",\n    \"cited_post_ids\": []\n}\n```\n\nCurrent date: 2024-01-02 | Ticker: COMI.CA",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 2181.1316669918597,
+  "timestamp_utc": "2026-06-18T19:28:43.459126+00:00",
+  "context_items": []
+}

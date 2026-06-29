@@ -1,7 +1,9 @@
 import json
 import re
+import time
 from typing import Any, Dict, Optional
 from tradingagents.dataflows.config import get_config
+from tradingagents.graph.node_record import get_recorder, hash_state_slice, hash_string
 
 # ---------------------------------------------------------------------------
 # Phase 3 helpers
@@ -12,6 +14,39 @@ _NO_SIGNAL_PHRASES = (
     "social sentiment: insufficient",
     "layer_c_status: no_signal",
 )
+
+
+def _fundamentals_quality_note(fundamental_analysis: Dict[str, Any]) -> str:
+    """Build a prompt preamble about fundamentals quality/degradation status."""
+    if not fundamental_analysis:
+        return ""
+    qs = fundamental_analysis.get("quality_status", {})
+    level = qs.get("level", "")
+    if level == "unavailable":
+        return (
+            "WARNING: No fundamentals data available for this ticker. "
+            "Any fundamental conclusions you draw are unsupported — state this explicitly.\n"
+        )
+    if level == "deterministic_only" and qs.get("enrichment_attempted"):
+        return (
+            "NOTE: Fundamentals enrichment was attempted but failed. "
+            "Ratios and flags are reliable but no investment thesis, earnings direction, "
+            "or valuation assessment was produced. Weight fundamental arguments with lower confidence.\n"
+        )
+    if level == "deterministic_only":
+        return (
+            "NOTE: Fundamentals analysis is deterministic-only (ratios and flags). "
+            "No interpretive enrichment (thesis, valuation, earnings direction) was produced.\n"
+        )
+    if level == "partial":
+        reasons = qs.get("reasons", [])
+        return (
+            "NOTE: Fundamentals enrichment partially completed. "
+            f"Issues: {'; '.join(reasons) if reasons else 'some CoT stages failed'}. "
+            "Ratios are reliable; interpretive conclusions may be incomplete.\n"
+        )
+    # "full" — no note needed
+    return ""
 
 
 def _format_sentiment_section(
@@ -100,11 +135,13 @@ def create_bull_researcher(llm, memory):
         curr_situation = f"{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}"
         memory_where = {"ticker": ticker} if ticker else None
         memory_threshold = float(config.get("memory_min_similarity", 0.30))
+        trade_date = state.get("trade_date")
         past_memories = memory.get_memories(
             curr_situation,
             n_matches=2,
             where=memory_where,
             min_similarity=memory_threshold,
+            as_of_date=str(trade_date) if trade_date else None,
         )
 
         past_memory_str = ""
@@ -142,12 +179,16 @@ def create_bull_researcher(llm, memory):
 
 {egx_context}
 
+## Benchmark-Relative Framing
+Your thesis must argue that this ticker will **outperform the EGX30 index** over the evaluation window, not merely that it is a "good stock" in absolute terms. Check the Technical Analysis for the EGX30 Relative Strength line (rs_label, rs_60d). If the stock is already outperforming, explain why that will continue. If it is underperforming, identify specific catalysts that will reverse the gap.
+
 ## Your Task
 Build a comprehensive BULLISH thesis by:
 1. COMBINING signals from all analyst reports (Technical, Fundamental, News)
-2. Discussing liquidity explicitly
-3. Defining clear time horizons
-4. Specifying conditions that would INVALIDATE your thesis
+2. Arguing why this stock will beat EGX30 over the holding period
+3. Discussing liquidity explicitly
+4. Defining clear time horizons
+5. Specifying conditions that would INVALIDATE your thesis
 
 ## Signal Integration Requirements
 You have access to analyst signals — use JSON when available (more token-efficient):
@@ -155,7 +196,7 @@ You have access to analyst signals — use JSON when available (more token-effic
 ### Technical Analysis (Chartist):
 {json.dumps(technical_analysis, indent=2) if technical_analysis else market_research_report}
 
-### Fundamental Analysis (Accountant):
+{_fundamentals_quality_note(fundamental_analysis)}### Fundamental Analysis (Accountant):
 {json.dumps(fundamental_analysis, indent=2) if fundamental_analysis else fundamentals_report}
 
 ### News & Sentiment Analysis (Journalist):
@@ -217,17 +258,34 @@ End your argument with a JSON block:
 
 Now present your compelling bull argument, counter the bear's concerns, and provide your structured thesis."""
 
+        # ── Recording: capture input state and prompt ────────────────────
+        recorder = get_recorder(state)
+        _input_keys = [
+            "investment_debate_state", "market_report", "sentiment_report",
+            "news_report", "fundamentals_report", "technical_analysis",
+            "fundamental_analysis", "sentiment_analysis", "low_liquidity",
+            "company_of_interest", "sentiment_blend_result",
+        ]
+        _input_hash = hash_state_slice(state, _input_keys) if recorder else ""
+        _prompt_hash = hash_string(prompt) if recorder else ""
+
+        t0 = time.monotonic()
         response = llm.invoke(prompt)
+        _elapsed_ms = (time.monotonic() - t0) * 1000
 
         argument = f"Bull Analyst: {response.content}"
-        
+
         # Try to extract structured thesis
         bull_thesis = None
+        _record_status = "success"
+        _fallback_source = None
         try:
             json_match = re.search(r'```json\s*(.*?)\s*```', response.content, re.DOTALL)
             if json_match:
                 bull_thesis = json.loads(json_match.group(1))
         except (json.JSONDecodeError, AttributeError):
+            _record_status = "fallback"
+            _fallback_source = "json_parse_failure"
             bull_thesis = None
 
         new_investment_debate_state = {
@@ -240,8 +298,27 @@ Now present your compelling bull argument, counter the bear's concerns, and prov
             # Pass through bear_thesis so _keep_last doesn't drop it when bull runs after bear
             "bear_thesis": investment_debate_state.get("bear_thesis"),
         }
+        _return = {"investment_debate_state": new_investment_debate_state}
 
-        return {"investment_debate_state": new_investment_debate_state}
+        # ── Recording: write record ──────────────────────────────────────
+        if recorder:
+            recorder.record(
+                node_name="bull_researcher",
+                trade_date=state.get("trade_date", ""),
+                input_state_keys=_input_keys,
+                input_hash=_input_hash,
+                prompt_hash=_prompt_hash,
+                prompt_text=prompt,
+                raw_output=response.content,
+                state_update=_return,
+                state_update_keys=["investment_debate_state"],
+                signal=bull_thesis.get("conviction_level") if bull_thesis else None,
+                wall_clock_ms=_elapsed_ms,
+                status=_record_status,
+                fallback_source=_fallback_source,
+            )
+
+        return _return
 
     return bull_node
 

@@ -196,7 +196,8 @@ def run_prediction(target_tickers=None):
             model=DEFAULT_CONFIG["quick_think_llm"],
             base_url=DEFAULT_CONFIG["backend_url"],
             api_key=_resolve_llm_api_key(DEFAULT_CONFIG["backend_url"]),
-            temperature=0
+            temperature=0,
+            seed=42,
         )
 
         price_table = "\n".join([
@@ -340,7 +341,8 @@ def analyze_ticker_for_api(ticker):
             model=DEFAULT_CONFIG["quick_think_llm"],
             base_url=DEFAULT_CONFIG["backend_url"],
             api_key=_resolve_llm_api_key(DEFAULT_CONFIG["backend_url"]),
-            temperature=0
+            temperature=0,
+            seed=42,
         )
 
         price_table = "\n".join([

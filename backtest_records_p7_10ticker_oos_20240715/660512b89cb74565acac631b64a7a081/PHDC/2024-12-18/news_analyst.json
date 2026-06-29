@@ -1,0 +1,182 @@
+{
+  "run_id": "660512b89cb74565acac631b64a7a081",
+  "ticker": "PHDC",
+  "trade_date": "2024-12-18",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "f59b4c8a817ae6c4c2eb148b1e0362f86f5c28e65ff1fb85282e5c1294e85b4a",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for PHDC.CA during the analysis period\",\n        \"No market-level news available for the EGX to provide broader context\",\n        \"Silence in news flow reduces confidence and suggests no immediate catalysts or risks\",\n        \"Data retrieval errors indicate potential gaps in news coverage rather than true company silence\"\n    ],\n    \"explanation\": \"No news articles were found for PHDC.CA between December 11-18, 2024, and no market-wide EGX news was available. The absence of news is a negative signal for confidence, as it provides no basis for bullish or bearish sentiment. The sentiment is rated neutral with weak strength due to the lack of actionable information.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-12-11 to 2024-12-18\"\n    },\n    \"risks_from_news\": [\n        \"No news identified, but data gaps may hide undisclosed risks\",\n        \"Lack of coverage could indicate low liquidity or investor disinterest\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to absence of news\"\n    ]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for PHDC.CA during the analysis period\",\\n        \"No market-level news available for the EGX to provide broader context\",\\n        \"Silence in news flow reduces confidence and suggests no immediate catalysts or risks\",\\n        \"Data retrieval errors indicate potential gaps in news coverage rather than true company silence\"\\n    ],\\n    \"explanation\": \"No news articles were found for PHDC.CA between December 11-18, 2024, and no market-wide EGX news was available. The absence of news is a negative signal for confidence, as it provides no basis for bullish or bearish sentiment. The sentiment is rated neutral with weak strength due to the lack of actionable information.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-12-11 to 2024-12-18\"\\n    },\\n    \"risks_from_news\": [\\n        \"No news identified, but data gaps may hide undisclosed risks\",\\n        \"Lack of coverage could indicate low liquidity or investor disinterest\"\\n    ],\\n    \"catalysts_from_news\": [\\n        \"No positive catalysts identified due to absence of news\"\\n    ]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 320, 'prompt_tokens': 668, 'total_tokens': 988, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 668}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'cf549a70-b64a-4e69-a848-9aac93aff447', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee021-09d1-7461-a97e-a24b2e2c2060-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 668, 'output_tokens': 320, 'total_tokens': 988, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for PHDC.CA during the analysis period\",\n        \"No market-level news available for the EGX to provide broader context\",\n        \"Silence in news flow reduces confidence and suggests no immediate catalysts or risks\",\n        \"Data retrieval errors indicate potential gaps in news coverage rather than true company silence\"\n    ],\n    \"explanation\": \"No news articles were found for PHDC.CA between December 11-18, 2024, and no market-wide EGX news was available. The absence of news is a negative signal for confidence, as it provides no basis for bullish or bearish sentiment. The sentiment is rated neutral with weak strength due to the lack of actionable information.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-12-11 to 2024-12-18\"\n    },\n    \"risks_from_news\": [\n        \"No news identified, but data gaps may hide undisclosed risks\",\n        \"Lack of coverage could indicate low liquidity or investor disinterest\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to absence of news\"\n    ]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for PHDC.CA during the analysis period",
+        "No market-level news available for the EGX to provide broader context",
+        "Silence in news flow reduces confidence and suggests no immediate catalysts or risks",
+        "Data retrieval errors indicate potential gaps in news coverage rather than true company silence",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for PHDC.CA between December 11-18, 2024, and no market-wide EGX news was available. The absence of news is a negative signal for confidence, as it provides no basis for bullish or bearish sentiment. The sentiment is rated neutral with weak strength due to the lack of actionable information.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-12-11 to 2024-12-18"
+      },
+      "risks_from_news": [
+        "No news identified, but data gaps may hide undisclosed risks",
+        "Lack of coverage could indicate low liquidity or investor disinterest"
+      ],
+      "catalysts_from_news": [
+        "No positive catalysts identified due to absence of news"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.4097,
+        "label": "bearish",
+        "confidence": 0.6363,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for PHDC.CA during the analysis period",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8967,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market-level news available for the EGX to provide broader context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9487,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence in news flow reduces confidence and suggests no immediate catalysts or risks",
+            "source": "quoted_in_report",
+            "score": -0.9628,
+            "label": "bearish",
+            "confidence": 0.9628,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data retrieval errors indicate potential gaps in news coverage rather than true company silence",
+            "source": "quoted_in_report",
+            "score": -0.8561,
+            "label": "bearish",
+            "confidence": 0.8561,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for PHDC.CA between December 11-18, 2024, and no market-wide EGX news wa",
+            "source": "quoted_in_report",
+            "score": -0.9479,
+            "label": "bearish",
+            "confidence": 0.9479,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-12-11 to 2024-12-18",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.939,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news identified, but data gaps may hide undisclosed risks",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.7357,
+            "model": "finbert"
+          },
+          {
+            "headline": "Lack of coverage could indicate low liquidity or investor disinterest",
+            "source": "quoted_in_report",
+            "score": -0.9115,
+            "label": "bearish",
+            "confidence": 0.9115,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No positive catalysts identified due to absence of news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8737,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.2663,
+        "label": "bearish",
+        "confidence": 0.5218
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "fb47cfe9508fd8130da422d9b91d75adb71cd6269bedd3bd04c173dce90b199c",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 4316.155625041574,
+  "timestamp_utc": "2026-06-19T13:45:27.000353+00:00",
+  "context_items": []
+}

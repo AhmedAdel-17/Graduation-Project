@@ -1,0 +1,41 @@
+{
+  "run_id": "beaf84d4875540bc939cb3e4e518b6ad",
+  "ticker": "EAST",
+  "trade_date": "2024-11-17",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "43379a8f9f8167e19a794d8663cadc4147d554ec3c9c4d392b723ed7131da632",
+  "raw_output": "```json\n{\n    \"narrative\": \"No retail investor discussion was detected for EAST.CA on Reddit within the analysis window. There are no Arabic or English social media posts to analyze, resulting in a complete absence of sentiment signals or thematic trends. The lack of activity suggests either low retail interest or that discussions occurred on unmonitored platforms.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No retail investor discussion was detected for EAST.CA on Reddit within the analysis window. There are no Arabic or English social media posts to analyze, resulting in a complete absence of sentiment signals or thematic trends. The lack of activity suggests either low retail interest or that discussions occurred on unmonitored platforms.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 80, 'prompt_tokens': 611, 'total_tokens': 691, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 99}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '8a4d268b-efb8-4656-b84b-7c61cf73a643', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edfed-ff3b-7a61-bfc3-cf0414435216-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 611, 'output_tokens': 80, 'total_tokens': 691, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for EAST.CA]\nNo retail investor discussion was detected for EAST.CA on Reddit within the analysis window. There are no Arabic or English social media posts to analyze, resulting in a complete absence of sentiment signals or thematic trends. The lack of activity suggests either low retail interest or that discussions occurred on unmonitored platforms.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"EAST.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No retail investor discussion was detected for EAST.CA on Reddit within the analysis window. There are no Arabic or English social media posts to analyze, resulting in a complete absence of sentiment signals or thematic trends. The lack of activity suggests either low retail interest or that discussions occurred on unmonitored platforms.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "447bda8ddbd79f2bf0314f7ec949e80045bebcffead7f4ce294e2cc7d5968e2e",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 2456.1641659820452,
+  "timestamp_utc": "2026-06-19T12:49:39.540293+00:00",
+  "context_items": []
+}

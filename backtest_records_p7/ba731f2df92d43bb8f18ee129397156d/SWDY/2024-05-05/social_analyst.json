@@ -1,0 +1,41 @@
+{
+  "run_id": "ba731f2df92d43bb8f18ee129397156d",
+  "ticker": "SWDY",
+  "trade_date": "2024-05-05",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "8e82b52809215bebf3456ff1a0d1700d64ccee95d14ed4a52188a4637f2f4532",
+  "raw_output": "```json\n{\n    \"narrative\": \"No retail investor discussion was detected for SWDY.CA across the monitored social media platforms during the analysis window. There are no Arabic or English posts to analyze, indicating a complete absence of social chatter or sentiment signals for this ticker at this time.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No retail investor discussion was detected for SWDY.CA across the monitored social media platforms during the analysis window. There are no Arabic or English posts to analyze, indicating a complete absence of social chatter or sentiment signals for this ticker at this time.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 69, 'prompt_tokens': 612, 'total_tokens': 681, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 100}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '1d58b203-2a2c-4279-94f3-891986f6530e', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edcd0-a838-7802-9968-42974b954603-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 612, 'output_tokens': 69, 'total_tokens': 681, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for SWDY.CA]\nNo retail investor discussion was detected for SWDY.CA across the monitored social media platforms during the analysis window. There are no Arabic or English posts to analyze, indicating a complete absence of social chatter or sentiment signals for this ticker at this time.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"SWDY.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No retail investor discussion was detected for SWDY.CA across the monitored social media platforms during the analysis window. There are no Arabic or English posts to analyze, indicating a complete absence of social chatter or sentiment signals for this ticker at this time.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "551333b60d0b9e8d213e37742e89a78d31e952fa4884dbfebaa189aab631ed70",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 1649.642291944474,
+  "timestamp_utc": "2026-06-18T22:18:44.267204+00:00",
+  "context_items": []
+}

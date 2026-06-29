@@ -26,6 +26,7 @@ from rich.rule import Rule
 
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
+from tradingagents.observability import setup_logging
 from cli.models import AnalystType
 from cli.utils import *
 from tradingagents.sentiment.surfacing import format_sentiment_for_cli
@@ -756,6 +757,7 @@ def extract_content_string(content):
         return str(content)
 
 def run_analysis():
+    setup_logging(json_output=False)  # CLI uses text format for readability
     # First get all user selections
     selections = get_user_selections()
 

@@ -1,0 +1,108 @@
+{
+  "run_id": "7d1ec5ac4f6f4a279a00b6854e5154a6",
+  "ticker": "EFIH",
+  "trade_date": "2024-08-04",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "a2b7ff408e8dcfe544e716864f9d3d94113d1ad06cd7b9e04b61675218407672",
+  "raw_output": "# EXECUTION PLAN — EFIH.CA\n\n## Analysis Summary\n\n### Investment Committee Decision: **SELL**\n\nThe bear case decisively wins here. At 75x P/E with a 1.33% earnings yield versus 27.25% risk-free rate, this is extreme overvaluation. The deteriorating fundamentals (operating margin compression -2.9% YoY, liabilities +56% vs assets +28.6%, current ratio declining 23%, Piotroski Score 4/9) directly contradict the growth narrative. The 75% rally in 120 days has created an exit window with elevated volume (2.17x average) — when volume normalizes, exiting will cost 2-3x more in slippage.\n\n### Key Execution Considerations\n\n1. **Liquidity**: ADV-based max is 2,187,698 shares/day, but our position is only 22,892 shares — we can exit in 1 day easily\n2. **Portfolio cap**: Max total position is 41,329 shares — we hold 22,892 (55% of max allowed)\n3. **Price limit risk**: ±10% daily circuit breaker — if stock gaps down, we may not be able to exit same day\n4. **Current price**: ~24.53 EGP (based on market value / shares held = 561,769.68 / 22,892)\n\n### Execution Strategy\n\n**Decision**: SELL 100% of position (22,892 shares)\n\n**Rationale for full exit**: Lock in +15,250 EGP unrealized gain. The deteriorating fundamentals suggest the growth story is peaking. Use current elevated volume as exit liquidity.\n\n**Timing**: Execute over 1 trading day (position is only 1.05% of ADV — well within daily limits)\n\n**Order Type**: Limit orders only — no market orders permitted\n\n**Execution Details**:\n- **Day 1**: Sell all 22,892 shares using limit orders\n  - Primary: Limit order at EGP 24.50 (near current price)\n  - Backup: If not filled within 2 hours, adjust to EGP 24.00\n  - Use iceberg orders (display 5,000 shares) to minimize slippage\n  - Total order value: ~EGP 561,000 — well below EGP 1M iceberg threshold\n\n**Price Levels**:\n- Current price: ~24.53 EGP\n- Target exit: 24.00-24.50 EGP\n- Worst-case: Accept 23.50 EGP if liquidity dries up\n\n**Risk Controls**:\n- No stop-loss needed — we are exiting entirely\n- If stock hits -10% limit (to ~22.08 EGP), pause execution and reassess next day\n- Do not chase price below 23.00 EGP — accept partial fill and try next day\n\n**Post-exit**: Do not re-enter until price corrects to EGP 14-17 range (35-45x P/E) with confirmed fundamental improvement (Piotroski Score >7, debt-to-equity <0.25x, operating margin expanding)\n\n---\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"EFIH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"SELL\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 22892,\n            \"execution_days\": 1,\n            \"pct_of_adv_per_day\": \"1.05%\",\n            \"portfolio_allocation\": \"0% (full exit)\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"limit\",\n            \"entry_zone\": {\n                \"limit_price\": 24.50,\n                \"price_range_low\": 23.50,\n                \"price_range_high\": 24.50\n            },\n            \"timing\": \"Execute in first 2 hours of trading (10:00-12:00 Cairo time) for maximum liquidity\",\n            \"conditions\": [\n                \"Price within 2% of previous close\",\n                \"No daily price limit hit in prior session\",\n                \"Volume >50% of 20-day average\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": 24.50, \"pct_of_position\": 50},\n                \"target_2\": {\"price\": 24.00, \"pct_of_position\": 50}\n            },\n            \"stop_loss\": {\n                \"price\": 23.00,\n                \"type\": \"mental_stop\",\n                \"note\": \"If price drops below 23.00, accept partial fill and reassess next day\"\n            },\n            \"time_stop\": \"Exit within 2 trading days maximum — do not hold through earnings\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"Already in profit — no additional loss risk\",\n            \"max_daily_execution\": \"22,892 shares (1.05% of ADV — well within limits)\",\n            \"price_limit_risk\": \"If stock hits -10% limit (to ~22.08 EGP), pause execution. Resume next day with limit order at 22.50 EGP\",\n            \"liquidity_exit_plan\": \"If volume drops below 50% of ADV, reduce order size to 10,000 shares/day and extend to 3 days\"\n        },\n        \"invalidation_triggers\": [\n            \"Price breaks above EGP 30 (+22%) with volume >3x average — momentum re-ignites\",\n            \"Major institutional investor discloses >5% stake — smart money validation\",\n            \"CBE cuts rates below 20%, normalizing equity risk premium\",\n            \"Piotroski Score improves to 7+/9 — financial health confirmed\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **SELL**\"\n}\n```",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN — EFIH.CA\\n\\n## Analysis Summary\\n\\n### Investment Committee Decision: **SELL**\\n\\nThe bear case decisively wins here. At 75x P/E with a 1.33% earnings yield versus 27.25% risk-free rate, this is extreme overvaluation. The deteriorating fundamentals (operating margin compression -2.9% YoY, liabilities +56% vs assets +28.6%, current ratio declining 23%, Piotroski Score 4/9) directly contradict the growth narrative. The 75% rally in 120 days has created an exit window with elevated volume (2.17x average) — when volume normalizes, exiting will cost 2-3x more in slippage.\\n\\n### Key Execution Considerations\\n\\n1. **Liquidity**: ADV-based max is 2,187,698 shares/day, but our position is only 22,892 shares — we can exit in 1 day easily\\n2. **Portfolio cap**: Max total position is 41,329 shares — we hold 22,892 (55% of max allowed)\\n3. **Price limit risk**: ±10% daily circuit breaker — if stock gaps down, we may not be able to exit same day\\n4. **Current price**: ~24.53 EGP (based on market value / shares held = 561,769.68 / 22,892)\\n\\n### Execution Strategy\\n\\n**Decision**: SELL 100% of position (22,892 shares)\\n\\n**Rationale for full exit**: Lock in +15,250 EGP unrealized gain. The deteriorating fundamentals suggest the growth story is peaking. Use current elevated volume as exit liquidity.\\n\\n**Timing**: Execute over 1 trading day (position is only 1.05% of ADV — well within daily limits)\\n\\n**Order Type**: Limit orders only — no market orders permitted\\n\\n**Execution Details**:\\n- **Day 1**: Sell all 22,892 shares using limit orders\\n  - Primary: Limit order at EGP 24.50 (near current price)\\n  - Backup: If not filled within 2 hours, adjust to EGP 24.00\\n  - Use iceberg orders (display 5,000 shares) to minimize slippage\\n  - Total order value: ~EGP 561,000 — well below EGP 1M iceberg threshold\\n\\n**Price Levels**:\\n- Current price: ~24.53 EGP\\n- Target exit: 24.00-24.50 EGP\\n- Worst-case: Accept 23.50 EGP if liquidity dries up\\n\\n**Risk Controls**:\\n- No stop-loss needed — we are exiting entirely\\n- If stock hits -10% limit (to ~22.08 EGP), pause execution and reassess next day\\n- Do not chase price below 23.00 EGP — accept partial fill and try next day\\n\\n**Post-exit**: Do not re-enter until price corrects to EGP 14-17 range (35-45x P/E) with confirmed fundamental improvement (Piotroski Score >7, debt-to-equity <0.25x, operating margin expanding)\\n\\n---\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"EFIH.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"SELL\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 22892,\\n            \"execution_days\": 1,\\n            \"pct_of_adv_per_day\": \"1.05%\",\\n            \"portfolio_allocation\": \"0% (full exit)\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"limit\",\\n            \"entry_zone\": {\\n                \"limit_price\": 24.50,\\n                \"price_range_low\": 23.50,\\n                \"price_range_high\": 24.50\\n            },\\n            \"timing\": \"Execute in first 2 hours of trading (10:00-12:00 Cairo time) for maximum liquidity\",\\n            \"conditions\": [\\n                \"Price within 2% of previous close\",\\n                \"No daily price limit hit in prior session\",\\n                \"Volume >50% of 20-day average\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": 24.50, \"pct_of_position\": 50},\\n                \"target_2\": {\"price\": 24.00, \"pct_of_position\": 50}\\n            },\\n            \"stop_loss\": {\\n                \"price\": 23.00,\\n                \"type\": \"mental_stop\",\\n                \"note\": \"If price drops below 23.00, accept partial fill and reassess next day\"\\n            },\\n            \"time_stop\": \"Exit within 2 trading days maximum — do not hold through earnings\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"Already in profit — no additional loss risk\",\\n            \"max_daily_execution\": \"22,892 shares (1.05% of ADV — well within limits)\",\\n            \"price_limit_risk\": \"If stock hits -10% limit (to ~22.08 EGP), pause execution. Resume next day with limit order at 22.50 EGP\",\\n            \"liquidity_exit_plan\": \"If volume drops below 50% of ADV, reduce order size to 10,000 shares/day and extend to 3 days\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"Price breaks above EGP 30 (+22%) with volume >3x average — momentum re-ignites\",\\n            \"Major institutional investor discloses >5% stake — smart money validation\",\\n            \"CBE cuts rates below 20%, normalizing equity risk premium\",\\n            \"Piotroski Score improves to 7+/9 — financial health confirmed\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **SELL**\"\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1287, 'prompt_tokens': 9466, 'total_tokens': 10753, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9466}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'd4a6ac45-09a3-4ea3-9fa5-4872d29cbde8', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee02c-e265-7e10-8600-cb22681d19da-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9466, 'output_tokens': 1287, 'total_tokens': 10753, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN — EFIH.CA\n\n## Analysis Summary\n\n### Investment Committee Decision: **SELL**\n\nThe bear case decisively wins here. At 75x P/E with a 1.33% earnings yield versus 27.25% risk-free rate, this is extreme overvaluation. The deteriorating fundamentals (operating margin compression -2.9% YoY, liabilities +56% vs assets +28.6%, current ratio declining 23%, Piotroski Score 4/9) directly contradict the growth narrative. The 75% rally in 120 days has created an exit window with elevated volume (2.17x average) — when volume normalizes, exiting will cost 2-3x more in slippage.\n\n### Key Execution Considerations\n\n1. **Liquidity**: ADV-based max is 2,187,698 shares/day, but our position is only 22,892 shares — we can exit in 1 day easily\n2. **Portfolio cap**: Max total position is 41,329 shares — we hold 22,892 (55% of max allowed)\n3. **Price limit risk**: ±10% daily circuit breaker — if stock gaps down, we may not be able to exit same day\n4. **Current price**: ~24.53 EGP (based on market value / shares held = 561,769.68 / 22,892)\n\n### Execution Strategy\n\n**Decision**: SELL 100% of position (22,892 shares)\n\n**Rationale for full exit**: Lock in +15,250 EGP unrealized gain. The deteriorating fundamentals suggest the growth story is peaking. Use current elevated volume as exit liquidity.\n\n**Timing**: Execute over 1 trading day (position is only 1.05% of ADV — well within daily limits)\n\n**Order Type**: Limit orders only — no market orders permitted\n\n**Execution Details**:\n- **Day 1**: Sell all 22,892 shares using limit orders\n  - Primary: Limit order at EGP 24.50 (near current price)\n  - Backup: If not filled within 2 hours, adjust to EGP 24.00\n  - Use iceberg orders (display 5,000 shares) to minimize slippage\n  - Total order value: ~EGP 561,000 — well below EGP 1M iceberg threshold\n\n**Price Levels**:\n- Current price: ~24.53 EGP\n- Target exit: 24.00-24.50 EGP\n- Worst-case: Accept 23.50 EGP if liquidity dries up\n\n**Risk Controls**:\n- No stop-loss needed — we are exiting entirely\n- If stock hits -10% limit (to ~22.08 EGP), pause execution and reassess next day\n- Do not chase price below 23.00 EGP — accept partial fill and try next day\n\n**Post-exit**: Do not re-enter until price corrects to EGP 14-17 range (35-45x P/E) with confirmed fundamental improvement (Piotroski Score >7, debt-to-equity <0.25x, operating margin expanding)\n\n---\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"EFIH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"SELL\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 22892,\n            \"execution_days\": 1,\n            \"pct_of_adv_per_day\": \"1.05%\",\n            \"portfolio_allocation\": \"0% (full exit)\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"limit\",\n            \"entry_zone\": {\n                \"limit_price\": 24.50,\n                \"price_range_low\": 23.50,\n                \"price_range_high\": 24.50\n            },\n            \"timing\": \"Execute in first 2 hours of trading (10:00-12:00 Cairo time) for maximum liquidity\",\n            \"conditions\": [\n                \"Price within 2% of previous close\",\n                \"No daily price limit hit in prior session\",\n                \"Volume >50% of 20-day average\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": 24.50, \"pct_of_position\": 50},\n                \"target_2\": {\"price\": 24.00, \"pct_of_position\": 50}\n            },\n            \"stop_loss\": {\n                \"price\": 23.00,\n                \"type\": \"mental_stop\",\n                \"note\": \"If price drops below 23.00, accept partial fill and reassess next day\"\n            },\n            \"time_stop\": \"Exit within 2 trading days maximum — do not hold through earnings\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"Already in profit — no additional loss risk\",\n            \"max_daily_execution\": \"22,892 shares (1.05% of ADV — well within limits)\",\n            \"price_limit_risk\": \"If stock hits -10% limit (to ~22.08 EGP), pause execution. Resume next day with limit order at 22.50 EGP\",\n            \"liquidity_exit_plan\": \"If volume drops below 50% of ADV, reduce order size to 10,000 shares/day and extend to 3 days\"\n        },\n        \"invalidation_triggers\": [\n            \"Price breaks above EGP 30 (+22%) with volume >3x average — momentum re-ignites\",\n            \"Major institutional investor discloses >5% stake — smart money validation\",\n            \"CBE cuts rates below 20%, normalizing equity risk premium\",\n            \"Piotroski Score improves to 7+/9 — financial health confirmed\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **SELL**\"\n}\n```",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "EFIH.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "SELL",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 22892,
+          "execution_days": 1,
+          "pct_of_adv_per_day": "1.05%",
+          "portfolio_allocation": "0% (full exit)"
+        },
+        "entry_logic": {
+          "order_type": "limit",
+          "entry_zone": {
+            "limit_price": 24.5,
+            "price_range_low": 23.5,
+            "price_range_high": 24.5
+          },
+          "timing": "Execute in first 2 hours of trading (10:00-12:00 Cairo time) for maximum liquidity",
+          "conditions": [
+            "Price within 2% of previous close",
+            "No daily price limit hit in prior session",
+            "Volume >50% of 20-day average"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": 24.5,
+              "pct_of_position": 50
+            },
+            "target_2": {
+              "price": 24.0,
+              "pct_of_position": 50
+            }
+          },
+          "stop_loss": {
+            "price": 23.0,
+            "type": "mental_stop",
+            "note": "If price drops below 23.00, accept partial fill and reassess next day"
+          },
+          "time_stop": "Exit within 2 trading days maximum — do not hold through earnings"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "Already in profit — no additional loss risk",
+          "max_daily_execution": "22,892 shares (1.05% of ADV — well within limits)",
+          "price_limit_risk": "If stock hits -10% limit (to ~22.08 EGP), pause execution. Resume next day with limit order at 22.50 EGP",
+          "liquidity_exit_plan": "If volume drops below 50% of ADV, reduce order size to 10,000 shares/day and extend to 3 days"
+        },
+        "invalidation_triggers": [
+          "Price breaks above EGP 30 (+22%) with volume >3x average — momentum re-ignites",
+          "Major institutional investor discloses >5% stake — smart money validation",
+          "CBE cuts rates below 20%, normalizing equity risk premium",
+          "Piotroski Score improves to 7+/9 — financial health confirmed"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **SELL**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "SELL",
+  "prompt_hash": "9b3bd3dd0e296c21cd48c4fb46d7a6883fc87ed46bdb4e11b2d815cff638d0b5",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 11603.354666964151,
+  "timestamp_utc": "2026-06-19T13:58:30.072232+00:00",
+  "context_items": []
+}

@@ -1,0 +1,41 @@
+{
+  "run_id": "bd73b9196f4f4d1eaabd9f7c194d1a97",
+  "ticker": "FWRY",
+  "trade_date": "2024-08-25",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "faa759e40e078d8ca51e948a2ee1b890dffd81c9c30dd212381b439561447a72",
+  "raw_output": "```json\n{\n    \"narrative\": \"No retail investor discussions were detected for FWRY.CA across the monitored social media platforms within the analysis window. As a result, there are no identifiable themes, tone, or Arabic-language signals to report at this time.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No retail investor discussions were detected for FWRY.CA across the monitored social media platforms within the analysis window. As a result, there are no identifiable themes, tone, or Arabic-language signals to report at this time.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 64, 'prompt_tokens': 618, 'total_tokens': 682, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 106}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '8c100fe5-1201-4876-8926-cac388654fa8', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edd78-b25d-7681-a74f-fd9d9c73fe45-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 618, 'output_tokens': 64, 'total_tokens': 682, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for FWRY.CA]\nNo retail investor discussions were detected for FWRY.CA across the monitored social media platforms within the analysis window. As a result, there are no identifiable themes, tone, or Arabic-language signals to report at this time.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"FWRY.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No retail investor discussions were detected for FWRY.CA across the monitored social media platforms within the analysis window. As a result, there are no identifiable themes, tone, or Arabic-language signals to report at this time.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "367ee3dea313c27e228b4d748cc2c24c126222548a1236fd507aec853c617920",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 1418.6370829120278,
+  "timestamp_utc": "2026-06-19T01:22:16.680731+00:00",
+  "context_items": []
+}

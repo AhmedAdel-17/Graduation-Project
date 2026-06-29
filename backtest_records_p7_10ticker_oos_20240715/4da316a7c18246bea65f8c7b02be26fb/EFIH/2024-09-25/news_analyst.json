@@ -1,0 +1,182 @@
+{
+  "run_id": "4da316a7c18246bea65f8c7b02be26fb",
+  "ticker": "EFIH",
+  "trade_date": "2024-09-25",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "44c00075fbf35a874bb5f2b7eb17fa27fb4c3911f835677b958141afbd9d07cd",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market news available to provide broader context\",\n        \"Silence reduces confidence and suggests no material public developments\",\n        \"Data source errors indicate potential data collection issues, not necessarily company silence\"\n    ],\n    \"explanation\": \"No news articles were found for EFIH.CA during the September 18-25, 2024 period, and no market-level news was available either. The absence of news is a neutral signal with low confidence, as it may reflect either a quiet period for the company or data retrieval limitations.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-09-18 to 2024-09-25\"\n    },\n    \"risks_from_news\": [\n        \"No news identified; lack of information increases uncertainty\",\n        \"Potential data gaps may hide material developments\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to absence of news\"\n    ]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for the period\",\\n        \"No market news available to provide broader context\",\\n        \"Silence reduces confidence and suggests no material public developments\",\\n        \"Data source errors indicate potential data collection issues, not necessarily company silence\"\\n    ],\\n    \"explanation\": \"No news articles were found for EFIH.CA during the September 18-25, 2024 period, and no market-level news was available either. The absence of news is a neutral signal with low confidence, as it may reflect either a quiet period for the company or data retrieval limitations.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-09-18 to 2024-09-25\"\\n    },\\n    \"risks_from_news\": [\\n        \"No news identified; lack of information increases uncertainty\",\\n        \"Potential data gaps may hide material developments\"\\n    ],\\n    \"catalysts_from_news\": [\\n        \"No positive catalysts identified due to absence of news\"\\n    ]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 284, 'prompt_tokens': 664, 'total_tokens': 948, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 664}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '2252d4fd-5d3a-4a13-86cc-25f8f85bebbe', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee037-6e34-7c43-ae7e-61ea40574561-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 664, 'output_tokens': 284, 'total_tokens': 948, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market news available to provide broader context\",\n        \"Silence reduces confidence and suggests no material public developments\",\n        \"Data source errors indicate potential data collection issues, not necessarily company silence\"\n    ],\n    \"explanation\": \"No news articles were found for EFIH.CA during the September 18-25, 2024 period, and no market-level news was available either. The absence of news is a neutral signal with low confidence, as it may reflect either a quiet period for the company or data retrieval limitations.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-09-18 to 2024-09-25\"\n    },\n    \"risks_from_news\": [\n        \"No news identified; lack of information increases uncertainty\",\n        \"Potential data gaps may hide material developments\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to absence of news\"\n    ]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for the period",
+        "No market news available to provide broader context",
+        "Silence reduces confidence and suggests no material public developments",
+        "Data source errors indicate potential data collection issues, not necessarily company silence",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for EFIH.CA during the September 18-25, 2024 period, and no market-level news was available either. The absence of news is a neutral signal with low confidence, as it may reflect either a quiet period for the company or data retrieval limitations.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-09-18 to 2024-09-25"
+      },
+      "risks_from_news": [
+        "No news identified; lack of information increases uncertainty",
+        "Potential data gaps may hide material developments"
+      ],
+      "catalysts_from_news": [
+        "No positive catalysts identified due to absence of news"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.4238,
+        "label": "bearish",
+        "confidence": 0.6031,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for the period",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8298,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market news available to provide broader context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9395,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence reduces confidence and suggests no material public developments",
+            "source": "quoted_in_report",
+            "score": -0.6744,
+            "label": "bearish",
+            "confidence": 0.6744,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data source errors indicate potential data collection issues, not necessarily company silence",
+            "source": "quoted_in_report",
+            "score": -0.8399,
+            "label": "bearish",
+            "confidence": 0.8399,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for EFIH.CA during the September 18-25, 2024 period, and no market-level",
+            "source": "quoted_in_report",
+            "score": -0.896,
+            "label": "bearish",
+            "confidence": 0.896,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-09-18 to 2024-09-25",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9384,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news identified; lack of information increases uncertainty",
+            "source": "quoted_in_report",
+            "score": -0.8027,
+            "label": "bearish",
+            "confidence": 0.8027,
+            "model": "finbert"
+          },
+          {
+            "headline": "Potential data gaps may hide material developments",
+            "source": "quoted_in_report",
+            "score": -0.8457,
+            "label": "bearish",
+            "confidence": 0.8457,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No positive catalysts identified due to absence of news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8737,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.2755,
+        "label": "bearish",
+        "confidence": 0.5019
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "08e46fb1c2f07e3a2b8ec051a235708043fc9de1e7d5a45e06b517b6b9199196",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 3816.18395796977,
+  "timestamp_utc": "2026-06-19T14:09:53.863010+00:00",
+  "context_items": []
+}

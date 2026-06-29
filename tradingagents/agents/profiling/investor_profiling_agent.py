@@ -158,12 +158,14 @@ class InvestorProfilingAgent:
                 seed=42,
             )
         if provider == "anthropic":
+            # Anthropic does not support `seed`; temperature=0 is best available.
             return ChatAnthropic(
                 model=quick_model,
                 base_url=backend_url,
                 temperature=0,
             )
         if provider == "google":
+            # Google does not support `seed`; temperature=0 is best available.
             return ChatGoogleGenerativeAI(
                 model=quick_model,
                 temperature=0,
@@ -195,7 +197,7 @@ class InvestorProfilingAgent:
         ]
 
         logger.info("InvestorProfilingAgent: invoking LLM for classification")
-        response = self._llm.invoke(messages, temperature=0)
+        response = self._llm.invoke(messages)
         raw = response.content.strip()
         logger.debug("InvestorProfilingAgent raw response: %s", raw[:300])
 

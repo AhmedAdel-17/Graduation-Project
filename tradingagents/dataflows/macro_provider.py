@@ -127,14 +127,17 @@ def _yf_last_two_closes(
         return None, None
 
 
-# Headline market indices for the dashboard strip. Only instruments with a
-# dependable free feed are listed — EGX70/EGX100 have no reliable public
-# source and are intentionally excluded. ``yf`` lists fallback symbols tried
-# in order until two closes are found.
+# Headline market indices for the dashboard ticker strip. ``yf`` lists
+# fallback symbols tried in order until two closes are found.  Each
+# instrument degrades independently — a feed failure yields available=false.
 _MARKET_INDEX_SPECS = (
-    {"key": "egx30",   "label": "EGX 30",   "yf": ["^CASE30", "EGX30.CA"], "kind": "index",     "decimals": 0},
-    {"key": "gold",    "label": "Gold",     "yf": ["GC=F", "GLD"],         "kind": "commodity", "decimals": 2},
-    {"key": "usd_egp", "label": "USD / EGP", "yf": ["USDEGP=X", "EGP=X"],  "kind": "fx",        "decimals": 2},
+    {"key": "egx30",    "label": "EGX 30",    "yf": ["^CASE30", "EGX30.CA"], "kind": "index",     "decimals": 0},
+    {"key": "gold",     "label": "Gold",      "yf": ["GC=F", "GLD"],         "kind": "commodity", "decimals": 2},
+    {"key": "usd_egp",  "label": "USD / EGP", "yf": ["USDEGP=X", "EGP=X"],  "kind": "fx",        "decimals": 2},
+    {"key": "brent",    "label": "Brent Oil", "yf": ["BZ=F"],                "kind": "commodity", "decimals": 2},
+    {"key": "eur_egp",  "label": "EUR / EGP", "yf": ["EUREGP=X"],            "kind": "fx",        "decimals": 2},
+    {"key": "silver",   "label": "Silver",    "yf": ["SI=F", "SLV"],         "kind": "commodity", "decimals": 2},
+    {"key": "sp500",    "label": "S&P 500",   "yf": ["^GSPC"],               "kind": "index",     "decimals": 0},
 )
 
 
@@ -272,6 +275,7 @@ def _egx30_proxy_1d_return(as_of_date: str) -> Optional[float]:
             end=end.strftime("%Y-%m-%d"),
             progress=False,
             auto_adjust=True,
+            threads=True,
         )
         if df is None or df.empty or "Close" not in df.columns:
             return None
@@ -292,6 +296,128 @@ def _egx30_proxy_1d_return(as_of_date: str) -> Optional[float]:
         return sum(rets) / len(rets)
     except Exception as exc:
         logger.debug("_egx30_proxy_1d_return(%s) failed: %s", as_of_date, exc)
+        return None
+
+
+def compute_market_breadth(
+    as_of_date: str,
+    lookback_days: int = 20,
+    rally_threshold: float = 0.70,
+    downturn_threshold: float = 0.30,
+) -> Optional[Dict[str, Any]]:
+    """Compute market breadth from EGX-30 proxy constituents.
+
+    Counts advancers vs decliners over a lookback window and classifies the
+    regime as ``"rally"`` / ``"downturn"`` / ``"sideways"``.  Uses the same
+    ``_EGX30_PROXY_CONSTITUENTS`` basket as the EGX-30 1-day return proxy.
+
+    Parameters
+    ----------
+    as_of_date : str
+        ISO-8601 date (e.g. ``"2024-09-25"``).
+    lookback_days : int
+        Trading days to measure per-ticker return over.
+    rally_threshold : float
+        Breadth ratio above which the regime is ``"rally"``.
+    downturn_threshold : float
+        Breadth ratio below which the regime is ``"downturn"``.
+
+    Returns ``None`` when fewer than 5 constituents have usable data.
+    """
+    try:
+        import math
+        import yfinance as yf
+
+        # ── diskcache: avoid re-downloading for the same date/lookback ──
+        try:
+            from tradingagents.dataflows.cache_manager import CacheManager
+            _cache = CacheManager().cache
+            _cache_key = f"breadth:{as_of_date}:{lookback_days}"
+            cached = _cache.get(_cache_key)
+            if cached is not None:
+                return cached
+        except Exception:
+            _cache = None
+            _cache_key = None
+
+        # Fetch a generous calendar window so we have enough trading days.
+        # EGX trades ~5 days/week, so lookback_days*2 calendar days is safe.
+        end = datetime.strptime(as_of_date, "%Y-%m-%d") + timedelta(days=1)
+        start = end - timedelta(days=max(lookback_days * 2, lookback_days + 15))
+        df = yf.download(
+            list(_EGX30_PROXY_CONSTITUENTS),
+            start=start.strftime("%Y-%m-%d"),
+            end=end.strftime("%Y-%m-%d"),
+            progress=False,
+            auto_adjust=True,
+            threads=True,
+        )
+        if df is None or df.empty or "Close" not in df.columns:
+            return None
+
+        close = df["Close"]
+        returns: list[float] = []
+        for col in close.columns:
+            series = close[col].dropna()
+            # Need at least lookback_days + 1 trading-day data points
+            if len(series) < lookback_days + 1:
+                # Fall back: use whatever is available (at least 2 points)
+                if len(series) < 2:
+                    continue
+                first = float(series.iloc[0])
+                last = float(series.iloc[-1])
+            else:
+                # Exact: last trading day vs the one exactly lookback_days
+                # trading days earlier (indexing from the end)
+                last = float(series.iloc[-1])
+                first = float(series.iloc[-(lookback_days + 1)])
+            if first and math.isfinite(first):
+                r = (last - first) / first
+                if math.isfinite(r):
+                    returns.append(r)
+
+        if len(returns) < 5:
+            return None
+
+        advancers = sum(1 for r in returns if r > 0)
+        decliners = sum(1 for r in returns if r < 0)
+        total = advancers + decliners
+        if total == 0:
+            return None
+
+        breadth_ratio = advancers / total
+
+        if breadth_ratio > rally_threshold:
+            regime = "rally"
+        elif breadth_ratio < downturn_threshold:
+            regime = "downturn"
+        else:
+            regime = "sideways"
+
+        import statistics
+        basket_return_pct = round(sum(returns) / len(returns) * 100, 2)
+        basket_vol_pct = round(statistics.stdev(returns) * 100, 2) if len(returns) >= 2 else 0.0
+
+        result = {
+            "breadth_ratio": round(breadth_ratio, 3),
+            "advancers": advancers,
+            "decliners": decliners,
+            "regime": regime,
+            "basket_return_pct": basket_return_pct,
+            "basket_volatility_pct": basket_vol_pct,
+            "lookback_days": lookback_days,
+            "as_of_date": as_of_date,
+            "tickers_used": len(returns),
+        }
+        # Cache for 1 day — same date won't change
+        if _cache is not None and _cache_key is not None:
+            try:
+                _cache.set(_cache_key, result, expire=86400)
+            except Exception:
+                pass
+        return result
+    except Exception as exc:
+        logger.warning("compute_market_breadth(%s) failed: %s", as_of_date, exc)
         return None
 
 
@@ -352,10 +478,26 @@ def get_egx_macro_context(
     cfg = config or {}
 
     # ── 1. CBE policy rate ─────────────────────────────────────────────────────
-    # Try config first (egx_risk_free_rate is kept up-to-date by operators);
-    # fall back to hard-coded default.
-    cbe_rate = float(cfg.get("egx_risk_free_rate", _DEFAULT_CBE_RATE))
+    # Use the date-aware CSV lookup (same source as fundamentals analyst) so
+    # that the macro context injected into research_manager / risk_manager /
+    # trader prompts matches the rate the fundamentals pipeline reported.
+    # Falls back to static config → hard-coded default if CSV is unavailable.
+    cbe_rate = None
     cbe_source = "config"
+    try:
+        from tradingagents.agents.analysts.fundamentals.rate_lookup import (
+            get_egx_risk_free_rate_as_of,
+        )
+        _rate, _src, _eff = get_egx_risk_free_rate_as_of(as_of_date, cfg)
+        if _rate is not None:
+            cbe_rate = _rate
+            cbe_source = _src  # "date_aware_cbe_policy_rate" or "static_config_fallback"
+    except Exception as exc:
+        logger.debug("macro_provider: rate_lookup import/call failed (%s); using static config", exc)
+
+    if cbe_rate is None:
+        cbe_rate = float(cfg.get("egx_risk_free_rate", _DEFAULT_CBE_RATE))
+        cbe_source = "config"
 
     # ── 2. T-bill yield (91-day) ───────────────────────────────────────────────
     # Egypt's Central Bank publishes these at auctions; no free real-time API.

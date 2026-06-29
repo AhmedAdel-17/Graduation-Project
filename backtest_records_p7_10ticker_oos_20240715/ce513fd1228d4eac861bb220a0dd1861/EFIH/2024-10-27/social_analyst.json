@@ -1,0 +1,41 @@
+{
+  "run_id": "ce513fd1228d4eac861bb220a0dd1861",
+  "ticker": "EFIH",
+  "trade_date": "2024-10-27",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "acd4e1e4357b07794b8736a731ffc1b2fdcb55c0e19a3902605ce5c02914c391",
+  "raw_output": "```json\n{\n    \"narrative\": \"No retail investor discussions were detected for EFIH.CA across the monitored social media platforms during the analysis window. There are no Arabic or English posts to analyze, and no themes, tone, or sentiment signals can be identified from the available data.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No retail investor discussions were detected for EFIH.CA across the monitored social media platforms during the analysis window. There are no Arabic or English posts to analyze, and no themes, tone, or sentiment signals can be identified from the available data.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 68, 'prompt_tokens': 615, 'total_tokens': 683, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 103}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'f0cadf61-c8b8-4637-87d7-67a4490d2b1f', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee03d-e651-7120-abc4-38800f26f385-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 615, 'output_tokens': 68, 'total_tokens': 683, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for EFIH.CA]\nNo retail investor discussions were detected for EFIH.CA across the monitored social media platforms during the analysis window. There are no Arabic or English posts to analyze, and no themes, tone, or sentiment signals can be identified from the available data.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"EFIH.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No retail investor discussions were detected for EFIH.CA across the monitored social media platforms during the analysis window. There are no Arabic or English posts to analyze, and no themes, tone, or sentiment signals can be identified from the available data.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "4ad401421d9b3f3ed00999463f6c77594a6f201e07237d9b0247799091080cb1",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 1934.629249968566,
+  "timestamp_utc": "2026-06-19T14:16:55.521182+00:00",
+  "context_items": []
+}

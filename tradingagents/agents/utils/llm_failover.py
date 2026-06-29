@@ -214,6 +214,15 @@ class ReliableChatModel(BaseChatModel):
                     )
                     errors.append(f"{pname}: {exc}")
                     self._rotate()
+                    # Observability: count failover rotations
+                    try:
+                        from tradingagents.observability.metrics import llm_failover_total
+                        from tradingagents.observability.node_metrics import get_current_node
+                        llm_failover_total.labels(
+                            agent_name=get_current_node(), provider=pname
+                        ).inc()
+                    except Exception:
+                        pass
                     time.sleep(1.5)
                 else:
                     logger.error("ReliableChatModel: %s non-retryable error: %s", pname, exc)
@@ -305,6 +314,7 @@ def build_resilient_llm(
                     base_url="https://api.groq.com/openai/v1",
                     api_key=api_key,
                     temperature=0,
+                    seed=seed,
                     max_retries=max_retries_per_provider,
                 ))
 
@@ -314,6 +324,8 @@ def build_resilient_llm(
                     logger.debug("build_resilient_llm: skipping google — no API key")
                     continue
                 from langchain_google_genai import ChatGoogleGenerativeAI
+                # Note: ChatGoogleGenerativeAI does not support a `seed` parameter.
+                # temperature=0 is the best determinism guarantee available.
                 providers.append(ChatGoogleGenerativeAI(
                     model=config.get("google_model", "gemini-1.5-flash"),
                     temperature=0,

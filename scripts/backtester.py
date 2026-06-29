@@ -24,6 +24,10 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 import numpy as np
 
+from dotenv import load_dotenv
+_project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+load_dotenv(os.path.join(_project_root, ".env"))
+
 # Windows console encoding fix — only applied when run as a CLI script,
 # not when imported as a module (e.g., by the API server background tasks).
 if __name__ == "__main__":
@@ -56,6 +60,16 @@ EGX_SLIPPAGE_LOW_LIQ = 0.005    # 0.5%  — low-liquidity stocks (wider spreads)
 
 EGX_CIRCUIT_BREAKER  = 0.10     # ±10% daily price move halts trading on EGX
 EGX_SETTLEMENT_DAYS  = 2        # T+2: cash from a SELL settles after 2 business days
+
+
+def _build_llm_fingerprint(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Single source of truth for the LLM fingerprint in backtest reports.
+
+    Delegates to audit_writer.build_model_fingerprint so the JSON report
+    and the Postgres audit row always agree.
+    """
+    from tradingagents.db.audit_writer import build_model_fingerprint
+    return build_model_fingerprint(config)
 
 
 def _summarize_thesis(thesis: dict) -> Optional[dict]:
@@ -121,6 +135,10 @@ class BacktestingEngine:
         initial_capital: float = 1_000_000.0,
         target_market: str = "EGX",
         benchmark_ticker: Optional[str] = "^EGX30",
+        record: bool = False,
+        record_prompts: bool = False,
+        records_dir: str = "./backtest_records",
+        output_dir: str = "",
     ):
         self.initial_capital = initial_capital
         self.cash = initial_capital
@@ -137,9 +155,11 @@ class BacktestingEngine:
 
         # Benchmark tracking (EGX30 external index — may be unavailable)
         self.benchmark_ticker = benchmark_ticker
+        self._requested_benchmark: Optional[str] = benchmark_ticker  # original request (never cleared)
         self.benchmark_start_price: Optional[float] = None
         self.benchmark_history: List[Dict] = []   # [{date, price, value}]
         self._bm_data_map: Dict[str, float] = {}   # {date_str: close_price}
+        self._benchmark_error: Optional[str] = None  # set when benchmark loading fails
 
         # Buy-and-hold benchmark using the same ticker being tested
         self.buyhold_start_price: Optional[float] = None
@@ -147,6 +167,16 @@ class BacktestingEngine:
 
         # Decision audit trail — one entry per evaluation date
         self.audit_log: List[Dict] = []
+
+        # Recording state — stored as instance vars so they survive
+        # TradingAgentsGraph.__init__ clobbering the global config.
+        self._record = record
+        self._record_prompts = record_prompts
+        self._records_dir = records_dir
+
+        # Output directory for reports, trade CSVs, and partial checkpoints.
+        # Empty string → default (backtest_results/ next to this script).
+        self._output_dir = output_dir
 
         # Configure system
         set_config({
@@ -270,20 +300,55 @@ class BacktestingEngine:
     # Phase 1 — Circuit Breaker
     # =========================================================================
 
-    def _check_circuit_breaker(self, ticker: str, current_price: float) -> bool:
+    @staticmethod
+    def _prev_trading_day_close(ohlcv_rows: List[Dict]) -> Optional[float]:
+        """Return the close price of the second-to-last OHLCV row.
+
+        This gives the *previous trading day's* close — the correct reference
+        price for an EGX daily circuit-breaker check.  Returns ``None`` when
+        fewer than 2 rows are available.
         """
-        Returns True if the EGX ±10% daily circuit breaker is triggered.
-        When True, trade execution is skipped for this date.
+        if len(ohlcv_rows) < 2:
+            return None
+        close = ohlcv_rows[-2].get("close")
+        if close is not None and float(close) > 0:
+            return float(close)
+        return None
+
+    def _check_circuit_breaker(
+        self,
+        ticker: str,
+        current_price: float,
+        ohlcv_rows: Optional[List[Dict]] = None,
+    ) -> bool:
+        """Check if the EGX ±10% *daily* circuit breaker is triggered.
+
+        The correct comparison is current evaluation-date close vs the
+        **previous trading day's** close (extracted from the daily OHLCV
+        window that was already fetched for this evaluation date).
+
+        Previous versions compared against ``self.prev_prices[ticker]``
+        which held the *previous evaluation date* price.  With
+        ``interval > 1``, that incorrectly treated multi-day cumulative
+        moves as single-day circuit-breaker events, causing false positives
+        on trending stocks (e.g. TMGH +30 % over 20 days).
         """
-        prev = self.prev_prices.get(ticker)
-        if prev is None or prev <= 0:
+        prev_close = None
+        if ohlcv_rows:
+            prev_close = self._prev_trading_day_close(ohlcv_rows)
+
+        if prev_close is None:
+            # Fallback: no daily OHLCV available — skip circuit breaker
+            # rather than comparing against an old evaluation-date price.
             return False
-        change_pct = abs(current_price - prev) / prev
+
+        change_pct = abs(current_price - prev_close) / prev_close
         if change_pct >= EGX_CIRCUIT_BREAKER:
-            direction = "UP" if current_price > prev else "DOWN"
+            direction = "UP" if current_price > prev_close else "DOWN"
             logger.warning(
-                f"[CIRCUIT BREAKER] {ticker} moved {change_pct:.1%} {direction} "
-                f"({prev:,.2f} → {current_price:,.2f}). Trading halted."
+                f"[CIRCUIT BREAKER] {ticker} daily move {change_pct:.1%} {direction} "
+                f"(prev trading day close {prev_close:,.2f} → {current_price:,.2f}). "
+                f"Trading halted."
             )
             return True
         return False
@@ -325,6 +390,19 @@ class BacktestingEngine:
     # EGX30 CSV Benchmark Loader
     # =========================================================================
 
+    # Date formats supported by the EGX30 CSV parser (tried in order).
+    _CSV_DATE_FORMATS = ["%m/%d/%Y", "%d/%m/%Y", "%Y-%m-%d"]
+
+    @staticmethod
+    def _parse_csv_date(raw: str) -> Optional[str]:
+        """Try multiple date formats, return YYYY-MM-DD or None."""
+        for fmt in BacktestingEngine._CSV_DATE_FORMATS:
+            try:
+                return datetime.strptime(raw, fmt).strftime("%Y-%m-%d")
+            except ValueError:
+                continue
+        return None
+
     def _load_egx30_csv(self, csv_path: str) -> bool:
         """
         Load EGX 30 index data from a local CSV file.
@@ -333,7 +411,9 @@ class BacktestingEngine:
           "Date","Price","Open","High","Low","Vol.","Change %"
           "09/04/2024","30,998.19",...
 
-        Dates are MM/DD/YYYY; prices are comma-formatted strings.
+        Supported date formats: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD.
+        Prices may contain commas (e.g., "30,998.19").
+
         Populates self._bm_data_map {YYYY-MM-DD: float} and sets
         self.benchmark_start_price to the earliest entry in the file.
 
@@ -350,9 +430,11 @@ class BacktestingEngine:
                     if not raw_date or not raw_price:
                         continue
                     try:
-                        dt = datetime.strptime(raw_date, "%m/%d/%Y")
+                        date_str = self._parse_csv_date(raw_date)
+                        if date_str is None:
+                            continue
                         price = float(raw_price)
-                        data[dt.strftime("%Y-%m-%d")] = price
+                        data[date_str] = price
                     except (ValueError, TypeError):
                         continue
             if not data:
@@ -415,12 +497,20 @@ class BacktestingEngine:
         )
         return {}
 
+    def _results_dir(self) -> str:
+        """Return the output directory for reports, CSVs, and partials."""
+        if self._output_dir:
+            d = os.path.abspath(self._output_dir)
+        else:
+            d = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "backtest_results")
+            )
+        os.makedirs(d, exist_ok=True)
+        return d
+
     def _partial_path(self, ticker: str) -> str:
         """Disk path for the per-ticker resumable checkpoint."""
-        d = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "backtest_results")
-        )
-        os.makedirs(d, exist_ok=True)
+        d = self._results_dir()
         safe = ticker.replace("/", "_").replace("\\", "_")
         return os.path.join(d, f"partial_{safe}.json")
 
@@ -644,8 +734,7 @@ class BacktestingEngine:
 
         # MEMORY §C1 — closed-trade win rate uses ONLY realized PnL on SELL
         # trades (no look-ahead). Wilson 95% CI is reported alongside so the
-        # number is interpretable on small samples. Helpers are reused from
-        # tradingagents.rl.walkforward (consumer of the same backtest JSONs).
+        # number is interpretable on small samples.
         from tradingagents.rl.walkforward import _closed_trade_winrate, _wilson_ci
         wr_pair = _closed_trade_winrate(self.trade_history)
         wr_val, wins, total_closed = wr_pair
@@ -671,10 +760,6 @@ class BacktestingEngine:
         calmar = ann_return / abs(max_drawdown) if max_drawdown != 0 else 0.0
 
         # Benchmark comparison — Alpha.
-        # Only report Benchmark Return / Alpha when we actually have benchmark
-        # prices. The old behaviour wrote 0.00% even when the EGX30 CSV was
-        # missing, which made the dashboard show "EGX30 flat 0%" instead of
-        # "data unavailable" and gave a misleading apples-to-apples comparison.
         has_benchmark_data = bool(
             self.benchmark_history
             and self.benchmark_start_price
@@ -689,8 +774,7 @@ class BacktestingEngine:
             )
             alpha = total_return - benchmark_return
 
-        # Buy-and-hold benchmark (same ticker). Available almost always
-        # because it only needs the agent's own price series.
+        # Buy-and-hold benchmark (same ticker).
         has_buyhold_data = bool(
             self.buyhold_start_price
             and self.buyhold_start_price > 0
@@ -733,13 +817,243 @@ class BacktestingEngine:
         return out
 
     # =========================================================================
+    # Per-decision EGX30-relative metrics (REPORT-ONLY — §Phase B)
+    # =========================================================================
+
+    def _calculate_decision_metrics(self) -> Dict[str, Any]:
+        """Compute per-decision quality metrics relative to EGX30.
+
+        Uses the ``fwd_excess_return`` fields that were backfilled into
+        audit_log entries during the backtest loop.  These are strictly
+        report-only — they are never fed into agent state, prompts, or
+        memory.
+
+        Returns a dict suitable for the ``"decision_quality"`` key in
+        the JSON report.  Empty dict when no measurable decisions exist.
+        """
+        from tradingagents.rl.walkforward import _wilson_ci
+
+        # Only consider entries that have a forward return computed
+        measurable = [
+            e for e in self.audit_log
+            if "fwd_excess_return" in e
+            and e.get("parsed_decision") in ("BUY", "SELL", "HOLD")
+        ]
+        if not measurable:
+            return {}
+
+        buy_entries = [e for e in measurable if e["parsed_decision"] == "BUY"]
+        hold_entries = [e for e in measurable if e["parsed_decision"] in ("HOLD", "SELL")]
+
+        # --- BUY metrics ---
+        n_buy = len(buy_entries)
+        buy_hits = [e for e in buy_entries if e["fwd_excess_return"] > 0]
+        buy_misses = [e for e in buy_entries if e["fwd_excess_return"] <= 0]
+        n_buy_hit = len(buy_hits)
+        n_buy_miss = len(buy_misses)
+
+        buy_hit_rate = n_buy_hit / n_buy if n_buy > 0 else None
+        false_buy_rate = n_buy_miss / n_buy if n_buy > 0 else None
+        buy_mean_excess = (
+            sum(e["fwd_excess_return"] for e in buy_entries) / n_buy
+            if n_buy > 0 else None
+        )
+
+        buy_hit_ci = _wilson_ci(n_buy_hit, n_buy) if n_buy > 0 else (None, None)
+
+        # --- HOLD/SELL rejection metrics ---
+        n_hold = len(hold_entries)
+        # Correct rejection: ticker underperformed EGX30 (negative excess)
+        hold_correct = [e for e in hold_entries if e["fwd_excess_return"] <= 0]
+        # Missed opportunity: ticker outperformed EGX30 (positive excess)
+        hold_missed = [e for e in hold_entries if e["fwd_excess_return"] > 0]
+        n_hold_correct = len(hold_correct)
+        n_hold_missed = len(hold_missed)
+
+        hold_rejection_quality = n_hold_correct / n_hold if n_hold > 0 else None
+        hold_miss_rate = n_hold_missed / n_hold if n_hold > 0 else None
+        hold_rejection_ci = _wilson_ci(n_hold_correct, n_hold) if n_hold > 0 else (None, None)
+
+        result: Dict[str, Any] = {
+            "total_measurable_decisions": len(measurable),
+            "n_buy": n_buy,
+            "n_hold_sell": n_hold,
+        }
+
+        if buy_hit_rate is not None:
+            result["buy_hit_rate_vs_egx30"] = round(buy_hit_rate, 4)
+            result["buy_hit_rate_ci_lo"] = round(buy_hit_ci[0], 4) if buy_hit_ci[0] is not None else None
+            result["buy_hit_rate_ci_hi"] = round(buy_hit_ci[1], 4) if buy_hit_ci[1] is not None else None
+        if false_buy_rate is not None:
+            result["false_buy_rate"] = round(false_buy_rate, 4)
+        if buy_mean_excess is not None:
+            result["buy_mean_excess_return"] = round(buy_mean_excess, 6)
+
+        if hold_rejection_quality is not None:
+            result["hold_rejection_quality"] = round(hold_rejection_quality, 4)
+            result["hold_rejection_ci_lo"] = round(hold_rejection_ci[0], 4) if hold_rejection_ci[0] is not None else None
+            result["hold_rejection_ci_hi"] = round(hold_rejection_ci[1], 4) if hold_rejection_ci[1] is not None else None
+        if hold_miss_rate is not None:
+            result["hold_miss_rate"] = round(hold_miss_rate, 4)
+
+        # Per-decision detail (for downstream analysis)
+        per_decision = []
+        for e in measurable:
+            decision = e.get("parsed_decision")
+            excess = e["fwd_excess_return"]
+            if decision == "BUY":
+                quality_label = "HIT" if excess > 0 else "MISS"
+            else:
+                # HOLD or SELL: positive excess = missed opportunity
+                quality_label = "MISSED_OPPORTUNITY" if excess > 0 else "CORRECT_REJECTION"
+            per_decision.append({
+                "date": e.get("date"),
+                "decision": decision,
+                "ticker_price": e.get("price"),
+                "egx30_price": e.get("egx30_price"),
+                "fwd_ticker_return": round(e.get("fwd_ticker_return", 0), 6),
+                "fwd_egx30_return": round(e.get("fwd_egx30_return", 0), 6),
+                "fwd_excess_return": round(excess, 6),
+                "holding_days": e.get("holding_days"),
+                "quality_label": quality_label,
+            })
+        result["per_decision"] = per_decision
+
+        return result
+
+    # =========================================================================
     # Decision resolution (LLM judge + trader plan + deterministic veto)
     # =========================================================================
+
+    @staticmethod
+    def _extract_risk_judge_confidence(final_state: Dict) -> Optional[float]:
+        """Parse the risk judge's confidence from ``risk_debate_state``.
+
+        The LLM Constitutional Judge (risk_manager.py) emits a free-text
+        response stored at ``risk_debate_state["judge_decision"]``.  Near the
+        end of that text it writes a JSON block like::
+
+            ```json
+            {"action": "HOLD", "confidence": 0.0}
+            ```
+
+        This helper extracts the ``confidence`` float.  Returns ``None`` if
+        parsing fails — callers must treat ``None`` as "no opinion" (i.e.
+        allow fallback by default), never as 0.0.
+        """
+        risk_debate = final_state.get("risk_debate_state")
+        if not isinstance(risk_debate, dict):
+            return None
+        judge_text = risk_debate.get("judge_decision")
+        if not isinstance(judge_text, str) or not judge_text.strip():
+            return None
+        # Scan for ALL {"action": ..., "confidence": ...} blocks — the risk
+        # judge's final decision is typically the last one in the response.
+        pattern = re.compile(
+            r'\{\s*"action"\s*:\s*"[^"]*"\s*,\s*"confidence"\s*:\s*'
+            r'([0-9]+(?:\.[0-9]+)?)\s*\}',
+            re.IGNORECASE,
+        )
+        matches = pattern.findall(judge_text)
+        if not matches:
+            # Try reversed key order: {"confidence": ..., "action": ...}
+            pattern_rev = re.compile(
+                r'\{\s*"confidence"\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*,\s*'
+                r'"action"\s*:\s*"[^"]*"\s*\}',
+                re.IGNORECASE,
+            )
+            matches = pattern_rev.findall(judge_text)
+        if not matches:
+            return None
+        try:
+            return float(matches[-1])
+        except (ValueError, IndexError):
+            return None
+
+    @staticmethod
+    def _extract_risk_judge_verdict(
+        final_state: Dict,
+    ) -> Tuple[Optional[str], Optional[float]]:
+        """Extract both action and confidence from the risk judge's JSON.
+
+        Returns ``(action, confidence)`` — e.g. ``("SELL", 0.70)``.
+        Either or both may be ``None`` if parsing fails.
+        """
+        risk_debate = final_state.get("risk_debate_state")
+        if not isinstance(risk_debate, dict):
+            return None, None
+        judge_text = risk_debate.get("judge_decision")
+        if not isinstance(judge_text, str) or not judge_text.strip():
+            return None, None
+
+        # Pattern: {"action": "...", "confidence": ...}
+        pattern = re.compile(
+            r'\{\s*"action"\s*:\s*"([^"]*)"\s*,\s*"confidence"\s*:\s*'
+            r'([0-9]+(?:\.[0-9]+)?)\s*\}',
+            re.IGNORECASE,
+        )
+        matches = pattern.findall(judge_text)
+        if not matches:
+            # Reversed key order: {"confidence": ..., "action": "..."}
+            pattern_rev = re.compile(
+                r'\{\s*"confidence"\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*,\s*'
+                r'"action"\s*:\s*"([^"]*)"\s*\}',
+                re.IGNORECASE,
+            )
+            rev_matches = pattern_rev.findall(judge_text)
+            if rev_matches:
+                # Reversed capture groups: (confidence, action)
+                conf_str, action_str = rev_matches[-1]
+                try:
+                    return action_str.upper(), float(conf_str)
+                except (ValueError, IndexError):
+                    return None, None
+            return None, None
+
+        # Normal order: last match wins (final decision)
+        action_str, conf_str = matches[-1]
+        try:
+            return action_str.upper(), float(conf_str)
+        except (ValueError, IndexError):
+            return None, None
+
+    def _get_previous_ticker_decision(self) -> Optional[Dict]:
+        """Return the last *active* decision from the audit log.
+
+        An "active" decision is the last BUY or SELL.  HOLD entries that
+        were created by an anti-churn override (``anti_churn_applied=True``)
+        are skipped — they represent a gate blocking a reversal, not a
+        deliberate neutral stance.  This prevents the feedback loop where
+        anti-churn HOLD → ``previous_decision=HOLD`` → continuity prompt
+        says "hold the course" → perpetual HOLD.
+
+        Falls back to the most recent genuine HOLD (one where the agent
+        truly chose HOLD, not an override) if no BUY/SELL exists yet.
+        """
+        last_genuine_hold = None
+        for entry in reversed(self.audit_log):
+            sig = entry.get("parsed_decision")
+            if sig in ("BUY", "SELL"):
+                return {
+                    "signal": sig,
+                    "date": entry["date"],
+                    "confidence": entry.get("confidence"),
+                }
+            if sig == "HOLD" and not entry.get("anti_churn_applied", False):
+                if last_genuine_hold is None:
+                    last_genuine_hold = {
+                        "signal": "HOLD",
+                        "date": entry["date"],
+                        "confidence": entry.get("confidence"),
+                    }
+        return last_genuine_hold
 
     @staticmethod
     def _resolve_decision(
         final_state: Dict,
         execution_plan: Dict,
+        current_date: str = "",
+        config: Dict = None,
     ) -> Tuple[str, str]:
         """Reduce the final state to a single ``BUY`` / ``SELL`` / ``HOLD`` action.
 
@@ -766,9 +1080,18 @@ class BacktestingEngine:
              rubber-stamps "HOLD" as a default text response even though the
              deterministic gate cleared the trade.
 
+             **P5 safety gate (2026-06-18):** Before allowing fallback, parse
+             the risk judge's confidence from ``risk_debate_state``.  If the
+             confidence is explicitly parseable and effectively zero (< 0.05),
+             block the fallback — the risk judge actively flagged the trade as
+             unacceptable even though the deterministic layer cleared it.
+             When confidence is missing or unparseable, allow fallback by
+             default (no false blocks from parse failures).
+
         Returns ``(decision, path)`` where ``path`` is one of
         ``{"deterministic_veto", "judge_bare", "judge_json", "judge_freetext",
-        "trader_fallback", "default_hold"}`` for audit-log readability.
+        "trader_fallback", "fallback_blocked_risk_confidence",
+        "default_hold"}`` for audit-log readability.
         """
         risk_assessment = final_state.get("risk_assessment", {}) or {}
         risk_action = str(final_state.get("risk_action", "") or "").upper()
@@ -820,12 +1143,151 @@ class BacktestingEngine:
         # plan and the deterministic gate is green, trust the trader. This
         # closes the silent-downgrade bug reported on the dashboard run where
         # trader=BUY + 0 violations + judge="HOLD" became HOLD on every date.
+        #
+        # P5 safety gate: if the risk judge's confidence is explicitly zero
+        # (< 0.05), it means the Constitutional Judge actively rejected the
+        # trade on qualitative grounds (e.g. position concentration, stale
+        # data) that the deterministic layer doesn't check. In that case,
+        # block the fallback and respect the HOLD.
         if judge_decision == "HOLD":
             plan_decision = ""
             if isinstance(execution_plan, dict):
                 plan_decision = (execution_plan.get("decision", "") or "").upper()
             if plan_decision in ("BUY", "SELL"):
-                return plan_decision, "trader_fallback"
+                rj_conf = BacktestingEngine._extract_risk_judge_confidence(
+                    final_state
+                )
+                if rj_conf is not None and rj_conf < 0.05:
+                    return "HOLD", "fallback_blocked_risk_confidence"
+                judge_decision = plan_decision
+                judge_path = "trader_fallback"
+
+        # ── Fix A (P8): Anti-churn reversal gate ─────────────────────────
+        # Fires AFTER normal decision resolution but BEFORE the final return.
+        # A reversal is BUY→SELL or SELL→BUY (not HOLD transitions).
+        # Always writes audit fields into final_state so the report can prove
+        # exactly why anti-churn did or did not fire.
+        if config and config.get("anti_churn_enabled") and judge_decision in ("BUY", "SELL"):
+            prev = final_state.get("previous_decision")
+            conf_scores = final_state.get("confidence_scores") or {}
+            conf_propagator = conf_scores.get("overall")
+            variant = config.get("anti_churn_variant", "A2")
+            threshold = config.get("anti_churn_reversal_confidence_threshold", 0.55)
+
+            # Prefer risk judge confidence when the judge's action matches the
+            # current decision.  This avoids using a compressed propagator score
+            # (~0.50) that blocks every reversal.  If the judge said a different
+            # action (e.g. judge=HOLD but trader_fallback flipped to BUY), fall
+            # back to propagator — the judge's confidence is for its own action,
+            # not the overridden one.
+            rj_action, rj_conf = BacktestingEngine._extract_risk_judge_verdict(
+                final_state
+            )
+            if (
+                rj_conf is not None
+                and 0.0 <= rj_conf <= 1.0
+                and rj_action == judge_decision
+            ):
+                conf_overall = rj_conf
+                _ac_conf_source = "risk_judge"
+            else:
+                conf_overall = conf_propagator
+                _ac_conf_source = "propagator"
+
+            is_reversal = (
+                (prev == "BUY" and judge_decision == "SELL")
+                or (prev == "SELL" and judge_decision == "BUY")
+            )
+
+            # Always record audit fields so the report shows the gate's reasoning
+            final_state["_anti_churn_audit"] = {
+                "checked": True,
+                "prev_decision": prev,
+                "current_decision": judge_decision,
+                "is_reversal": is_reversal,
+                "confidence_used": conf_overall,
+                "confidence_source": _ac_conf_source,
+                "confidence_propagator": conf_propagator,
+                "confidence_risk_judge": rj_conf,
+                "risk_judge_action": rj_action,
+                "threshold": threshold,
+                "variant": variant,
+                "applied": False,
+                "reason": None,
+            }
+
+            if is_reversal:
+                if variant == "A1":
+                    # Hard minimum hold period
+                    prev_date = final_state.get("previous_decision_date")
+                    if prev_date and current_date:
+                        from datetime import datetime as _dt
+                        try:
+                            days_held = (_dt.strptime(current_date, "%Y-%m-%d")
+                                         - _dt.strptime(prev_date, "%Y-%m-%d")).days
+                            min_hold = config.get("anti_churn_min_hold_days", 20)
+                            if days_held < min_hold:
+                                final_state["_anti_churn_audit"]["applied"] = True
+                                final_state["_anti_churn_audit"]["reason"] = (
+                                    f"A1: held {days_held}d < min {min_hold}d"
+                                )
+                                return "HOLD", "anti_churn_A1_hold_Nd"
+                        except (ValueError, TypeError):
+                            pass
+
+                elif variant == "A2":
+                    # Conviction-gated reversal (primary)
+                    if conf_overall is not None and conf_overall < threshold:
+                        final_state["_anti_churn_audit"]["applied"] = True
+                        final_state["_anti_churn_audit"]["reason"] = (
+                            f"A2: conf {conf_overall:.3f} < threshold {threshold} "
+                            f"(source={_ac_conf_source})"
+                        )
+                        return "HOLD", "anti_churn_A2_low_conf"
+                    else:
+                        final_state["_anti_churn_audit"]["reason"] = (
+                            f"A2: reversal allowed — conf {conf_overall} >= {threshold} "
+                            f"(source={_ac_conf_source})"
+                            if conf_overall is not None
+                            else "A2: reversal allowed — conf_overall is None (no gate)"
+                        )
+
+                elif variant == "A3":
+                    # Partial-size reversal — don't change decision, mark for
+                    # partial exit in execute_trade
+                    final_state["_partial_exit"] = True
+                    final_state["_anti_churn_audit"]["applied"] = True
+                    final_state["_anti_churn_audit"]["reason"] = "A3: partial exit marked"
+
+                elif variant == "A4":
+                    # Regime-aware reversal gating (requires Fix C)
+                    breadth = final_state.get("market_breadth") or {}
+                    regime = breadth.get("regime", "sideways")
+                    regime_opposes = (
+                        (regime == "rally" and judge_decision == "SELL")
+                        or (regime == "downturn" and judge_decision == "BUY")
+                    )
+                    if regime_opposes and conf_overall is not None and conf_overall < threshold:
+                        final_state["_anti_churn_audit"]["applied"] = True
+                        final_state["_anti_churn_audit"]["reason"] = (
+                            f"A4: regime={regime} opposes {judge_decision}, "
+                            f"conf {conf_overall:.3f} < {threshold}"
+                        )
+                        return "HOLD", "anti_churn_A4_regime_gate"
+
+        # ── Fix C (P8): Direction-aware breadth confidence dampening ──────
+        # Once we know the decision, dampen confidence for regime-opposed signals.
+        # This reduces position size without blocking the trade.
+        if config and config.get("market_breadth_enabled") and judge_decision in ("BUY", "SELL"):
+            breadth = final_state.get("market_breadth") or {}
+            regime = breadth.get("regime", "sideways")
+            dampening = config.get("market_breadth_dampening_factor", 0.75)
+            conf_scores = final_state.get("confidence_scores") or {}
+            conf = conf_scores.get("overall")
+            if conf is not None:
+                if (regime == "rally" and judge_decision == "SELL") or \
+                   (regime == "downturn" and judge_decision == "BUY"):
+                    final_state["_breadth_adjusted_confidence"] = conf * dampening
 
         return judge_decision, judge_path
 
@@ -909,8 +1371,12 @@ class BacktestingEngine:
 
             # Scale position by confidence (min 20% of target, max 100%).
             # confidence=0 or None means no scaling — use full position size.
-            if confidence is not None and confidence > 0:
-                confidence_scalar = max(0.20, min(1.0, confidence))
+            # Fix C (P8): use breadth-adjusted confidence when available.
+            # B4 (P8): lower sizing floor from 20% to 5% when enabled.
+            effective_conf = final_state.get("_breadth_adjusted_confidence", confidence) if final_state else confidence
+            sizing_floor = 0.05 if self.config.get("b4_sizing_floor_enabled") else 0.20
+            if effective_conf is not None and effective_conf > 0:
+                confidence_scalar = max(sizing_floor, min(1.0, effective_conf))
                 original_target = target_shares
                 target_shares = max(1, int(target_shares * confidence_scalar))
                 if target_shares != original_target:
@@ -963,7 +1429,12 @@ class BacktestingEngine:
                 shares_to_transact = target_shares
 
         elif "SELL" in decision and pos["shares"] > 0:
-            shares_to_transact = pos["shares"]
+            # A3 partial exit: sell only a fraction of the position
+            if final_state and final_state.get("_partial_exit"):
+                frac = self.config.get("anti_churn_partial_exit_frac", 0.50)
+                shares_to_transact = max(1, int(pos["shares"] * frac))
+            else:
+                shares_to_transact = pos["shares"]
             exec_price, commission = self._apply_execution_costs(
                 "SELL", shares_to_transact, close_price, low_liquidity
             )
@@ -979,7 +1450,11 @@ class BacktestingEngine:
                 f"[T+2 QUEUED] {net_proceeds:,.2f} EGP to settle on {settle_date}"
             )
 
-            self.positions[ticker] = {"shares": 0, "avg_cost": 0.0}
+            remaining = pos["shares"] - shares_to_transact
+            self.positions[ticker] = {
+                "shares": remaining,
+                "avg_cost": pos["avg_cost"] if remaining > 0 else 0.0,
+            }
             action = "SELL"
 
         if action != "HOLD":
@@ -1131,15 +1606,43 @@ class BacktestingEngine:
                             f"start price: {self.benchmark_start_price}"
                         )
                     else:
-                        logger.warning("No benchmark data returned. Disabling benchmark.")
+                        _err = (
+                            f"BENCHMARK UNAVAILABLE: '{self.benchmark_ticker}' returned no data "
+                            f"from any source (no local CSV found, gateway returned empty). "
+                            f"Alpha vs EGX30 will NOT be computed for this run."
+                        )
+                        logger.error(_err)
+                        self._benchmark_error = _err
                         self.benchmark_ticker = None
                 except Exception as e:
-                    logger.warning(f"Benchmark fetch failed ({e}). Proceeding without benchmark.")
+                    _err = (
+                        f"BENCHMARK UNAVAILABLE: '{self.benchmark_ticker}' fetch failed ({e}). "
+                        f"Alpha vs EGX30 will NOT be computed for this run."
+                    )
+                    logger.error(_err)
+                    self._benchmark_error = _err
                     self.benchmark_ticker = None
 
         # ---- Initialize agent graph ----
         logger.info(f"Initializing Agent Graph (analysts: {analysts})...")
         graph = TradingAgentsGraph(selected_analysts=analysts, debug=False)
+
+        # Re-apply recording config.  TradingAgentsGraph.__init__ calls
+        # set_config(DEFAULT_CONFIG) which overwrites backtest_record_outputs.
+        if self._record:
+            set_config({
+                "backtest_record_outputs": True,
+                "record_full_prompts": self._record_prompts,
+                "backtest_records_dir": self._records_dir,
+            })
+
+        # Log fundamentals mode for traceability
+        _fund_mode = get_config().get("use_hybrid_fundamental_analyst", False)
+        logger.info(
+            "Fundamentals mode: %s (extra CoT LLM calls: %s)",
+            "hybrid (deterministic + CoT)" if _fund_mode else "deterministic-only",
+            "yes, +2-4 per evaluation" if _fund_mode else "none",
+        )
 
         # Wrap LLMs with InstrumentedLLM so per-call token counts and latency
         # are captured without affecting the graph's compiled closures.
@@ -1226,9 +1729,11 @@ class BacktestingEngine:
                 "value": buyhold_value,
             })
 
-            # ---- Circuit breaker check ----
-            circuit_halted = self._check_circuit_breaker(ticker, current_price)
-            self.prev_prices[ticker] = current_price  # store for next iteration
+            # ---- Circuit breaker check (daily close vs previous trading day) ----
+            circuit_halted = self._check_circuit_breaker(
+                ticker, current_price, ohlcv_rows=stock_data.get("data"),
+            )
+            self.prev_prices[ticker] = current_price  # diagnostic / portfolio tracking
 
             # ---- Mark portfolio to market ----
             position_value = sum(
@@ -1311,6 +1816,11 @@ class BacktestingEngine:
                         "volume_missing":   stock_data.get("volume_missing", False),
                         "current_position": current_position,
                     })
+                    # Fix A (P8): inject previous decision for anti-churn gating
+                    if self.config.get("anti_churn_enabled"):
+                        prev = self._get_previous_ticker_decision()
+                        base_state["previous_decision"] = prev.get("signal") if prev else None
+                        base_state["previous_decision_date"] = prev.get("date") if prev else None
                     return base_state
 
                 graph.propagator.create_initial_state = patched_create_initial_state
@@ -1332,7 +1842,10 @@ class BacktestingEngine:
                 if isinstance(execution_plan, dict) and "execution_plan" in execution_plan:
                     execution_plan = execution_plan["execution_plan"]
 
-                decision, _decision_path = self._resolve_decision(final_state, execution_plan)
+                decision, _decision_path = self._resolve_decision(
+                    final_state, execution_plan,
+                    current_date=date, config=self.config,
+                )
                 logger.info(
                     "Resolved decision: %s (path=%s, raw_judge=%r, "
                     "plan_decision=%r, risk_action=%r, critical_violations=%s)",
@@ -1424,9 +1937,19 @@ class BacktestingEngine:
                 logger.info(f"Agent Decision: {decision} | Confidence: {confidence:.2f}")
 
                 # ---- Decision Audit Log ----
+                # EGX30 price at this eval date (report-only, for
+                # per-decision forward-return metrics).
+                _egx30_price_at_date = self._bm_data_map.get(date)
+
+                # Risk judge verdict (report-only audit field)
+                _rj_action, _rj_conf = self._extract_risk_judge_verdict(
+                    final_state
+                )
+
                 audit_entry = {
                     "date": date,
                     "price": current_price,
+                    "egx30_price": _egx30_price_at_date,
                     "raw_decision": str(raw_decision)[:200],  # Truncate long LLM text
                     "parsed_decision": decision,
                     "decision_path": _decision_path,
@@ -1436,6 +1959,8 @@ class BacktestingEngine:
                     "critical_violations": risk_assessment.get("critical_violations", 0) if isinstance(risk_assessment, dict) else 0,
                     "execution_plan_decision": execution_plan.get("decision", "N/A") if isinstance(execution_plan, dict) else "N/A",
                     "confidence": confidence,
+                    "risk_judge_confidence": _rj_conf,
+                    "risk_judge_action": _rj_action,
                     "llm_calls": _llm_calls,
                     "trade_time_s": round(_trade_time_s, 1),
                     "reasoning_score": _reasoning_score,
@@ -1455,8 +1980,87 @@ class BacktestingEngine:
                     ),
                     "judge_rationale": judge_rationale,
                 }
+
+                # ---- Fundamentals quality tracking ----
+                _fund_analysis = final_state.get("fundamental_analysis") or {}
+                _fund_qs = _fund_analysis.get("quality_status") or {}
+                audit_entry["fundamentals_quality"] = _fund_qs.get("level", "unknown")
+                audit_entry["fundamentals_effective_confidence"] = _fund_analysis.get("effective_confidence")
+                audit_entry["fundamentals_pipeline_mode"] = _fund_analysis.get("pipeline_mode", "unknown")
+
+                # ---- P3 Momentum Debug Instrumentation ----
+                # Persist compact momentum fields so smoke tests can prove
+                # momentum_pack reached the LLM prompt path.
+                _tech = final_state.get("technical_analysis") or {}
+                _mpack = _tech.get("momentum") if isinstance(_tech, dict) else None
+                if isinstance(_mpack, dict) and _mpack:
+                    audit_entry["p3_momentum_debug"] = {
+                        "return_20d": _mpack.get("return_20d"),
+                        "return_60d": _mpack.get("return_60d"),
+                        "return_120d": _mpack.get("return_120d"),
+                        "momentum_label": _mpack.get("momentum_label"),
+                        "rs_60d": _mpack.get("rs_60d"),
+                        "rs_label": _mpack.get("rs_label"),
+                        "volume_confirmed": _mpack.get("volume_confirmed"),
+                    }
+                    # The evidence narrative includes "PRICE MOMENTUM" section
+                    # whenever momentum_pack is non-null in data_cot.
+                    audit_entry["p3_evidence_narrative_contains_momentum_section"] = True
+                else:
+                    audit_entry["p3_momentum_debug"] = None
+                    audit_entry["p3_evidence_narrative_contains_momentum_section"] = False
+
+                # ---- Anti-churn audit fields ----
+                _ac_audit = final_state.get("_anti_churn_audit")
+                if _ac_audit and isinstance(_ac_audit, dict):
+                    audit_entry["anti_churn_checked"] = _ac_audit.get("checked", False)
+                    audit_entry["anti_churn_prev_decision"] = _ac_audit.get("prev_decision")
+                    audit_entry["anti_churn_current_decision"] = _ac_audit.get("current_decision")
+                    audit_entry["anti_churn_confidence_used"] = _ac_audit.get("confidence_used")
+                    audit_entry["anti_churn_confidence_source"] = _ac_audit.get("confidence_source")
+                    audit_entry["anti_churn_confidence_propagator"] = _ac_audit.get("confidence_propagator")
+                    audit_entry["anti_churn_confidence_risk_judge"] = _ac_audit.get("confidence_risk_judge")
+                    audit_entry["anti_churn_risk_judge_action"] = _ac_audit.get("risk_judge_action")
+                    audit_entry["anti_churn_threshold"] = _ac_audit.get("threshold")
+                    audit_entry["anti_churn_is_reversal"] = _ac_audit.get("is_reversal", False)
+                    audit_entry["anti_churn_applied"] = _ac_audit.get("applied", False)
+                    audit_entry["anti_churn_reason"] = _ac_audit.get("reason")
+
                 logger.info(f"[AUDIT] {json.dumps(audit_entry, default=str)}")
                 self.audit_log.append(audit_entry)
+
+                # ---- Per-decision forward return (REPORT-ONLY) ----
+                # Now that date t+1 is processed, backfill the forward
+                # return on the PREVIOUS audit entry (date t).  These
+                # fields are strictly for the decision_quality report
+                # block — they are NEVER fed into agent state, prompts,
+                # memory, or later decisions.
+                if len(self.audit_log) >= 2:
+                    prev_entry = self.audit_log[-2]
+                    prev_price = prev_entry.get("price")
+                    prev_egx = prev_entry.get("egx30_price")
+                    cur_price_now = audit_entry.get("price")
+                    cur_egx_now = audit_entry.get("egx30_price")
+                    if (
+                        prev_price and prev_price > 0
+                        and cur_price_now and cur_price_now > 0
+                    ):
+                        fwd_ticker = (cur_price_now / prev_price) - 1.0
+                        prev_entry["fwd_ticker_return"] = fwd_ticker
+                        if (
+                            prev_egx and prev_egx > 0
+                            and cur_egx_now and cur_egx_now > 0
+                        ):
+                            fwd_egx = (cur_egx_now / prev_egx) - 1.0
+                            prev_entry["fwd_egx30_return"] = fwd_egx
+                            prev_entry["fwd_excess_return"] = fwd_ticker - fwd_egx
+                        # Holding days
+                        try:
+                            d_prev = datetime.strptime(prev_entry["date"], "%Y-%m-%d")
+                            d_cur = datetime.strptime(audit_entry["date"], "%Y-%m-%d")
+                            prev_entry["holding_days"] = (d_cur - d_prev).days
+                        except (ValueError, KeyError):
+                            pass
 
                 # ---- Attach exit plan to the upcoming trade record ----
                 # When the trader recommends BUY, the execution_plan carries
@@ -1613,8 +2217,7 @@ class BacktestingEngine:
         """Save trade log, daily portfolio history, and metrics to CSV and JSON."""
         # Always write results to project-root/backtest_results so API + dashboard
         # can discover them reliably (FastAPI background tasks may have a different CWD).
-        results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backtest_results"))
-        os.makedirs(results_dir, exist_ok=True)
+        results_dir = self._results_dir()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         if self.trade_history:
@@ -1675,13 +2278,62 @@ class BacktestingEngine:
                 },
             }
 
+        # ---- Fundamentals quality distribution (aggregated from audit_log) ----
+        fundamentals_summary = {}
+        audit_with_fund = [a for a in self.audit_log if "fundamentals_quality" in a]
+        if audit_with_fund:
+            quality_counts = {}
+            eff_conf_vals = []
+            for a in audit_with_fund:
+                q = a.get("fundamentals_quality", "unknown")
+                quality_counts[q] = quality_counts.get(q, 0) + 1
+                ec = a.get("fundamentals_effective_confidence")
+                if ec is not None:
+                    eff_conf_vals.append(ec)
+            fundamentals_summary = {
+                "hybrid_enabled": bool(get_config().get("use_hybrid_fundamental_analyst", False)),
+                "dates_with_fundamentals": len(audit_with_fund),
+                "quality_distribution": quality_counts,
+                "avg_effective_confidence": round(sum(eff_conf_vals) / len(eff_conf_vals), 1) if eff_conf_vals else None,
+                "min_effective_confidence": min(eff_conf_vals) if eff_conf_vals else None,
+                "max_effective_confidence": max(eff_conf_vals) if eff_conf_vals else None,
+            }
+
+        # Benchmark status block — explicit enabled/disabled flag
+        _bm_block = getattr(self, "_benchmark_block", {})
+        _bm_error = getattr(self, "_benchmark_error", None)
+        _bm_requested = getattr(self, "_requested_benchmark", None)
+        benchmark_status = {
+            "benchmark_requested": _bm_requested,
+            "benchmark_enabled": bool(_bm_block and _bm_block.get("n_aligned_days", 0) > 0),
+            "benchmark_error": _bm_error,
+            **_bm_block,
+        }
+
+        # Print a final loud warning if benchmark was requested but unavailable
+        if _bm_requested and not benchmark_status["benchmark_enabled"]:
+            _msg = (
+                f"\n{'='*70}\n"
+                f"  ⚠ BENCHMARK WARNING: '{_bm_requested}' was requested but is NOT available.\n"
+                f"  Alpha vs EGX30 was NOT computed for this run.\n"
+                f"  Reason: {_bm_error or 'no aligned days between strategy and benchmark'}\n"
+                f"{'='*70}\n"
+            )
+            logger.warning(_msg)
+            print(_msg)
+
+        # Per-decision EGX30-relative quality metrics (report-only)
+        decision_quality = self._calculate_decision_metrics()
+
         report = {
             "session":              session_name,
             "error":                getattr(self, "_run_error", None),
             "metrics":              metrics,
             "split_metrics":        split_metrics,
-            "benchmark":            getattr(self, "_benchmark_block", {}),
+            "decision_quality":     decision_quality,
+            "benchmark":            benchmark_status,
             "pipeline_efficiency":  efficiency_summary,
+            "fundamentals_quality": fundamentals_summary,
             "trades":               self.trade_history,
             "daily_portfolio":      self.daily_history,
             "benchmark_history":    self.benchmark_history,
@@ -1695,6 +2347,7 @@ class BacktestingEngine:
                 "settlement":          f"T+{EGX_SETTLEMENT_DAYS}",
                 "circuit_breaker":     f"±{EGX_CIRCUIT_BREAKER:.0%}",
             },
+            "llm_fingerprint": _build_llm_fingerprint(self.config),
         }
         json_path = os.path.join(results_dir, f"report_{session_name}_{timestamp}.json")
         with open(json_path, "w", encoding="utf-8") as f:
@@ -1774,16 +2427,52 @@ if __name__ == "__main__":
                         help="Resume from the per-ticker partial checkpoint if "
                              "one exists in backtest_results/. Skips dates that "
                              "have already been evaluated.")
+    parser.add_argument("--record",     action="store_true",
+                        help="Enable per-node LLM output recording for audit/replay. "
+                             "Writes JSON records to --records-dir.")
+    parser.add_argument("--record-prompts", action="store_true",
+                        help="Also save full prompt text in records (large). "
+                             "Requires --record.")
+    parser.add_argument("--records-dir", type=str, default="./backtest_records",
+                        help="Directory for node records (default: ./backtest_records)")
+    parser.add_argument("--output-dir", type=str, default="",
+                        help="Directory for reports, trades CSVs, and partial checkpoints. "
+                             "Default: backtest_results/ next to this script.")
+    parser.add_argument("--no-hybrid-fundamentals", action="store_true",
+                        help="Disable CoT enrichment for fundamentals (deterministic-only). "
+                             "Default is hybrid (deterministic + 3-stage CoT).")
 
     args = parser.parse_args()
+
+    # Initialize structured logging
+    from tradingagents.observability import setup_logging
+    setup_logging()
 
     analysts_list = args.analysts.split(",")
     benchmark  = None if args.benchmark.lower()  == "none" else args.benchmark
     train_end  = None if args.train_end.lower()  == "none" else args.train_end
 
+    # Apply recording config if --record is set
+    if args.record:
+        set_config({
+            "backtest_record_outputs": True,
+            "record_full_prompts": args.record_prompts,
+            "backtest_records_dir": args.records_dir,
+        })
+
+    # Apply hybrid fundamentals override if --no-hybrid-fundamentals is set.
+    # Mutate DEFAULT_CONFIG directly so TradingAgentsGraph.__init__ (which does
+    # `self.config = config or DEFAULT_CONFIG; set_config(self.config)`) picks
+    # up the override without being clobbered by the graph constructor's reset.
+    if args.no_hybrid_fundamentals:
+        from tradingagents.default_config import DEFAULT_CONFIG as _DC
+        _DC["use_hybrid_fundamental_analyst"] = False
+        set_config({"use_hybrid_fundamental_analyst": False})
+
     engine = BacktestingEngine(
         initial_capital=args.capital,
         benchmark_ticker=benchmark,
+        output_dir=args.output_dir,
     )
     engine.run_backtest(
         args.ticker, args.start, args.end,

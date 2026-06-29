@@ -3,6 +3,7 @@ import time
 import json
 import re
 from tradingagents.dataflows.config import get_config
+from tradingagents.graph.node_record import get_recorder, hash_state_slice, hash_string
 
 # =============================================================================
 # Institutional Trader Agent for EGX Market
@@ -11,6 +12,23 @@ from tradingagents.dataflows.config import get_config
 # Respects EGX constraints: long-only, no leverage, no market orders
 # Position sizing is liquidity-adjusted
 # =============================================================================
+
+def _fundamentals_quality_note_short(fundamental_analysis: dict) -> str:
+    """One-line quality note for the fundamentals section in the trader prompt."""
+    if not fundamental_analysis:
+        return ""
+    qs = fundamental_analysis.get("quality_status", {})
+    level = qs.get("level", "")
+    if level == "unavailable":
+        return "[NO FUNDAMENTALS DATA] "
+    if level == "deterministic_only" and qs.get("enrichment_attempted"):
+        return "[DEGRADED: enrichment failed, ratios only] "
+    if level == "deterministic_only":
+        return "[deterministic-only: ratios/flags, no thesis] "
+    if level == "partial":
+        return "[partial enrichment: some CoT stages failed] "
+    return ""
+
 
 # Execution constraints from EGX institutional best practices
 MAX_POSITION_PCT_ADV = 0.10  # Max 10% of Average Daily Volume per day
@@ -26,13 +44,18 @@ def calculate_position_limits(
     avg_daily_volume: float,
     current_price: float,
     portfolio_value: float,
-    low_liquidity: bool = False
+    low_liquidity: bool = False,
+    max_position_pct_override: float | None = None,
 ) -> dict:
     """
     Calculate position sizing limits based on EGX liquidity constraints.
 
     In backtest_mode the single-stock portfolio cap is lifted to 100% so that
     single-ticker backtests are not artificially capped at 10% of capital.
+
+    When *max_position_pct_override* is provided (from investor profile),
+    the effective cap is ``min(override, system_cap)`` — the profile can
+    only be MORE restrictive than the system default, never less.
     """
     config = get_config()
     backtest_mode = config.get("backtest_mode", False)
@@ -42,7 +65,11 @@ def calculate_position_limits(
     max_shares_per_day = int(avg_daily_volume * adv_limit_pct)
 
     # In backtest mode allow the full portfolio; otherwise enforce the 10% cap
-    effective_single_stock_pct = 1.0 if backtest_mode else MAX_PORTFOLIO_SINGLE_STOCK
+    system_cap = 1.0 if backtest_mode else MAX_PORTFOLIO_SINGLE_STOCK
+    if max_position_pct_override is not None:
+        effective_single_stock_pct = min(max_position_pct_override, system_cap)
+    else:
+        effective_single_stock_pct = system_cap
     max_position_value = portfolio_value * effective_single_stock_pct
     max_shares_portfolio = int(max_position_value / current_price) if current_price > 0 else 0
 
@@ -121,11 +148,13 @@ def create_trader(llm, memory):
         curr_situation = f"{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}"
         memory_where = {"ticker": ticker} if ticker else None
         memory_threshold = float(config.get("memory_min_similarity", 0.30))
+        trade_date = state.get("trade_date")
         past_memories = memory.get_memories(
             curr_situation,
             n_matches=2,
             where=memory_where,
             min_similarity=memory_threshold,
+            as_of_date=str(trade_date) if trade_date else None,
         )
 
         past_memory_str = ""
@@ -139,6 +168,7 @@ def create_trader(llm, memory):
         # Inject validated, deterministic limits into the prompt so the LLM
         # reasons about execution strategy with correct arithmetic — not
         # reinventing position sizing from first principles.
+        ic = state.get("investor_context") or {}
         avg_daily_volume = state.get("avg_daily_volume") or 100000
         current_price = state.get("current_price") or 50.0
         portfolio_value = state.get("portfolio_value") or 10000000
@@ -147,6 +177,7 @@ def create_trader(llm, memory):
             current_price=current_price,
             portfolio_value=portfolio_value,
             low_liquidity=low_liquidity,
+            max_position_pct_override=ic.get("max_position_pct"),
         )
 
         # EGX-specific constraints prompt
@@ -181,6 +212,23 @@ def create_trader(llm, memory):
 """
 
 
+        # ── Investor profile constraints (when running for a specific user) ──
+        investor_section = ""
+        if ic:
+            max_pos = ic.get("max_position_pct", 0.10)
+            investor_section = (
+                "## Investor Constraints\n"
+                f"- Risk tolerance: {ic.get('risk_tolerance', 'moderate')}\n"
+                f"- Horizon: {ic.get('investment_horizon', 'medium_term').replace('_', ' ')}\n"
+                f"- Max single-stock allocation: {max_pos:.0%} of portfolio\n"
+                f"- Capital: {ic.get('capital_size', 10_000_000):,.0f} EGP\n"
+                f"- Style: {ic.get('trading_style', 'position')}\n"
+                f"- Sector exclusions: {', '.join(ic.get('sector_exclusions', [])) or 'none'}\n\n"
+                f"Position sizing MUST respect the {max_pos:.0%} allocation cap.\n"
+                "For conservative investors, use the lower end of position ranges.\n"
+                "This is a RECOMMENDATION — the investor reviews before any action."
+            )
+
         # Macro overlay: deterministic EGX macro context.
         try:
             from tradingagents.dataflows.macro_provider import format_macro_context_for_prompt
@@ -193,6 +241,7 @@ def create_trader(llm, memory):
 {macro_section}
 
 {egx_constraints}
+{investor_section}
 {position_info}
 ## Your Task
 Based on the investment thesis and analyst reports, create a comprehensive execution plan that includes:
@@ -213,7 +262,7 @@ Based on the investment thesis and analyst reports, create a comprehensive execu
 
 ## Analyst Reports Summary
 - Technical Analysis: {json.dumps(technical_analysis, indent=2) if technical_analysis else market_research_report[:500]}
-- Fundamental Analysis: {json.dumps(fundamental_analysis, indent=2) if fundamental_analysis else fundamentals_report[:500]}
+- Fundamental Analysis: {_fundamentals_quality_note_short(fundamental_analysis)}{json.dumps(fundamental_analysis, indent=2) if fundamental_analysis else fundamentals_report[:500]}
 - Sentiment Analysis: {json.dumps(sentiment_analysis, indent=2) if sentiment_analysis else sentiment_report[:500]}
 
 ## Lessons from Past Trades
@@ -299,16 +348,35 @@ Always conclude with: FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**"""
             }
         ]
 
+        # ── Recording: capture input state and prompt ────────────────────
+        recorder = get_recorder(state)
+        _input_keys = [
+            "company_of_interest", "investment_plan", "market_report",
+            "sentiment_report", "news_report", "fundamentals_report",
+            "technical_analysis", "fundamental_analysis", "sentiment_analysis",
+            "investment_debate_state", "low_liquidity", "current_position",
+            "avg_daily_volume", "current_price", "portfolio_value", "macro_context",
+        ]
+        _input_hash = hash_state_slice(state, _input_keys) if recorder else ""
+        _prompt_full = json.dumps(messages, ensure_ascii=False)
+        _prompt_hash = hash_string(_prompt_full) if recorder else ""
+
+        t0 = time.monotonic()
         result = llm.invoke(messages)
-        
+        _elapsed_ms = (time.monotonic() - t0) * 1000
+
         # Try to extract structured execution plan
         execution_plan = None
+        _record_status = "success"
+        _fallback_source = None
         try:
             json_match = re.search(r'```json\s*(.*?)\s*```', result.content, re.DOTALL)
             if json_match:
                 execution_plan = json.loads(json_match.group(1))
         except (json.JSONDecodeError, AttributeError):
             # If JSON parsing fails, create minimal plan
+            _record_status = "fallback"
+            _fallback_source = "json_parse_failure"
             execution_plan = {
                 "execution_plan": {
                     "symbol": ticker,
@@ -320,12 +388,37 @@ Always conclude with: FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**"""
                 "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
             }
 
-        return {
+        # Build return dict
+        _return = {
             "messages": [result],
             "trader_investment_plan": result.content,
             "execution_plan": execution_plan,
             "sender": name,
         }
+
+        # ── Recording: write record ──────────────────────────────────────
+        if recorder:
+            _signal = None
+            if execution_plan and isinstance(execution_plan, dict):
+                ep = execution_plan.get("execution_plan", execution_plan)
+                _signal = ep.get("decision")
+            recorder.record(
+                node_name="trader",
+                trade_date=state.get("trade_date", ""),
+                input_state_keys=_input_keys,
+                input_hash=_input_hash,
+                prompt_hash=_prompt_hash,
+                prompt_text=_prompt_full,
+                raw_output=result.content,
+                state_update=_return,
+                state_update_keys=["messages", "trader_investment_plan", "execution_plan", "sender"],
+                signal=_signal,
+                wall_clock_ms=_elapsed_ms,
+                status=_record_status,
+                fallback_source=_fallback_source,
+            )
+
+        return _return
 
     return functools.partial(trader_node, name="Institutional_Trader")
 

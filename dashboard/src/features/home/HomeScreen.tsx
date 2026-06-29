@@ -18,7 +18,9 @@ import {
   Zap,
 } from "lucide-react";
 import { useRunPrediction, useRunFullPipeline } from "../../hooks/usePrediction";
+import { useAppStore } from "../../store/appStore";
 import { AgentCard, AgentCardSkeleton } from "../shared/AgentCard";
+import { DecisionCard, fromPredictionResult } from "../shared/DecisionCard";
 import { TickerPicker } from "../shared/TickerPicker";
 import { PriceChart } from "../../components/charts/PriceChart";
 import { cn, formatNumber, formatPercent } from "../../lib/utils";
@@ -26,7 +28,7 @@ import { getTickerMeta } from "../../data/egxTickerMeta";
 import { TickerLogo } from "../../components/ui/TickerLogo";
 import { MarketIndicesBar } from "./MarketIndicesBar";
 import { PivotLevels } from "./PivotLevels";
-import type { StockBar } from "../../services/api/types";
+import type { StockBar, DecisionExplanation } from "../../services/api/types";
 
 type Dir = "up" | "down" | "flat";
 
@@ -44,6 +46,7 @@ function toNum(v: unknown): number | undefined {
 
 export function HomeScreen() {
   const [ticker, setTicker] = useState("COMI.CA");
+  const activeProfileId = useAppStore((s) => s.activeProfileId);
   const runPrediction = useRunPrediction();
   const runFullPipeline = useRunFullPipeline();
 
@@ -84,6 +87,7 @@ export function HomeScreen() {
     return undefined;
   }, [upside, downside]);
 
+  const decisionExplanation = result?.decision_explanation as DecisionExplanation | undefined;
   const signal = (rec?.signal || "").toUpperCase();
   const confidence = (rec?.confidence || "").toUpperCase();
   const isQuickLoading = runPrediction.isPending;
@@ -106,8 +110,8 @@ export function HomeScreen() {
 
   async function handleRunFull() {
     try {
-      toast.info("Full pipeline started — this takes 3-8 minutes");
-      const res = await runFullPipeline.mutateAsync(ticker);
+      toast.info("Building your recommendation — this takes 3-8 minutes");
+      const res = await runFullPipeline.mutateAsync({ ticker, profileId: activeProfileId });
       if (res?.error) {
         toast.error(res.error);
         return;
@@ -115,10 +119,10 @@ export function HomeScreen() {
       if (res?.llm_error) {
         toast.warning(`Pipeline completed with errors: ${res.llm_error}`);
       } else {
-        toast.success(`Full pipeline complete · ${res?.recommendation?.signal ?? "—"}`);
+        toast.success(`Recommendation ready · ${res?.recommendation?.signal ?? "—"}`);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Full pipeline failed");
+      toast.error(e instanceof Error ? e.message : "Recommendation failed");
     }
   }
 
@@ -128,25 +132,20 @@ export function HomeScreen() {
       <MarketIndicesBar />
 
       {/* ─── Page header ─────────────────────────────────────────── */}
-      <header className="flex items-end justify-between gap-6 flex-wrap">
-        <div>
-          <div className="eyebrow mb-3">Home · EGX research desk</div>
-          <h1 className="display text-[36px] md:text-[42px] font-semibold leading-[1.05] text-ink">
-            A second opinion,
-            <br />
-            from <span className="italic">four</span> minds at once.
-          </h1>
-          <p className="text-[14px] text-ink-3 mt-3 max-w-xl leading-relaxed">
-            Run a full bull, bear, judge and portfolio review on any EGX-30
-            ticker. Every thesis is traceable, sized to EGX risk limits, and
-            ready in seconds.
-          </p>
-        </div>
+      <header className="flex items-center gap-3 px-1">
+        <img
+          src="/brand/stockhive-icon.png"
+          alt="StockHive"
+          className="h-8 w-8 shrink-0"
+        />
+        <h1 className="display text-[24px] md:text-[30px] font-semibold leading-none text-ink">
+          Hello Omar.
+        </h1>
       </header>
 
       {/* ─── Run bar ─────────────────────────────────────────────── */}
       <div>
-        <div className="card-elevated p-2 flex items-center gap-2 flex-wrap sm:flex-nowrap">
+        <div className="card-elevated p-2 flex items-center gap-2 flex-wrap">
           <div className="flex-1 min-w-[200px]">
             <TickerPicker value={ticker} onChange={setTicker} />
           </div>
@@ -154,7 +153,7 @@ export function HomeScreen() {
             onClick={handleRun}
             disabled={isLoading}
             className={cn(
-              "shrink-0 inline-flex items-center gap-2 h-12 px-5 rounded-xl",
+              "flex-1 sm:flex-none justify-center inline-flex items-center gap-2 h-12 px-5 rounded-xl",
               "bg-white text-ink border border-stone-200 hover:bg-stone-50 text-[14px] font-medium",
               "dark:bg-[var(--paper)] dark:border-[var(--hairline)] dark:hover:bg-white/5",
               "transition-all duration-200",
@@ -177,20 +176,20 @@ export function HomeScreen() {
             onClick={handleRunFull}
             disabled={isLoading}
             className={cn(
-              "shrink-0 inline-flex items-center gap-2 h-12 px-5 rounded-xl",
-              "bg-stone-900 hover:bg-stone-800 text-white text-[14px] font-medium",
-              "transition-all duration-200 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.18)]",
+              "flex-1 sm:flex-none justify-center inline-flex items-center gap-2 h-12 px-5 rounded-xl",
+              "bg-[var(--ink)] hover:opacity-95 text-white text-[14px] font-medium",
+              "transition-all duration-200 shadow-[0_10px_24px_-12px_rgba(6,27,61,0.55)]",
               "disabled:opacity-60 disabled:cursor-not-allowed"
             )}
           >
             {isFullLoading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Running full pipeline…
+                Building recommendation…
               </>
             ) : (
               <>
-                Run full pipeline
+                Get recommendation
                 <ArrowRight className="h-4 w-4" />
               </>
             )}
@@ -205,8 +204,8 @@ export function HomeScreen() {
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-stone-900" />
-            <strong className="font-medium text-ink-2">Run full pipeline</strong>
-            <span>— four-agent debate, 3–8 minutes</span>
+            <strong className="font-medium text-ink-2">Get recommendation</strong>
+            <span>— multi-agent review, 3–8 minutes</span>
           </span>
         </div>
       </div>
@@ -228,6 +227,17 @@ export function HomeScreen() {
             weeklyChange={toNum(price?.weekly_change)}
             signal={signal}
           />
+
+          {/* Your recommendation — decision explanation card */}
+          {decisionExplanation && (
+            <>
+              <SectionLabel index="—" label="Your recommendation" />
+              <DecisionCard
+                {...fromPredictionResult(decisionExplanation)}
+                variant="card"
+              />
+            </>
+          )}
 
           {/* Chart + verdict — the trading-terminal core */}
           <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
@@ -265,7 +275,7 @@ export function HomeScreen() {
           <PivotLevels bars={history} current={current} />
 
           {/* Bull + Bear */}
-          <SectionLabel index="01" label="Adversarial research" />
+          <SectionLabel index="01" label="Why StockHive sees opportunity &amp; risk" />
           <div className="grid gap-5 md:grid-cols-2">
             <AgentCard
               tone="bull"
@@ -307,13 +317,13 @@ export function HomeScreen() {
           </div>
 
           {/* Judge */}
-          <SectionLabel index="02" label="Debate resolution" />
+          <SectionLabel index="02" label="Recommendation reasoning" />
           <AgentCard
             tone="judge"
             icon={Gavel}
-            agent="Debate judge"
-            role="Research manager verdict"
-            chip={signal ? `Verdict: ${signal}` : "Verdict"}
+            agent="Research summary"
+            role="How StockHive weighed the evidence"
+            chip={signal ? `Recommendation: ${signal}` : "Recommendation"}
             meta={[
               { label: "Signal", value: signal || "—" },
               { label: "Confidence", value: confidence || "—" },
@@ -328,14 +338,14 @@ export function HomeScreen() {
               "No reconciled verdict was returned for this run."}
           </AgentCard>
 
-          {/* Portfolio manager */}
-          <SectionLabel index="03" label="Execution plan" />
+          {/* Recommendation plan */}
+          <SectionLabel index="03" label="Suggested position plan" />
           <AgentCard
             tone="manager"
             icon={Briefcase}
-            agent="Portfolio manager"
-            role="Trade construction"
-            chip={confidence ? `${confidence} conviction` : "Trade plan"}
+            agent="Recommendation builder"
+            role="Position sizing and risk review"
+            chip={confidence ? `${confidence} conviction` : "Position plan"}
           >
             <ExecutionPlan
               signal={signal}
@@ -452,7 +462,7 @@ function QuoteHeader({
 
         {/* Signal */}
         <div className="flex flex-col items-end gap-1.5">
-          <div className="eyebrow text-stone-500">Agent verdict</div>
+          <div className="eyebrow text-stone-500">Recommendation</div>
           <span
             className={cn(
               "inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[15px] font-semibold uppercase tracking-wide border",
@@ -916,11 +926,11 @@ function EmptyHero() {
           <div className="rounded-xl border border-stone-200 bg-white p-4 dark:border-[var(--hairline)] dark:bg-[var(--bg)]">
             <div className="flex items-center gap-2">
               <Gavel className="h-4 w-4 text-stone-500" />
-              <span className="text-[13px] font-semibold text-ink">Full pipeline</span>
+              <span className="text-[13px] font-semibold text-ink">Get recommendation</span>
             </div>
             <p className="text-[12px] text-ink-3 mt-1.5 leading-relaxed">
-              The complete four-agent debate with risk-sized execution plan.
-              Takes 3–8 minutes — the deeper, traceable thesis.
+              The complete multi-agent recommendation with risk-reviewed
+              position plan. Takes 3–8 minutes — the deeper, traceable thesis.
             </p>
           </div>
         </div>
@@ -936,10 +946,10 @@ function formatElapsed(seconds: number) {
 }
 
 const PIPELINE_STAGES = [
-  "Gathering market, fundamentals, news & social",
-  "Bull vs. bear adversarial debate",
-  "Debate judge reconciles the verdict",
-  "Portfolio manager sizes & risk-checks the trade",
+  "Gathering market, fundamentals, news & social data",
+  "Evaluating opportunity and risk from multiple perspectives",
+  "Building the recommendation from the evidence",
+  "Reviewing position sizing and risk constraints",
 ];
 
 function LoadingHero({ mode }: { mode: "quick" | "full" }) {
@@ -971,13 +981,13 @@ function LoadingHero({ mode }: { mode: "quick" | "full" }) {
             <div>
               <div className="text-[15px] font-semibold text-ink">
                 {isFull
-                  ? "Running the full multi-agent pipeline"
+                  ? "Building your recommendation"
                   : "Running a quick analysis"}
               </div>
               <p className="text-[12.5px] text-ink-3 mt-1 max-w-md leading-relaxed">
                 {isFull
-                  ? "Four agents are debating this ticker. This usually takes 3–8 minutes — you can leave this tab open and check back."
-                  : "A single-LLM read of this ticker — usually ready in under a minute."}
+                  ? "StockHive is evaluating this ticker from multiple angles. This usually takes 3–8 minutes — you can leave this tab open and check back."
+                  : "A quick snapshot of this ticker — usually ready in under a minute."}
               </p>
             </div>
           </div>

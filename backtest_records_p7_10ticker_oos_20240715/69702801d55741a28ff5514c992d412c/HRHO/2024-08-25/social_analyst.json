@@ -1,0 +1,41 @@
+{
+  "run_id": "69702801d55741a28ff5514c992d412c",
+  "ticker": "HRHO",
+  "trade_date": "2024-08-25",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "de5867935a89af00a36b591ddc3d2511749ee480c4a22cb0e65c9e07d609c23c",
+  "raw_output": "```json\n{\n    \"narrative\": \"No retail investor discussions were detected for HRHO.CA on Reddit within the analysis window. There are no Arabic or English social media posts available to assess themes, tone, or sentiment. The absence of data suggests very low retail engagement or coverage for this ticker during this period.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No retail investor discussions were detected for HRHO.CA on Reddit within the analysis window. There are no Arabic or English social media posts available to assess themes, tone, or sentiment. The absence of data suggests very low retail engagement or coverage for this ticker during this period.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 76, 'prompt_tokens': 614, 'total_tokens': 690, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 102}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '01ff1292-47c4-4e70-854c-fc49008884fd', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee057-fcf0-7673-8ba1-cba5d82cf581-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 614, 'output_tokens': 76, 'total_tokens': 690, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for HRHO.CA]\nNo retail investor discussions were detected for HRHO.CA on Reddit within the analysis window. There are no Arabic or English social media posts available to assess themes, tone, or sentiment. The absence of data suggests very low retail engagement or coverage for this ticker during this period.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"HRHO.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No retail investor discussions were detected for HRHO.CA on Reddit within the analysis window. There are no Arabic or English social media posts available to assess themes, tone, or sentiment. The absence of data suggests very low retail engagement or coverage for this ticker during this period.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "44800adf7d209b724e6cfce5f064dcc8bbb35b4407fb29cae153fb708ed482de",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 1812.6814169809222,
+  "timestamp_utc": "2026-06-19T14:45:25.125900+00:00",
+  "context_items": []
+}

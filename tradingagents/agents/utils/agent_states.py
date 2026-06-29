@@ -1,4 +1,4 @@
-from typing import Annotated, Dict, List, Optional, Sequence
+from typing import Annotated, Any, Dict, List, Optional, Sequence
 from datetime import date, timedelta, datetime
 from typing_extensions import TypedDict
 from langchain_openai import ChatOpenAI
@@ -146,6 +146,11 @@ class AgentState(MessagesState):
     # sentiment-derived multipliers WITHOUT changing directional score.
     sentiment_blend_result: Annotated[Optional[Dict], "Layer E blend output: {confidence_multiplier, position_size_multiplier, audit}"]
 
+    # Manifest-based fundamentals freshness pre-flight (Phase 2C)
+    fundamentals_manifest_fresh: Annotated[Optional[bool], "Whether the manifest freshness check passed"]
+    fundamentals_manifest_reasons: Annotated[Optional[List[str]], "Freshness failure reasons (empty if fresh)"]
+    fundamentals_manifest_checked_tickers: Annotated[Optional[List[str]], "Tickers evaluated by the freshness check"]
+
     # EGX-specific market context
     target_market: Annotated[Optional[str], "Target market identifier (e.g. 'EGX')"]
     trading_currency: Annotated[Optional[str], "Trading currency (e.g. 'EGP')"]
@@ -153,3 +158,21 @@ class AgentState(MessagesState):
     # Macro environment context (populated by DataPrefetcher / get_egx_macro_context)
     # Injected before graph runs; consumed by Research Manager, Risk Manager, Trader prompts.
     macro_context: Annotated[Optional[Dict], _keep_last]
+
+    # Market breadth context (Fix C, P8) — populated by prefetcher when enabled
+    market_breadth: Annotated[Optional[Dict], _keep_last]
+
+    # Investor context — runtime snapshot of investor profile (profile_id,
+    # risk_tolerance, horizon, capital, position limits, sector prefs/exclusions).
+    # Injected by TradingAgentsGraph.propagate() when a profile_id is provided.
+    # Consumed by Research Manager, Trader, and Risk Manager prompts.
+    investor_context: Annotated[Optional[Dict], _keep_last]
+
+    # Anti-churn context (Fix A, P8) — populated by backtester from audit history
+    previous_decision: Annotated[Optional[str], "Previous BUY/SELL/HOLD for this ticker"]
+    previous_decision_date: Annotated[Optional[str], "Date of previous decision for this ticker"]
+
+    # Node-level audit recorder (infrastructure — not visible to agents).
+    # Injected by TradingAgentsGraph.propagate() when backtest_record_outputs
+    # is enabled.  Agents call get_recorder(state) to access it.
+    _node_recorder: Annotated[Optional[Any], "NodeRecorder instance for audit recording"]

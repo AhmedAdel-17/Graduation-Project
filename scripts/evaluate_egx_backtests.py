@@ -45,7 +45,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 # Add project root to path so `from scripts.backtester ...` works when this
 # script is invoked directly (`python scripts/evaluate_egx_backtests.py`).
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+_project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, _project_root)
+
+from dotenv import load_dotenv
+load_dotenv(os.path.join(_project_root, ".env"))
 
 from tradingagents.rl.walkforward import (
     ArmMetrics,
@@ -105,6 +109,9 @@ def run_one_ticker(
     train_end: Optional[str],
     skip_if_recent: bool,
     resume: bool,
+    record: bool = False,
+    record_prompts: bool = False,
+    records_dir: str = "./backtest_records",
 ) -> Optional[Path]:
     """Run one backtest. Returns the path to the produced JSON report (or the
     existing one if skipped). Returns None if the run failed completely."""
@@ -125,7 +132,11 @@ def run_one_ticker(
     engine = BacktestingEngine(
         initial_capital=float(capital),
         benchmark_ticker=benchmark,
+        record=record,
+        record_prompts=record_prompts,
+        records_dir=records_dir,
     )
+
     try:
         engine.run_backtest(
             ticker, start, end,
@@ -379,6 +390,13 @@ def main() -> int:
     parser.add_argument("--resume",    action="store_true",
                         help="Pass --resume through to the per-ticker backtester so "
                              "interrupted runs continue from their partial checkpoint.")
+    parser.add_argument("--record",    action="store_true",
+                        help="Enable node-level prompt/output recording for "
+                             "reproducibility analysis (writes to --records-dir).")
+    parser.add_argument("--record-prompts", action="store_true",
+                        help="Also record full prompt text (large). Requires --record.")
+    parser.add_argument("--records-dir", type=str, default="./backtest_records",
+                        help="Directory for node-level records (default: ./backtest_records).")
     args = parser.parse_args()
 
     tickers = [t.strip() for t in args.tickers.split(",") if t.strip()]
@@ -412,6 +430,9 @@ def main() -> int:
             train_end=train_end,
             skip_if_recent=not args.force,
             resume=args.resume,
+            record=args.record,
+            record_prompts=args.record_prompts,
+            records_dir=args.records_dir,
         )
         if not report_path or not report_path.exists():
             logger.warning("No report for %s — skipping in aggregation.", ticker)

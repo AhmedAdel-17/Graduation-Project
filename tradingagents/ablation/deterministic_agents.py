@@ -9,9 +9,13 @@ so the graph wiring does not change.
 """
 
 import json
+import logging
 import re
 import time
+from datetime import datetime
 from typing import Dict, Any, Optional, List
+
+from dateutil.relativedelta import relativedelta
 
 from tradingagents.agents.utils.agent_utils import get_stock_data, get_indicators
 from tradingagents.agents.analysts.market_analyst import (
@@ -21,6 +25,8 @@ from tradingagents.agents.analysts.market_analyst import (
     generate_invalidation_conditions,
     EGX_DAILY_INDICATORS,
 )
+
+_det_logger = logging.getLogger(__name__)
 from tradingagents.agents.analysts.fundamentals_analyst import (
     create_deterministic_fundamentals_analyst as _make_det_fundamentals,
 )
@@ -88,6 +94,59 @@ def deterministic_market_analyst(state: dict) -> dict:
     # 5. Generate invalidation conditions
     invalidations = generate_invalidation_conditions(trend, signals)
 
+    # ── P3: Compute momentum pack ────────────────────────────────────────
+    # Fetch OHLCV directly (tool returns string, we need numeric arrays).
+    momentum_pack = None
+    try:
+        from tradingagents.dataflows.eodhd import get_eodhd_stock_data
+        from tradingagents.agents.analysts.fundamentals.momentum import compute_momentum_pack
+        from tradingagents.dataflows.egx30_loader import load_egx30_csv
+
+        _p3_start = (
+            datetime.strptime(trade_date, "%Y-%m-%d") - relativedelta(days=252)
+        ).strftime("%Y-%m-%d")
+
+        # Try EODHD first
+        _price_result = get_eodhd_stock_data(ticker, _p3_start, trade_date)
+        _closes: List[float] = []
+        _volumes: List[float] = []
+        _dates: List[str] = []
+        if _price_result and _price_result.get("data"):
+            _closes = [bar["close"] for bar in _price_result["data"]]
+            _volumes = [bar.get("volume", 0) for bar in _price_result["data"]]
+            _dates = [bar.get("date", "") for bar in _price_result["data"]]
+
+        # Fallback to yfinance
+        if not _closes:
+            import yfinance as _yf
+            import pandas as _pd
+            _df = _yf.download(
+                ticker, start=_p3_start, end=trade_date,
+                progress=False, auto_adjust=True,
+            )
+            if _df is not None and not _df.empty:
+                if isinstance(_df.columns, _pd.MultiIndex):
+                    _df.columns = _df.columns.get_level_values(0)
+                if "Close" in _df.columns:
+                    _cs = _df["Close"].dropna()
+                    _closes = [float(v) for v in _cs.values]
+                    _dates = [d.strftime("%Y-%m-%d") for d in _cs.index]
+                    if "Volume" in _df.columns:
+                        _vs = _df["Volume"].dropna()
+                        _volumes = [float(v) for v in _vs.values]
+
+        if _closes and _dates:
+            _egx30 = load_egx30_csv()
+            momentum_pack = compute_momentum_pack(
+                closes=_closes,
+                volumes=_volumes,
+                dates=_dates,
+                trade_date=trade_date,
+                egx30_map=_egx30,
+            )
+    except Exception as _e:
+        _det_logger.warning("P3 momentum failed for %s: %s", ticker, _e)
+
     # 6. Build structured output (same schema the LLM was prompted to produce)
     structured_analysis = {
         "trend_direction": trend,
@@ -96,6 +155,8 @@ def deterministic_market_analyst(state: dict) -> dict:
         "confidence_adjustments": [],
         "invalidation_conditions": invalidations,
         "data_quality": data_quality,
+        # P3: momentum and relative strength pack
+        "momentum": momentum_pack,
     }
 
     if low_liquidity:

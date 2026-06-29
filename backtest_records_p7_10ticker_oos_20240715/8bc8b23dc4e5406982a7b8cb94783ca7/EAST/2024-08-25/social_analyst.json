@@ -1,0 +1,41 @@
+{
+  "run_id": "8bc8b23dc4e5406982a7b8cb94783ca7",
+  "ticker": "EAST",
+  "trade_date": "2024-08-25",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "fe4d194e9bcc1560af64d69af7c9dcce2df17de0d182d416458c98c2117a09a9",
+  "raw_output": "```json\n{\n    \"narrative\": \"No retail investor discussions were detected for EAST.CA across the monitored social media platforms within the analysis window. As a result, there are no themes, tone, or Arabic-language signals to report at this time.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No retail investor discussions were detected for EAST.CA across the monitored social media platforms within the analysis window. As a result, there are no themes, tone, or Arabic-language signals to report at this time.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 61, 'prompt_tokens': 611, 'total_tokens': 672, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 99}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'cb89639a-2b34-4575-ab52-02254c886edf', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edfda-15e9-7712-bd7b-ae8e32d6b0aa-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 611, 'output_tokens': 61, 'total_tokens': 672, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for EAST.CA]\nNo retail investor discussions were detected for EAST.CA across the monitored social media platforms within the analysis window. As a result, there are no themes, tone, or Arabic-language signals to report at this time.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"EAST.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No retail investor discussions were detected for EAST.CA across the monitored social media platforms within the analysis window. As a result, there are no themes, tone, or Arabic-language signals to report at this time.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "b2cc4eb5625034098c0b8fc0be549267391b46b3d116b0105d1b32d3b1e3352c",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 2074.7106669005007,
+  "timestamp_utc": "2026-06-19T12:27:54.244867+00:00",
+  "context_items": []
+}

@@ -26,11 +26,12 @@ from typing import Any, List, Optional
 
 from tradingagents.dataflows.config import get_config
 
-from .schemas import FundamentalAnalysisReport
+from .schemas import FundamentalAnalysisReport, FundamentalsQualityStatus
 from .sector_config import SectorConfig
 from .data_cot import build_evidence_pack, validate_evidence_pack
 from .concept_cot import run_concept_cot
 from .thesis_cot import run_thesis_cot
+from .thesis_cot_3call import run_thesis_cot_3call
 from .calibration import calibrate_earnings_direction
 from .memory_manager import FundamentalMemoryManager
 
@@ -46,6 +47,7 @@ def run_cot_pipeline(
     use_memory: Optional[bool] = None,
     memory_manager: Optional[FundamentalMemoryManager] = None,
     source_run_id: Optional[str] = None,
+    momentum_pack: Optional[dict] = None,
 ) -> FundamentalAnalysisReport:
     """
     Run the three-stage CoT pipeline and return an enriched FundamentalAnalysisReport.
@@ -91,12 +93,21 @@ def run_cot_pipeline(
             sector_cfg,
             freq=freq,
             prior_memory_context=prior_memory_context if memory_enabled else None,
+            momentum_pack=momentum_pack,
         )
     except Exception as e:
         logger.error("pipeline[%s]: Stage 1 (data_cot) crashed: %s", ticker, e)
         deterministic = report.model_copy(update={
             "pipeline_mode": "deterministic",
             "stages_completed": [],
+            "quality_status": FundamentalsQualityStatus(
+                level="deterministic_only",
+                reasons=[f"Stage 1 (data_cot) crashed: {e}"],
+                data_available=True,
+                enrichment_attempted=True,
+                enrichment_succeeded=False,
+            ),
+            "effective_confidence": min(report.data_confidence, int(report.data_confidence * 0.6)),
         })
         _record_memory_safely(manager, memory_enabled, deterministic, freq, source_run_id)
         return deterministic
@@ -110,6 +121,14 @@ def run_cot_pipeline(
         deterministic = report.model_copy(update={
             "pipeline_mode": "deterministic",
             "stages_completed": [],
+            "quality_status": FundamentalsQualityStatus(
+                level="deterministic_only",
+                reasons=[f"Stage 1 validation failed: {errors}"],
+                data_available=True,
+                enrichment_attempted=True,
+                enrichment_succeeded=False,
+            ),
+            "effective_confidence": min(report.data_confidence, int(report.data_confidence * 0.6)),
         })
         _record_memory_safely(manager, memory_enabled, deterministic, freq, source_run_id)
         return deterministic
@@ -128,6 +147,7 @@ def run_cot_pipeline(
             evidence_pack=evidence_pack,
             concept_output={},
             stages_completed=stages_completed,
+            failure_reason=f"Stage 2 (concept_cot) crashed: {e}",
         )
         _record_memory_safely(manager, memory_enabled, partial, freq, source_run_id)
         return partial
@@ -142,6 +162,7 @@ def run_cot_pipeline(
             evidence_pack=evidence_pack,
             concept_output={},
             stages_completed=stages_completed,
+            failure_reason=f"Stage 2 validation failed: {errors}",
         )
         _record_memory_safely(manager, memory_enabled, partial, freq, source_run_id)
         return partial
@@ -150,9 +171,11 @@ def run_cot_pipeline(
     logger.debug("pipeline[%s]: Stage 2 complete", ticker)
 
     # ── Stage 3: Thesis CoT ───────────────────────────────────────────────────
+    thesis_mode = cfg.get("thesis_cot_mode", "single")
+    _thesis_runner = run_thesis_cot_3call if thesis_mode == "3call" else run_thesis_cot
     thesis_output: dict = {}
     try:
-        thesis_output = run_thesis_cot(deep_llm, evidence_pack, concept_output)
+        thesis_output = _thesis_runner(deep_llm, evidence_pack, concept_output)
     except Exception as e:
         logger.error("pipeline[%s]: Stage 3 (thesis_cot) crashed: %s", ticker, e)
         partial = _build_partial_report(
@@ -160,6 +183,7 @@ def run_cot_pipeline(
             evidence_pack=evidence_pack,
             concept_output=concept_output,
             stages_completed=stages_completed,
+            failure_reason=f"Stage 3 (thesis_cot) crashed: {e}",
         )
         _record_memory_safely(manager, memory_enabled, partial, freq, source_run_id)
         return partial
@@ -198,6 +222,7 @@ def _build_partial_report(
     evidence_pack: dict,
     concept_output: dict,
     stages_completed: List[str],
+    failure_reason: str = "",
 ) -> FundamentalAnalysisReport:
     """
     Build a partially-enriched report when Stage 2 or Stage 3 failed.
@@ -205,9 +230,33 @@ def _build_partial_report(
     Applies concept_output fields if available, otherwise falls back
     to deterministic values. Stage 3 thesis fields remain empty.
     """
+    # "partial" if at least one CoT stage succeeded; "deterministic_only" if none did
+    has_any_cot = len(stages_completed) > 0
+    quality_level = "partial" if has_any_cot else "deterministic_only"
+
+    reasons = []
+    if failure_reason:
+        reasons.append(failure_reason)
+    missing_stages = {"data_cot", "concept_cot", "thesis_cot"} - set(stages_completed)
+    if missing_stages:
+        reasons.append(f"Missing stages: {', '.join(sorted(missing_stages))}")
+
+    # Penalize effective_confidence: partial gets 80% of data_confidence,
+    # deterministic_only (all stages failed) gets 60%
+    penalty_factor = 0.8 if has_any_cot else 0.6
+    effective_conf = min(report.data_confidence, int(report.data_confidence * penalty_factor))
+
     updates: dict = {
         "pipeline_mode": "cot_partial",
         "stages_completed": stages_completed,
+        "quality_status": FundamentalsQualityStatus(
+            level=quality_level,
+            reasons=reasons,
+            data_available=True,
+            enrichment_attempted=True,
+            enrichment_succeeded=False,
+        ),
+        "effective_confidence": effective_conf,
     }
 
     # If concept_cot succeeded, apply its financial_health assessment
@@ -277,6 +326,7 @@ def _build_full_report(
         data_confidence=report.data_confidence,
         sector=report.sector,
         de_ratio=report.ratios.get("debt_to_equity") if report.ratios else None,
+        risk_free_rate=getattr(report, "risk_free_rate_value", None),
     )
 
     # earnings_direction = calibrated direction (backward compatible)
@@ -302,10 +352,33 @@ def _build_full_report(
     # Merge with the deterministic EGX structural risks
     key_risks = _merge_risks(report.key_risks, all_thesis_risks)
 
+    # Competing-hypotheses audit trail (3-call mode only; empty for single-call)
+    competing_hypotheses = thesis_output.get("competing_hypotheses", [])
+    scored_hypotheses = thesis_output.get("scored_hypotheses", [])
+    selected_hypothesis_id = thesis_output.get("selected_hypothesis_id", "")
+
+    # Quality status: "full" if all 3 stages completed, "partial" otherwise
+    is_full = pipeline_mode == "cot_full"
+    quality = FundamentalsQualityStatus(
+        level="full" if is_full else "partial",
+        reasons=[] if is_full else [f"Missing stages: {', '.join({'data_cot', 'concept_cot', 'thesis_cot'} - set(stages_completed))}"],
+        data_available=True,
+        enrichment_attempted=True,
+        enrichment_succeeded=is_full,
+    )
+    # effective_confidence: full data_confidence when enrichment succeeded,
+    # 80% when partial (some interpretive context present)
+    effective_conf = report.data_confidence if is_full else min(
+        report.data_confidence, int(report.data_confidence * 0.8)
+    )
+
     return report.model_copy(update={
         "pipeline_mode": pipeline_mode,
         "stages_completed": stages_completed,
         "financial_health": financial_health,
+        # Quality/degradation tracking
+        "quality_status": quality,
+        "effective_confidence": effective_conf,
         # Calibrated direction is the public earnings_direction
         "earnings_direction": earnings_direction,
         "earnings_direction_confidence": earnings_direction_confidence,
@@ -322,6 +395,10 @@ def _build_full_report(
         "valuation_assessment": valuation_assessment,
         "thesis_text": thesis_text,
         "key_risks": key_risks,
+        # Competing-hypotheses audit trail (3-call H&P)
+        "competing_hypotheses": competing_hypotheses,
+        "scored_hypotheses": scored_hypotheses,
+        "selected_hypothesis_id": selected_hypothesis_id,
     })
 
 

@@ -79,6 +79,35 @@ CRITICAL RULES:
    - Most EGX companies show annual earnings growth in most years. Only predict "down" or "flat"
      when the fundamental evidence strongly supports it — not merely because risks exist.
 
+   HIGH-RATE REGIME GUIDANCE (P2):
+   When the evidence pack shows inflation_regime="high" (CBE policy rate > 15%):
+   - Negative earnings yield spread (EY < risk-free rate) is STRUCTURALLY COMMON for most
+     EGX equities in this regime. It does not carry the same bearish signal as in normal-rate
+     environments and should NOT be treated as a standalone veto of equity exposure.
+   - For REAL ESTATE and HOLDINGS sectors: also evaluate pricing power under inflation,
+     replacement cost dynamics, balance-sheet composition, and the informational flag
+     PB_UNDERSTATED_HISTORICAL_COST (book value understated by historical-cost land valuation).
+   - For all sectors: the relevant comparison in high-rate regimes shifts from "EY vs CBE rate"
+     to "which companies benefit most from inflation, devaluation, or real asset repricing."
+   - Treat the EARNINGS_YIELD_COMPRESSED flag as one data point among many, not as a
+     dominant bearish signal. Weight growth trends, margin trajectory, and sector context
+     at least equally.
+
+   MOMENTUM & RELATIVE STRENGTH GUIDANCE (P3):
+   When the evidence pack includes a PRICE MOMENTUM & RELATIVE STRENGTH section:
+   - Momentum is POSITIVE EVIDENCE for continuation, not a guarantee. A stock
+     with strong_up momentum AND improving fundamentals has a stronger bull case
+     than one with improving fundamentals alone.
+   - Relative strength (outperforming EGX30) indicates the market is already
+     pricing in positive expectations. This supports a bullish thesis but also
+     raises the bar for entry — is the good news already in the price?
+   - volume_confirmed=true alongside positive momentum is a stronger signal
+     than price movement alone.
+   - Do NOT treat momentum as a standalone BUY signal. It is one factor among
+     fundamentals, valuation, risk, and macro context.
+   - If momentum is insufficient_history, do not penalize — simply note that
+     price trend data is unavailable and rely on fundamental signals.
+
    QUARTERLY MODE: Growth rates are QoQ (current quarter vs prior quarter). Apply:
      (a) If the [NOTE] flags a near-zero crossing (QoQ magnitude > 200%), do NOT extrapolate.
          Use multi-period trend directions and margin levels. Assign confidence <= 58.

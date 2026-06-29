@@ -7,31 +7,42 @@
 @layer base {
   :root {
     color-scheme: light;
-    --bg: #F6F5F1;
+    --bg: #EEF7F6;
     --paper: #FFFFFF;
-    --ink: #0A0A0B;
-    --ink-2: #44403C;
-    --ink-3: #78716C;
-    --hairline: #EAE7E1;
-    --hairline-2: #D6D3CE;
-    --accent: #1A1A1A;
+    --ink: #061B3D;
+    --ink-2: #31506F;
+    --ink-3: #6D8496;
+    --hairline: #D7E7EA;
+    --hairline-2: #B8D1D6;
+    --accent: #22B887;
+    --brand-navy: #061B3D;
+    --brand-emerald: #22B887;
+    --brand-mint: #DDF4EC;
+    --brand-blue: #DCEBFA;
   }
   html.dark {
     color-scheme: dark;
-    --bg: #0B0B0F;
-    --paper: #16161B;
-    --ink: #F5F4EF;
-    --ink-2: #C9C7C0;
-    --ink-3: #8C8A82;
-    --hairline: #2A2A30;
-    --hairline-2: #3A3A42;
-    --accent: #F5F4EF;
+    --bg: #071525;
+    --paper: #0D2033;
+    --ink: #F4FBF9;
+    --ink-2: #C5D8DE;
+    --ink-3: #86A2AE;
+    --hairline: #20384D;
+    --hairline-2: #2C4C63;
+    --accent: #35D49C;
+    --brand-navy: #061B3D;
+    --brand-emerald: #35D49C;
+    --brand-mint: #112D35;
+    --brand-blue: #102B45;
   }
   html, body, #root { height: 100%; }
   body {
     font-family: "Inter", system-ui, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
-    background: var(--bg);
+    background:
+      radial-gradient(circle at 18% 0%, rgba(34, 184, 135, 0.14), transparent 34rem),
+      radial-gradient(circle at 92% 16%, rgba(95, 154, 209, 0.13), transparent 32rem),
+      linear-gradient(180deg, #EFF9F5 0%, var(--bg) 44%, #EAF2FB 100%);
     color: var(--ink);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -39,6 +50,13 @@
 
   html[dir="rtl"] body {
     font-family: "Cairo", "Inter", system-ui, sans-serif;
+  }
+
+  html.dark body {
+    background:
+      radial-gradient(circle at 18% 0%, rgba(53, 212, 156, 0.12), transparent 34rem),
+      radial-gradient(circle at 92% 16%, rgba(80, 142, 198, 0.12), transparent 32rem),
+      linear-gradient(180deg, #071525 0%, var(--bg) 100%);
   }
 
   .num, [class*="num"] {
@@ -60,9 +78,9 @@
 
 @layer components {
   .display {
-    font-family: "Fraunces", "Inter", serif;
+    font-family: "Inter", "Cairo", system-ui, sans-serif;
     font-feature-settings: "ss01", "ss02";
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
   }
   .display-num {
     font-family: "Fraunces", "JetBrains Mono", serif;
@@ -89,10 +107,12 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    opacity: 0.35;
+    opacity: 0.22;
     mix-blend-mode: multiply;
-    background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,0.025) 1px, transparent 0);
-    background-size: 6px 6px;
+    background-image:
+      linear-gradient(30deg, rgba(6, 27, 61, 0.035) 12%, transparent 12.5%, transparent 87%, rgba(6, 27, 61, 0.035) 87.5%, rgba(6, 27, 61, 0.035)),
+      linear-gradient(150deg, rgba(6, 27, 61, 0.035) 12%, transparent 12.5%, transparent 87%, rgba(6, 27, 61, 0.035) 87.5%, rgba(6, 27, 61, 0.035));
+    background-size: 28px 48px;
     border-radius: inherit;
   }
 
@@ -101,21 +121,32 @@
 
   /* Ticker label chip */
   .eyebrow {
-    @apply text-[10.5px] font-semibold tracking-[0.18em] uppercase text-stone-500;
+    @apply text-[10.5px] font-semibold tracking-[0.18em] uppercase;
+    color: var(--accent);
   }
 
   .card {
-    @apply bg-white border border-stone-200/80 rounded-2xl dark:bg-[var(--paper)] dark:border-[var(--hairline)];
+    @apply bg-white/90 border rounded-2xl dark:bg-[var(--paper)] dark:border-[var(--hairline)];
+    border-color: var(--hairline);
     box-shadow:
       0 1px 0 0 rgba(0, 0, 0, 0.02),
-      0 1px 2px 0 rgba(15, 15, 15, 0.04);
+      0 1px 2px 0 rgba(6, 27, 61, 0.04);
   }
   .card-elevated {
-    @apply bg-white border border-stone-200/80 rounded-2xl dark:bg-[var(--paper)] dark:border-[var(--hairline)];
+    @apply bg-white/90 border rounded-2xl dark:bg-[var(--paper)] dark:border-[var(--hairline)];
+    border-color: var(--hairline);
     box-shadow:
       0 1px 0 0 rgba(0, 0, 0, 0.02),
-      0 4px 12px -2px rgba(15, 15, 15, 0.06),
-      0 16px 40px -12px rgba(15, 15, 15, 0.08);
+      0 4px 12px -2px rgba(6, 27, 61, 0.07),
+      0 18px 48px -18px rgba(6, 27, 61, 0.16);
+  }
+
+  .stockhive-panel {
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(239, 249, 245, 0.82)),
+      linear-gradient(180deg, rgba(220, 235, 250, 0.55), rgba(221, 244, 236, 0.45));
+    border: 1px solid var(--hairline);
+    box-shadow: 0 18px 55px -28px rgba(6, 27, 61, 0.28);
   }
 }
 
@@ -142,8 +173,17 @@
     100% { background-position: 800px 0; }
   }
   .skeleton {
-    background: linear-gradient(90deg, #EAE7E1 0%, #F4F1EB 50%, #EAE7E1 100%);
+    background: linear-gradient(90deg, #D7E7EA 0%, #F0F8F6 50%, #D7E7EA 100%);
     background-size: 800px 100%;
     animation: shimmer 1.6s linear infinite;
+  }
+
+  @keyframes ticker-scroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .ticker-scroll {
+    animation: ticker-scroll 40s linear infinite;
+    will-change: transform;
   }
 }

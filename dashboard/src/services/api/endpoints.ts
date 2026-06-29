@@ -6,11 +6,14 @@ import type {
   ConfigResponse,
   ConfigUpdateRequest,
   ConfigUpdateResponse,
+  DataFreshnessResponse,
   FingerprintsResponse,
   HealthResponse,
+  InvestorProfile,
   MemoryAgent,
   MemoryEntriesResponse,
   MemorySearchResponse,
+  MetricsSummary,
   PredictionResult,
   PromptsResponse,
   ReflectionsResponse,
@@ -21,7 +24,9 @@ import type {
   RunBacktestResponse,
   RunBtRequest,
   SessionTraceResponse,
+  ShadowRun,
   StockDataResponse,
+  SystemStatus,
   TickersResponse,
 } from "./types";
 
@@ -43,8 +48,11 @@ export const endpoints = {
     api.post<PredictionResult>("/test/random-egx", ticker ? { ticker } : {}),
 
   // Full multi-agent pipeline (TradingAgentsGraph end-to-end, 3-8 min)
-  runFullPipeline: (ticker: string) =>
-    api.post<PredictionResult>("/analyze-full", { ticker }),
+  runFullPipeline: (ticker: string, profileId?: string) =>
+    api.post<PredictionResult>("/analyze-full", {
+      ticker,
+      ...(profileId && { profile_id: profileId }),
+    }),
 
   // Historical OHLCV
   stockData: (
@@ -150,4 +158,31 @@ export const endpoints = {
     const qs = q.toString();
     return api.get<RlDecisionsResponse>(`/rl/decisions${qs ? `?${qs}` : ""}`);
   },
+
+  // ─── Profiles & Shadow Runs ─────────────────────────────────────────
+  listProfiles: () => api.get<InvestorProfile[]>("/profiles"),
+  getProfile: (id: string) =>
+    api.get<InvestorProfile>(`/profiles/${encodeURIComponent(id)}`),
+  createProfile: (data: Omit<InvestorProfile, "id" | "created_at" | "updated_at">) =>
+    api.post<InvestorProfile>("/profiles", data),
+  updateProfile: (id: string, data: Partial<InvestorProfile>) =>
+    api.put<InvestorProfile>(`/profiles/${encodeURIComponent(id)}`, data),
+  deleteProfile: (id: string) =>
+    api.delete<{ deleted: boolean }>(`/profiles/${encodeURIComponent(id)}`),
+
+  listShadowRuns: (params?: { ticker?: string; limit?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.ticker) q.set("ticker", params.ticker);
+    if (params?.limit !== undefined) q.set("limit", String(params.limit));
+    const qs = q.toString();
+    return api.get<ShadowRun[]>(`/shadow-runs${qs ? `?${qs}` : ""}`);
+  },
+  getShadowRun: (id: string) =>
+    api.get<ShadowRun>(`/shadow-runs/${encodeURIComponent(id)}`),
+  recordShadowRun: (data: Partial<ShadowRun>) =>
+    api.post<ShadowRun>("/shadow-runs", data),
+
+  systemStatus: () => api.get<SystemStatus>("/system-status"),
+  metricsSummary: () => api.get<MetricsSummary>("/metrics-summary"),
+  dataFreshness: () => api.get<DataFreshnessResponse>("/data-freshness"),
 };

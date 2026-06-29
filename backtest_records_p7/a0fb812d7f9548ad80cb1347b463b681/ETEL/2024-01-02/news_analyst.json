@@ -1,0 +1,182 @@
+{
+  "run_id": "a0fb812d7f9548ad80cb1347b463b681",
+  "ticker": "ETEL",
+  "trade_date": "2024-01-02",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "7f18e0a6ec9f18c0acfa8ab9b8c6c6e19b94453eda986eecca5fc2d14cc070d8",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the review period\",\n        \"No market news available to provide broader context\",\n        \"Silence in news flow reduces confidence in any directional bias\",\n        \"Data retrieval errors indicate potential coverage gaps rather than true inactivity\"\n    ],\n    \"explanation\": \"No news articles were found for ETEL.CA during the December 26, 2023 to January 2, 2024 period, and market-level news was also unavailable. The lack of any corporate announcements, regulatory filings, or media coverage creates a neutral-to-low confidence outlook, as silence typically reduces conviction in any sentiment direction. Without any positive or negative catalysts, the stock appears to be in a news vacuum, warranting a cautious stance.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2023-12-26 to 2024-01-02\"\n    },\n    \"risks_from_news\": [\n        \"No news flow may indicate low liquidity or reduced investor attention\",\n        \"Absence of disclosures could mask underlying operational or financial issues\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to complete lack of news\"\n    ]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for the review period\",\\n        \"No market news available to provide broader context\",\\n        \"Silence in news flow reduces confidence in any directional bias\",\\n        \"Data retrieval errors indicate potential coverage gaps rather than true inactivity\"\\n    ],\\n    \"explanation\": \"No news articles were found for ETEL.CA during the December 26, 2023 to January 2, 2024 period, and market-level news was also unavailable. The lack of any corporate announcements, regulatory filings, or media coverage creates a neutral-to-low confidence outlook, as silence typically reduces conviction in any sentiment direction. Without any positive or negative catalysts, the stock appears to be in a news vacuum, warranting a cautious stance.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2023-12-26 to 2024-01-02\"\\n    },\\n    \"risks_from_news\": [\\n        \"No news flow may indicate low liquidity or reduced investor attention\",\\n        \"Absence of disclosures could mask underlying operational or financial issues\"\\n    ],\\n    \"catalysts_from_news\": [\\n        \"No positive catalysts identified due to complete lack of news\"\\n    ]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 322, 'prompt_tokens': 664, 'total_tokens': 986, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 640}, 'prompt_cache_hit_tokens': 640, 'prompt_cache_miss_tokens': 24}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '8f434297-95e5-49f4-95d4-dac217157c41', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edc98-cea6-7001-853e-2774cdecff3d-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 664, 'output_tokens': 322, 'total_tokens': 986, 'input_token_details': {'cache_read': 640}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the review period\",\n        \"No market news available to provide broader context\",\n        \"Silence in news flow reduces confidence in any directional bias\",\n        \"Data retrieval errors indicate potential coverage gaps rather than true inactivity\"\n    ],\n    \"explanation\": \"No news articles were found for ETEL.CA during the December 26, 2023 to January 2, 2024 period, and market-level news was also unavailable. The lack of any corporate announcements, regulatory filings, or media coverage creates a neutral-to-low confidence outlook, as silence typically reduces conviction in any sentiment direction. Without any positive or negative catalysts, the stock appears to be in a news vacuum, warranting a cautious stance.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2023-12-26 to 2024-01-02\"\n    },\n    \"risks_from_news\": [\n        \"No news flow may indicate low liquidity or reduced investor attention\",\n        \"Absence of disclosures could mask underlying operational or financial issues\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to complete lack of news\"\n    ]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for the review period",
+        "No market news available to provide broader context",
+        "Silence in news flow reduces confidence in any directional bias",
+        "Data retrieval errors indicate potential coverage gaps rather than true inactivity",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for ETEL.CA during the December 26, 2023 to January 2, 2024 period, and market-level news was also unavailable. The lack of any corporate announcements, regulatory filings, or media coverage creates a neutral-to-low confidence outlook, as silence typically reduces conviction in any sentiment direction. Without any positive or negative catalysts, the stock appears to be in a news vacuum, warranting a cautious stance.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2023-12-26 to 2024-01-02"
+      },
+      "risks_from_news": [
+        "No news flow may indicate low liquidity or reduced investor attention",
+        "Absence of disclosures could mask underlying operational or financial issues"
+      ],
+      "catalysts_from_news": [
+        "No positive catalysts identified due to complete lack of news"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.4041,
+        "label": "bearish",
+        "confidence": 0.638,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for the review period",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8911,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market news available to provide broader context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9395,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence in news flow reduces confidence in any directional bias",
+            "source": "quoted_in_report",
+            "score": -0.9369,
+            "label": "bearish",
+            "confidence": 0.9369,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data retrieval errors indicate potential coverage gaps rather than true inactivity",
+            "source": "quoted_in_report",
+            "score": -0.9295,
+            "label": "bearish",
+            "confidence": 0.9295,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for ETEL.CA during the December 26, 2023 to January 2, 2024 period, and ",
+            "source": "quoted_in_report",
+            "score": -0.8343,
+            "label": "bearish",
+            "confidence": 0.8343,
+            "model": "finbert"
+          },
+          {
+            "headline": "2023-12-26 to 2024-01-02",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9433,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news flow may indicate low liquidity or reduced investor attention",
+            "source": "quoted_in_report",
+            "score": -0.956,
+            "label": "bearish",
+            "confidence": 0.956,
+            "model": "finbert"
+          },
+          {
+            "headline": "Absence of disclosures could mask underlying operational or financial issues",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8696,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No positive catalysts identified due to complete lack of news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.7939,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.2627,
+        "label": "bearish",
+        "confidence": 0.5228
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "23f02621a9544d1e2c447154735bc29b61471df7d001c1c3af8616f1ed230e47",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 4214.173958054744,
+  "timestamp_utc": "2026-06-18T21:17:46.878336+00:00",
+  "context_items": []
+}

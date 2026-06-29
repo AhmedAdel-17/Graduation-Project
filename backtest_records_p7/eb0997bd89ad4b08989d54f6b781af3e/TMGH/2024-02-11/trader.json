@@ -1,0 +1,120 @@
+{
+  "run_id": "eb0997bd89ad4b08989d54f6b781af3e",
+  "ticker": "TMGH",
+  "trade_date": "2024-02-11",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "2e87dcaf20b500161443ccf5d03e9891b84aefb7076c01837527f2d7d0c1197f",
+  "raw_output": "# EXECUTION PLAN — TMGH.CA\n\n## Analysis & Decision Framework\n\n### Signal Assessment\n\n| Signal Source | Direction | Conviction | Weight |\n|---|---|---|---|\n| **Technical** | Strong Up / Outperforming | High | 30% |\n| **Fundamental** | Bearish (42.1x P/E, 3.42x D/E, 6.2% ROE) | High | 40% |\n| **Sentiment** | Neutral (no news coverage) | Low | 15% |\n| **Macro Context** | Mixed (bullish EGX30, negative real rates, active IMF) | Moderate | 15% |\n\n### Blocker Analysis\n\n**Legitimate HOLD Blockers Present:**\n1. **Extreme valuation without earnings support** — 42.1x P/E with only 1 period of financials, negative earnings yield spread of -16.87% vs 19.25% risk-free rate\n2. **Stale/low-confidence fundamentals** — Only 1 period of financial data available, no trend analysis possible\n3. **Leverage trap** — 3.42x debt-to-equity in 19.25% rate environment creates solvency risk\n\n### Decision: HOLD\n\n**Rationale:**\nThe bear case identifies concrete, stock-specific risks that override the strong technical momentum. The 362% rally has occurred on momentum alone with no fundamental validation — no insider buying, no dividend yield, no new project announcements, and only one period of financial data. The asymmetric risk-reward (50%+ downside vs 15-35% upside) favors staying in cash.\n\n**Risk of HOLD:** Opportunity cost of missing further momentum-driven upside in a bullish EGX30 environment. This is acceptable given the fundamental fragility.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"TMGH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"N/A\",\n            \"conditions\": [\n                \"Price consolidates above EGP 40 for 20+ trading days with declining volatility\",\n                \"Company releases updated NAV showing >EGP 50/share\",\n                \"Debt-to-equity falls below 2.0x\",\n                \"ROE improves to 12%+\",\n                \"Insider buying at current levels\",\n                \"CBE cuts rates to 12% or below\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A\",\n                \"note\": \"No position to exit\"\n            },\n            \"time_stop\": \"Reassess in 4 weeks (by 2024-03-10) if momentum holds and fundamentals improve\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"0 EGP — no capital at risk\",\n            \"max_daily_execution\": \"0 shares\",\n            \"price_limit_risk\": \"N/A — no position exposed to ±10% daily limits\",\n            \"liquidity_exit_plan\": \"N/A — no position to exit\"\n        },\n        \"invalidation_triggers\": [\n            \"Stock consolidates above EGP 40 for 20+ trading days with declining volatility\",\n            \"Company releases updated NAV showing >EGP 50 per share\",\n            \"Debt-to-equity falls below 2.0x\",\n            \"ROE improves to 12%+\",\n            \"Dividend reinstated at 5%+ yield\",\n            \"Insider buying at current levels\",\n            \"CBE cuts rates to 12% or below\",\n            \"EGP stabilizes for 6+ months\",\n            \"Stock holds above EGP 35 for 3 months while fundamentals improve\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Monitoring Framework\n\n### Watchlist Triggers (Re-evaluate if ANY of these occur)\n\n| Trigger | Condition | Action |\n|---|---|---|\n| **Price consolidation** | Above EGP 40 for 20+ trading days with declining volatility | Reassess entry at lower conviction |\n| **NAV update** | Company releases NAV >EGP 50/share | Upgrade to BUY with 2-4% allocation |\n| **Debt reduction** | D/E falls below 2.0x | Upgrade to BUY with 1-2% allocation |\n| **Rate cut** | CBE cuts rates to 12% or below | Reassess sector-wide re-rating |\n| **Insider buying** | Directors/officers buy at current levels | Upgrade to BUY with 1-2% allocation |\n\n### Review Cadence\n- **Next review**: 2024-03-10 (4 weeks)\n- **Fundamental re-check**: After next quarterly earnings release\n- **Macro re-check**: After next CBE meeting (expected March 2024)\n\n### Alternative Deployment\nGiven the bullish EGX30 environment (12.95% monthly return), consider deploying cash into:\n- EGX30 index exposure (lower risk, diversified)\n- Stocks with reasonable valuations and positive earnings trajectories\n- Sectors benefiting from EGP stabilization (importers, consumer staples)\n\n---\n\n**FINAL TRANSACTION PROPOSAL: **HOLD****",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN — TMGH.CA\\n\\n## Analysis & Decision Framework\\n\\n### Signal Assessment\\n\\n| Signal Source | Direction | Conviction | Weight |\\n|---|---|---|---|\\n| **Technical** | Strong Up / Outperforming | High | 30% |\\n| **Fundamental** | Bearish (42.1x P/E, 3.42x D/E, 6.2% ROE) | High | 40% |\\n| **Sentiment** | Neutral (no news coverage) | Low | 15% |\\n| **Macro Context** | Mixed (bullish EGX30, negative real rates, active IMF) | Moderate | 15% |\\n\\n### Blocker Analysis\\n\\n**Legitimate HOLD Blockers Present:**\\n1. **Extreme valuation without earnings support** — 42.1x P/E with only 1 period of financials, negative earnings yield spread of -16.87% vs 19.25% risk-free rate\\n2. **Stale/low-confidence fundamentals** — Only 1 period of financial data available, no trend analysis possible\\n3. **Leverage trap** — 3.42x debt-to-equity in 19.25% rate environment creates solvency risk\\n\\n### Decision: HOLD\\n\\n**Rationale:**\\nThe bear case identifies concrete, stock-specific risks that override the strong technical momentum. The 362% rally has occurred on momentum alone with no fundamental validation — no insider buying, no dividend yield, no new project announcements, and only one period of financial data. The asymmetric risk-reward (50%+ downside vs 15-35% upside) favors staying in cash.\\n\\n**Risk of HOLD:** Opportunity cost of missing further momentum-driven upside in a bullish EGX30 environment. This is acceptable given the fundamental fragility.\\n\\n---\\n\\n## Structured Execution Plan\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"TMGH.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A — no entry\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": null,\\n                \"price_range_high\": null\\n            },\\n            \"timing\": \"N/A\",\\n            \"conditions\": [\\n                \"Price consolidates above EGP 40 for 20+ trading days with declining volatility\",\\n                \"Company releases updated NAV showing >EGP 50/share\",\\n                \"Debt-to-equity falls below 2.0x\",\\n                \"ROE improves to 12%+\",\\n                \"Insider buying at current levels\",\\n                \"CBE cuts rates to 12% or below\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A\",\\n                \"note\": \"No position to exit\"\\n            },\\n            \"time_stop\": \"Reassess in 4 weeks (by 2024-03-10) if momentum holds and fundamentals improve\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"0 EGP — no capital at risk\",\\n            \"max_daily_execution\": \"0 shares\",\\n            \"price_limit_risk\": \"N/A — no position exposed to ±10% daily limits\",\\n            \"liquidity_exit_plan\": \"N/A — no position to exit\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"Stock consolidates above EGP 40 for 20+ trading days with declining volatility\",\\n            \"Company releases updated NAV showing >EGP 50 per share\",\\n            \"Debt-to-equity falls below 2.0x\",\\n            \"ROE improves to 12%+\",\\n            \"Dividend reinstated at 5%+ yield\",\\n            \"Insider buying at current levels\",\\n            \"CBE cuts rates to 12% or below\",\\n            \"EGP stabilizes for 6+ months\",\\n            \"Stock holds above EGP 35 for 3 months while fundamentals improve\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```\\n\\n---\\n\\n## Monitoring Framework\\n\\n### Watchlist Triggers (Re-evaluate if ANY of these occur)\\n\\n| Trigger | Condition | Action |\\n|---|---|---|\\n| **Price consolidation** | Above EGP 40 for 20+ trading days with declining volatility | Reassess entry at lower conviction |\\n| **NAV update** | Company releases NAV >EGP 50/share | Upgrade to BUY with 2-4% allocation |\\n| **Debt reduction** | D/E falls below 2.0x | Upgrade to BUY with 1-2% allocation |\\n| **Rate cut** | CBE cuts rates to 12% or below | Reassess sector-wide re-rating |\\n| **Insider buying** | Directors/officers buy at current levels | Upgrade to BUY with 1-2% allocation |\\n\\n### Review Cadence\\n- **Next review**: 2024-03-10 (4 weeks)\\n- **Fundamental re-check**: After next quarterly earnings release\\n- **Macro re-check**: After next CBE meeting (expected March 2024)\\n\\n### Alternative Deployment\\nGiven the bullish EGX30 environment (12.95% monthly return), consider deploying cash into:\\n- EGX30 index exposure (lower risk, diversified)\\n- Stocks with reasonable valuations and positive earnings trajectories\\n- Sectors benefiting from EGP stabilization (importers, consumer staples)\\n\\n---\\n\\n**FINAL TRANSACTION PROPOSAL: **HOLD****', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1331, 'prompt_tokens': 8256, 'total_tokens': 9587, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 896}, 'prompt_cache_hit_tokens': 896, 'prompt_cache_miss_tokens': 7360}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '1be13a3d-32b3-4d4b-b591-9ba188a1f5fe', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edcdd-6e85-7b23-a80c-4f00bfeecf25-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 8256, 'output_tokens': 1331, 'total_tokens': 9587, 'input_token_details': {'cache_read': 896}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN — TMGH.CA\n\n## Analysis & Decision Framework\n\n### Signal Assessment\n\n| Signal Source | Direction | Conviction | Weight |\n|---|---|---|---|\n| **Technical** | Strong Up / Outperforming | High | 30% |\n| **Fundamental** | Bearish (42.1x P/E, 3.42x D/E, 6.2% ROE) | High | 40% |\n| **Sentiment** | Neutral (no news coverage) | Low | 15% |\n| **Macro Context** | Mixed (bullish EGX30, negative real rates, active IMF) | Moderate | 15% |\n\n### Blocker Analysis\n\n**Legitimate HOLD Blockers Present:**\n1. **Extreme valuation without earnings support** — 42.1x P/E with only 1 period of financials, negative earnings yield spread of -16.87% vs 19.25% risk-free rate\n2. **Stale/low-confidence fundamentals** — Only 1 period of financial data available, no trend analysis possible\n3. **Leverage trap** — 3.42x debt-to-equity in 19.25% rate environment creates solvency risk\n\n### Decision: HOLD\n\n**Rationale:**\nThe bear case identifies concrete, stock-specific risks that override the strong technical momentum. The 362% rally has occurred on momentum alone with no fundamental validation — no insider buying, no dividend yield, no new project announcements, and only one period of financial data. The asymmetric risk-reward (50%+ downside vs 15-35% upside) favors staying in cash.\n\n**Risk of HOLD:** Opportunity cost of missing further momentum-driven upside in a bullish EGX30 environment. This is acceptable given the fundamental fragility.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"TMGH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"N/A\",\n            \"conditions\": [\n                \"Price consolidates above EGP 40 for 20+ trading days with declining volatility\",\n                \"Company releases updated NAV showing >EGP 50/share\",\n                \"Debt-to-equity falls below 2.0x\",\n                \"ROE improves to 12%+\",\n                \"Insider buying at current levels\",\n                \"CBE cuts rates to 12% or below\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A\",\n                \"note\": \"No position to exit\"\n            },\n            \"time_stop\": \"Reassess in 4 weeks (by 2024-03-10) if momentum holds and fundamentals improve\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"0 EGP — no capital at risk\",\n            \"max_daily_execution\": \"0 shares\",\n            \"price_limit_risk\": \"N/A — no position exposed to ±10% daily limits\",\n            \"liquidity_exit_plan\": \"N/A — no position to exit\"\n        },\n        \"invalidation_triggers\": [\n            \"Stock consolidates above EGP 40 for 20+ trading days with declining volatility\",\n            \"Company releases updated NAV showing >EGP 50 per share\",\n            \"Debt-to-equity falls below 2.0x\",\n            \"ROE improves to 12%+\",\n            \"Dividend reinstated at 5%+ yield\",\n            \"Insider buying at current levels\",\n            \"CBE cuts rates to 12% or below\",\n            \"EGP stabilizes for 6+ months\",\n            \"Stock holds above EGP 35 for 3 months while fundamentals improve\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Monitoring Framework\n\n### Watchlist Triggers (Re-evaluate if ANY of these occur)\n\n| Trigger | Condition | Action |\n|---|---|---|\n| **Price consolidation** | Above EGP 40 for 20+ trading days with declining volatility | Reassess entry at lower conviction |\n| **NAV update** | Company releases NAV >EGP 50/share | Upgrade to BUY with 2-4% allocation |\n| **Debt reduction** | D/E falls below 2.0x | Upgrade to BUY with 1-2% allocation |\n| **Rate cut** | CBE cuts rates to 12% or below | Reassess sector-wide re-rating |\n| **Insider buying** | Directors/officers buy at current levels | Upgrade to BUY with 1-2% allocation |\n\n### Review Cadence\n- **Next review**: 2024-03-10 (4 weeks)\n- **Fundamental re-check**: After next quarterly earnings release\n- **Macro re-check**: After next CBE meeting (expected March 2024)\n\n### Alternative Deployment\nGiven the bullish EGX30 environment (12.95% monthly return), consider deploying cash into:\n- EGX30 index exposure (lower risk, diversified)\n- Stocks with reasonable valuations and positive earnings trajectories\n- Sectors benefiting from EGP stabilization (importers, consumer staples)\n\n---\n\n**FINAL TRANSACTION PROPOSAL: **HOLD****",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "TMGH.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — remain 100% cash"
+        },
+        "entry_logic": {
+          "order_type": "N/A — no entry",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": null,
+            "price_range_high": null
+          },
+          "timing": "N/A",
+          "conditions": [
+            "Price consolidates above EGP 40 for 20+ trading days with declining volatility",
+            "Company releases updated NAV showing >EGP 50/share",
+            "Debt-to-equity falls below 2.0x",
+            "ROE improves to 12%+",
+            "Insider buying at current levels",
+            "CBE cuts rates to 12% or below"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": null
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A",
+            "note": "No position to exit"
+          },
+          "time_stop": "Reassess in 4 weeks (by 2024-03-10) if momentum holds and fundamentals improve"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "0 EGP — no capital at risk",
+          "max_daily_execution": "0 shares",
+          "price_limit_risk": "N/A — no position exposed to ±10% daily limits",
+          "liquidity_exit_plan": "N/A — no position to exit"
+        },
+        "invalidation_triggers": [
+          "Stock consolidates above EGP 40 for 20+ trading days with declining volatility",
+          "Company releases updated NAV showing >EGP 50 per share",
+          "Debt-to-equity falls below 2.0x",
+          "ROE improves to 12%+",
+          "Dividend reinstated at 5%+ yield",
+          "Insider buying at current levels",
+          "CBE cuts rates to 12% or below",
+          "EGP stabilizes for 6+ months",
+          "Stock holds above EGP 35 for 3 months while fundamentals improve"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "d6319941e383664503419806d140f3dd59e21e840c6d17c2cd6443db6944b0dd",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 11585.127333994024,
+  "timestamp_utc": "2026-06-18T22:32:51.398736+00:00",
+  "context_items": []
+}

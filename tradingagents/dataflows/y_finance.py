@@ -390,17 +390,20 @@ def _get_stock_stats_bulk(
 ) -> dict:
     """
     Optimized bulk calculation of stock stats indicators.
-    Fetches data once and calculates indicator for all available dates.
+    Fetches data once and calculates indicator for all available dates
+    up to (and including) curr_date.  No data after curr_date is fetched
+    or returned — this prevents future-price leakage in backtests.
+
     Returns dict mapping date strings to indicator values.
     """
     from .config import get_config
     import pandas as pd
     from stockstats import wrap
     import os
-    
+
     config = get_config()
     online = config["data_vendors"]["technical_indicators"] != "local"
-    
+
     if not online:
         # Local data path
         try:
@@ -411,25 +414,28 @@ def _get_stock_stats_bulk(
                 )
             )
             df = wrap(data)
+            # Normalize Date column to string for consistent filtering below
+            df["Date"] = pd.to_datetime(df["Date"]).dt.strftime("%Y-%m-%d")
         except FileNotFoundError:
             raise Exception("Stockstats fail: Yahoo Finance data not fetched yet!")
     else:
-        # Online data fetching with caching
-        today_date = pd.Timestamp.today()
+        # Temporal safety: end_date = curr_date + 1 day (yfinance end is exclusive).
+        # Never fetch beyond trade_date — prevents future price leakage.
         curr_date_dt = pd.to_datetime(curr_date)
-        
-        end_date = today_date
-        start_date = today_date - pd.DateOffset(years=15)
+        end_date_dt = curr_date_dt + pd.DateOffset(days=1)
+        start_date = curr_date_dt - pd.DateOffset(years=15)
         start_date_str = start_date.strftime("%Y-%m-%d")
-        end_date_str = end_date.strftime("%Y-%m-%d")
-        
+        end_date_str = end_date_dt.strftime("%Y-%m-%d")
+
         os.makedirs(config["data_cache_dir"], exist_ok=True)
-        
+
+        # Cache key includes end_date (derived from curr_date) so that
+        # data cached for a different trade_date is not reused.
         data_file = os.path.join(
             config["data_cache_dir"],
             f"{symbol}-YFin-data-{start_date_str}-{end_date_str}.csv",
         )
-        
+
         if os.path.exists(data_file):
             data = pd.read_csv(data_file)
             data["Date"] = pd.to_datetime(data["Date"])
@@ -444,25 +450,30 @@ def _get_stock_stats_bulk(
             )
             data = data.reset_index()
             data.to_csv(data_file, index=False)
-        
+
         df = wrap(data)
         df["Date"] = df["Date"].dt.strftime("%Y-%m-%d")
-    
+
+    # Temporal safety: drop any rows after curr_date (belt-and-suspenders
+    # in case local CSV files contain future data).
+    curr_date_str = pd.to_datetime(curr_date).strftime("%Y-%m-%d")
+    df = df[df["Date"] <= curr_date_str].copy()
+
     # Calculate the indicator for all rows at once
     df[indicator]  # This triggers stockstats to calculate the indicator
-    
+
     # Create a dictionary mapping date strings to indicator values
     result_dict = {}
     for _, row in df.iterrows():
         date_str = row["Date"]
         indicator_value = row[indicator]
-        
+
         # Handle NaN/None values
         if pd.isna(indicator_value):
             result_dict[date_str] = "N/A"
         else:
             result_dict[date_str] = str(indicator_value)
-    
+
     return result_dict
 
 

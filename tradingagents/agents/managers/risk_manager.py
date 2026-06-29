@@ -33,10 +33,12 @@ Architecture literature:
 
 import json
 import re
+import time
 from typing import List, Tuple, Optional
 
 from tradingagents.dataflows.config import get_config
 from tradingagents.agents.risk_mgmt.risk_scorer import EGX_FOREIGN_RESTRICTED
+from tradingagents.graph.node_record import get_recorder, hash_state_slice, hash_string
 
 
 # =============================================================================
@@ -205,15 +207,33 @@ def create_risk_manager(llm, memory):
             state.get("memory_min_similarity")
             or DEFAULT_CONFIG.get("memory_min_similarity", 0.30)
         )
+        trade_date = state.get("trade_date")
         past_memories = memory.get_memories(
             curr_situation,
             n_matches=2,
             where=memory_where,
             min_similarity=memory_threshold,
+            as_of_date=str(trade_date) if trade_date else None,
         )
         past_memory_str = "".join(
             rec["recommendation"] + "\n\n" for rec in past_memories
         )
+
+        # ── Investor profile context (when running for a specific user) ───
+        investor_section = ""
+        ic = state.get("investor_context")
+        if ic:
+            exclusions = ic.get("sector_exclusions", [])
+            investor_section = (
+                "## Investor Profile\n"
+                f"- Risk tolerance: {ic.get('risk_tolerance', 'moderate')}\n"
+                f"- Horizon: {ic.get('investment_horizon', 'medium_term').replace('_', ' ')}\n"
+                f"- Max position: {ic.get('max_position_pct', 0.10):.0%}\n"
+                f"- Sector exclusions: {', '.join(exclusions) or 'none'}\n\n"
+                "Risk tolerance affects sizing and margin of safety, not evidence quality.\n"
+                "Do not lower your scrutiny for aggressive investors.\n"
+                "Deterministic hard limits apply regardless of profile."
+            )
 
         # ── Build scorer context section ──────────────────────────────────────
         # Strip veto_explanation from assessment shown to LLM (VETO never reaches here)
@@ -248,6 +268,30 @@ Risk Action: **{risk_action}**
             if is_egx else ""
         )
 
+        # ── Fundamentals quality note ─────────────────────────────────────────
+        fund = state.get("fundamental_analysis") or {}
+        fund_quality_note = ""
+        if isinstance(fund, dict):
+            qs = fund.get("quality_status", {})
+            quality_level = qs.get("level", "")
+            if quality_level == "unavailable":
+                fund_quality_note = (
+                    "\n**FUNDAMENTALS WARNING**: No financial data available for this ticker. "
+                    "Fundamental risk cannot be assessed. Consider this an elevated-risk condition "
+                    "and apply more conservative position sizing."
+                )
+            elif quality_level == "deterministic_only" and qs.get("enrichment_attempted"):
+                fund_quality_note = (
+                    "\n**Fundamentals note**: Enrichment was attempted but failed. "
+                    "Ratios and distress flags are available but no interpretive thesis or valuation. "
+                    "Treat fundamental conclusions with reduced confidence."
+                )
+            elif quality_level == "partial":
+                fund_quality_note = (
+                    "\n**Fundamentals note**: Enrichment partially completed — "
+                    "some interpretive stages failed. Fundamental conclusions may be incomplete."
+                )
+
         # Macro overlay: deterministic EGX macro context for veto reasoning.
         try:
             from tradingagents.dataflows.macro_provider import format_macro_context_for_prompt
@@ -255,10 +299,21 @@ Risk Action: **{risk_action}**
         except Exception:
             macro_section = ""
 
+        # Fix C (P8): inject breadth context when available
+        breadth_note = ""
+        breadth = state.get("market_breadth")
+        if breadth and isinstance(breadth, dict) and breadth.get("breadth_ratio") is not None:
+            breadth_note = (
+                f"\nMarket breadth ({breadth.get('lookback_days', 20)}d): "
+                f"{breadth['breadth_ratio']:.0%} of EGX constituents advancing "
+                f"— regime: {breadth.get('regime', 'unknown')}\n"
+            )
+
         # ── Full prompt ───────────────────────────────────────────────────────
         prompt = f"""You are the Constitutional Risk Manager for {company_name} on {"EGX" if is_egx else "the market"}.
 
 {macro_section}
+{breadth_note}
 
 {constitution_section}
 
@@ -266,7 +321,9 @@ Risk Action: **{risk_action}**
 
 ## Current Portfolio Position
 {position_context}
+{investor_section}
 {data_note}
+{fund_quality_note}
 
 ## Trader's Execution Plan (post-throttle if THROTTLE was applied)
 ```json
@@ -313,7 +370,20 @@ Your response format:
 Replace BUY with SELL or HOLD. Confidence: 0.0 (low) to 1.0 (high).
 """
 
+        # ── Recording: capture input state and prompt ────────────────────
+        recorder = get_recorder(state)
+        _input_keys = [
+            "company_of_interest", "risk_assessment", "risk_action",
+            "risk_metrics", "risk_debate_state", "execution_plan",
+            "current_position", "market_report", "news_report",
+            "fundamentals_report", "sentiment_report", "macro_context",
+        ]
+        _input_hash = hash_state_slice(state, _input_keys) if recorder else ""
+        _prompt_hash = hash_string(prompt) if recorder else ""
+
+        t0 = time.monotonic()
         response = llm.invoke(prompt)
+        _elapsed_ms = (time.monotonic() - t0) * 1000
 
         # ── Parse LLM decision ────────────────────────────────────────────────
         final_trade_decision: Optional[str] = None
@@ -370,12 +440,30 @@ Replace BUY with SELL or HOLD. Confidence: 0.0 (low) to 1.0 (high).
             "current_neutral_response": risk_debate_state.get("current_neutral_response", ""),
             "count": risk_debate_state.get("count", 0),
         }
-
-        return {
+        _return = {
             "risk_debate_state": new_risk_debate_state,
             "final_trade_decision": final_trade_decision,
             "risk_assessment": risk_assessment,
         }
+
+        # ── Recording: write record ──────────────────────────────────────
+        if recorder:
+            recorder.record(
+                node_name="risk_manager",
+                trade_date=state.get("trade_date", ""),
+                input_state_keys=_input_keys,
+                input_hash=_input_hash,
+                prompt_hash=_prompt_hash,
+                prompt_text=prompt,
+                raw_output=response.content,
+                state_update=_return,
+                state_update_keys=["risk_debate_state", "final_trade_decision", "risk_assessment"],
+                signal=final_trade_decision if final_trade_decision in ("BUY", "SELL", "HOLD") else None,
+                wall_clock_ms=_elapsed_ms,
+                status="success",
+            )
+
+        return _return
 
     return risk_manager_node
 

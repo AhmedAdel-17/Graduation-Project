@@ -1,0 +1,118 @@
+{
+  "run_id": "6a87c7683a95494e80431dd14cf52698",
+  "ticker": "COMI",
+  "trade_date": "2024-12-08",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "0ddfcac46fe41c18c6cd86d2e3e5ac93b1c3cd3f68309dddf468bf0c5298df68",
+  "raw_output": "# EXECUTION PLAN: COMI.CA\n\n## Analysis & Decision Framework\n\n### Thesis Reconciliation\n\n**Bull Case Strengths:**\n- Stock-specific NIM expansion trajectory (no two consecutive flat quarters)\n- 1.8:1 to 3.9:1 risk-reward favoring upside\n- Positive EGX30 momentum (bullish tailwind)\n- IMF program anchors macro stability\n- Q4 2024 earnings catalyst in February 2025\n\n**Bear Case Weaknesses:**\n- Negative earnings yield spread (-16.7%) is structurally common in high-rate EM regimes\n- Peak-cycle earnings concern is macro-level, not stock-specific\n- No near-term catalyst identified to trigger downside\n- Technical signals are neutral, not bearish\n\n**Key Constraint:**\n- Current position: 12,098 shares (near portfolio cap of 13,154)\n- Max additional shares: 1,056 shares (13,154 - 12,098)\n- This severely limits the proposed 2,000-3,500 share increase\n\n### Decision: HOLD (with tactical adjustment)\n\nGiven the position limit constraint, a full BUY of 2,000-3,500 shares is impossible. The research team's BUY recommendation assumed available capacity that doesn't exist. However, the bull case is compelling enough not to SELL.\n\n**Optimal Action:** HOLD current position. If the portfolio cap can be increased, execute a small tactical add of ~1,000 shares using the phased approach below.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"COMI.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"moderate\",\n        \"position_sizing\": {\n            \"target_shares\": 12098,\n            \"max_shares_per_day\": 2618228,\n            \"execution_days\": 1,\n            \"pct_of_adv_per_day\": \"0.46%\",\n            \"portfolio_allocation\": \"100% of current position\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"limit\",\n            \"entry_zone\": {\n                \"limit_price\": 75.90,\n                \"price_range_low\": 74.00,\n                \"price_range_high\": 77.00\n            },\n            \"timing\": \"No new entry - maintain current position. If portfolio cap is increased, add up to 1,056 shares using limit orders at 74.00-75.00 EGP during first 30 minutes of trading over 2-3 days\",\n            \"conditions\": [\n                \"Portfolio cap must be increased above 13,154 shares\",\n                \"Price must trade below 75.00 EGP for entry\",\n                \"Volume must exceed 50% of 20-day average on entry day\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": 85.00, \"pct_of_position\": 33},\n                \"target_2\": {\"price\": 92.00, \"pct_of_position\": 33},\n                \"target_3\": {\"price\": 96.00, \"pct_of_position\": 34}\n            },\n            \"stop_loss\": {\n                \"price\": 64.00,\n                \"type\": \"mental_stop\",\n                \"note\": \"No market stop orders - use limit order at 64.00 EGP if triggered. Monitor daily for breach.\"\n            },\n            \"time_stop\": \"Exit if Q4 2024 earnings (Feb 2025) show NIM contraction or two consecutive flat NIM quarters. If no catalyst by June 2025, reduce to 50% position.\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"15% of position value (137,699 EGP at 64.00 stop)\",\n            \"max_daily_execution\": \"2,618,228 shares (10% of ADV)\",\n            \"price_limit_risk\": \"If stock hits -10% limit, do NOT panic sell. Wait for next day. If limit triggered on stop-loss day, use limit order at 64.00 EGP next session. If +10% limit hit on take-profit, consider accelerating partial exits.\",\n            \"liquidity_exit_plan\": \"If volume drops below 25% of 20-day average, extend exit to 5-7 days. Use iceberg orders at 50% of daily volume. Accept 1-2% slippage for execution certainty.\"\n        },\n        \"invalidation_triggers\": [\n            \"NIM contracts below 5% in Q4 2024 earnings\",\n            \"Two consecutive flat NIM quarters printed\",\n            \"NPL ratio exceeds 5%\",\n            \"CAR falls below 14%\",\n            \"CBE imposes capital controls\",\n            \"EGP devaluation exceeds 30% in single event\",\n            \"IMF program suspension\",\n            \"Insider selling by C-suite\",\n            \"Breakdown below 64.00 EGP with volume confirming trend reversal\",\n            \"RSI drops below 30 indicating momentum failure\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n## Key Rationale for HOLD Decision\n\n1. **Position Limit Constraint:** Current position (12,098 shares) is at 92% of portfolio cap (13,154). Only 1,056 shares of additional capacity exists — insufficient for the research team's proposed 2,000-3,500 share increase.\n\n2. **Favorable Risk-Reward:** The 1.8:1 to 3.9:1 risk-reward ratio supports holding. Current price (~75.90 EGP) offers 27% upside to base case (96 EGP) with -15% downside to stop-loss (64 EGP).\n\n3. **Catalyst Timeline:** Q4 2024 earnings in February 2025 is the key catalyst. Holding through this event allows thesis confirmation without premature exit.\n\n4. **Macro Context:** Positive real rate (1.45%), bullish EGX30, and active IMF program provide a supportive backdrop for bank stocks.\n\n5. **No Urgent Sell Signal:** Technicals are neutral (not bearish), fundamentals are healthy (ROE 32.7%, net margin 49.4%), and the bear case lacks a near-term catalyst.\n\n## Monitoring Checklist\n\n| Trigger | Action | Timeline |\n|---------|--------|----------|\n| Q4 2024 earnings beat with NIM expansion | Maintain HOLD, consider adding if cap increases | Feb 2025 |\n| NIM contraction or flat QoQ | Switch to SELL, exit over 5-7 days | Feb 2025 |\n| Price reaches 96 EGP | Take profit on 34% of position | 6-12 months |\n| Price breaks below 64 EGP | Execute stop-loss via limit order | Immediate |\n| Portfolio cap increased | Execute tactical add of 1,056 shares | As available |",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN: COMI.CA\\n\\n## Analysis & Decision Framework\\n\\n### Thesis Reconciliation\\n\\n**Bull Case Strengths:**\\n- Stock-specific NIM expansion trajectory (no two consecutive flat quarters)\\n- 1.8:1 to 3.9:1 risk-reward favoring upside\\n- Positive EGX30 momentum (bullish tailwind)\\n- IMF program anchors macro stability\\n- Q4 2024 earnings catalyst in February 2025\\n\\n**Bear Case Weaknesses:**\\n- Negative earnings yield spread (-16.7%) is structurally common in high-rate EM regimes\\n- Peak-cycle earnings concern is macro-level, not stock-specific\\n- No near-term catalyst identified to trigger downside\\n- Technical signals are neutral, not bearish\\n\\n**Key Constraint:**\\n- Current position: 12,098 shares (near portfolio cap of 13,154)\\n- Max additional shares: 1,056 shares (13,154 - 12,098)\\n- This severely limits the proposed 2,000-3,500 share increase\\n\\n### Decision: HOLD (with tactical adjustment)\\n\\nGiven the position limit constraint, a full BUY of 2,000-3,500 shares is impossible. The research team\\'s BUY recommendation assumed available capacity that doesn\\'t exist. However, the bull case is compelling enough not to SELL.\\n\\n**Optimal Action:** HOLD current position. If the portfolio cap can be increased, execute a small tactical add of ~1,000 shares using the phased approach below.\\n\\n---\\n\\n## Structured Execution Plan\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"COMI.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"moderate\",\\n        \"position_sizing\": {\\n            \"target_shares\": 12098,\\n            \"max_shares_per_day\": 2618228,\\n            \"execution_days\": 1,\\n            \"pct_of_adv_per_day\": \"0.46%\",\\n            \"portfolio_allocation\": \"100% of current position\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"limit\",\\n            \"entry_zone\": {\\n                \"limit_price\": 75.90,\\n                \"price_range_low\": 74.00,\\n                \"price_range_high\": 77.00\\n            },\\n            \"timing\": \"No new entry - maintain current position. If portfolio cap is increased, add up to 1,056 shares using limit orders at 74.00-75.00 EGP during first 30 minutes of trading over 2-3 days\",\\n            \"conditions\": [\\n                \"Portfolio cap must be increased above 13,154 shares\",\\n                \"Price must trade below 75.00 EGP for entry\",\\n                \"Volume must exceed 50% of 20-day average on entry day\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": 85.00, \"pct_of_position\": 33},\\n                \"target_2\": {\"price\": 92.00, \"pct_of_position\": 33},\\n                \"target_3\": {\"price\": 96.00, \"pct_of_position\": 34}\\n            },\\n            \"stop_loss\": {\\n                \"price\": 64.00,\\n                \"type\": \"mental_stop\",\\n                \"note\": \"No market stop orders - use limit order at 64.00 EGP if triggered. Monitor daily for breach.\"\\n            },\\n            \"time_stop\": \"Exit if Q4 2024 earnings (Feb 2025) show NIM contraction or two consecutive flat NIM quarters. If no catalyst by June 2025, reduce to 50% position.\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"15% of position value (137,699 EGP at 64.00 stop)\",\\n            \"max_daily_execution\": \"2,618,228 shares (10% of ADV)\",\\n            \"price_limit_risk\": \"If stock hits -10% limit, do NOT panic sell. Wait for next day. If limit triggered on stop-loss day, use limit order at 64.00 EGP next session. If +10% limit hit on take-profit, consider accelerating partial exits.\",\\n            \"liquidity_exit_plan\": \"If volume drops below 25% of 20-day average, extend exit to 5-7 days. Use iceberg orders at 50% of daily volume. Accept 1-2% slippage for execution certainty.\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"NIM contracts below 5% in Q4 2024 earnings\",\\n            \"Two consecutive flat NIM quarters printed\",\\n            \"NPL ratio exceeds 5%\",\\n            \"CAR falls below 14%\",\\n            \"CBE imposes capital controls\",\\n            \"EGP devaluation exceeds 30% in single event\",\\n            \"IMF program suspension\",\\n            \"Insider selling by C-suite\",\\n            \"Breakdown below 64.00 EGP with volume confirming trend reversal\",\\n            \"RSI drops below 30 indicating momentum failure\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```\\n\\n## Key Rationale for HOLD Decision\\n\\n1. **Position Limit Constraint:** Current position (12,098 shares) is at 92% of portfolio cap (13,154). Only 1,056 shares of additional capacity exists — insufficient for the research team\\'s proposed 2,000-3,500 share increase.\\n\\n2. **Favorable Risk-Reward:** The 1.8:1 to 3.9:1 risk-reward ratio supports holding. Current price (~75.90 EGP) offers 27% upside to base case (96 EGP) with -15% downside to stop-loss (64 EGP).\\n\\n3. **Catalyst Timeline:** Q4 2024 earnings in February 2025 is the key catalyst. Holding through this event allows thesis confirmation without premature exit.\\n\\n4. **Macro Context:** Positive real rate (1.45%), bullish EGX30, and active IMF program provide a supportive backdrop for bank stocks.\\n\\n5. **No Urgent Sell Signal:** Technicals are neutral (not bearish), fundamentals are healthy (ROE 32.7%, net margin 49.4%), and the bear case lacks a near-term catalyst.\\n\\n## Monitoring Checklist\\n\\n| Trigger | Action | Timeline |\\n|---------|--------|----------|\\n| Q4 2024 earnings beat with NIM expansion | Maintain HOLD, consider adding if cap increases | Feb 2025 |\\n| NIM contraction or flat QoQ | Switch to SELL, exit over 5-7 days | Feb 2025 |\\n| Price reaches 96 EGP | Take profit on 34% of position | 6-12 months |\\n| Price breaks below 64 EGP | Execute stop-loss via limit order | Immediate |\\n| Portfolio cap increased | Execute tactical add of 1,056 shares | As available |', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1505, 'prompt_tokens': 9333, 'total_tokens': 10838, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9333}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'cfb2d914-81bc-421a-8543-b345b09166ce', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edd40-63cf-7271-a26a-62ca6c8fb514-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9333, 'output_tokens': 1505, 'total_tokens': 10838, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN: COMI.CA\n\n## Analysis & Decision Framework\n\n### Thesis Reconciliation\n\n**Bull Case Strengths:**\n- Stock-specific NIM expansion trajectory (no two consecutive flat quarters)\n- 1.8:1 to 3.9:1 risk-reward favoring upside\n- Positive EGX30 momentum (bullish tailwind)\n- IMF program anchors macro stability\n- Q4 2024 earnings catalyst in February 2025\n\n**Bear Case Weaknesses:**\n- Negative earnings yield spread (-16.7%) is structurally common in high-rate EM regimes\n- Peak-cycle earnings concern is macro-level, not stock-specific\n- No near-term catalyst identified to trigger downside\n- Technical signals are neutral, not bearish\n\n**Key Constraint:**\n- Current position: 12,098 shares (near portfolio cap of 13,154)\n- Max additional shares: 1,056 shares (13,154 - 12,098)\n- This severely limits the proposed 2,000-3,500 share increase\n\n### Decision: HOLD (with tactical adjustment)\n\nGiven the position limit constraint, a full BUY of 2,000-3,500 shares is impossible. The research team's BUY recommendation assumed available capacity that doesn't exist. However, the bull case is compelling enough not to SELL.\n\n**Optimal Action:** HOLD current position. If the portfolio cap can be increased, execute a small tactical add of ~1,000 shares using the phased approach below.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"COMI.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"moderate\",\n        \"position_sizing\": {\n            \"target_shares\": 12098,\n            \"max_shares_per_day\": 2618228,\n            \"execution_days\": 1,\n            \"pct_of_adv_per_day\": \"0.46%\",\n            \"portfolio_allocation\": \"100% of current position\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"limit\",\n            \"entry_zone\": {\n                \"limit_price\": 75.90,\n                \"price_range_low\": 74.00,\n                \"price_range_high\": 77.00\n            },\n            \"timing\": \"No new entry - maintain current position. If portfolio cap is increased, add up to 1,056 shares using limit orders at 74.00-75.00 EGP during first 30 minutes of trading over 2-3 days\",\n            \"conditions\": [\n                \"Portfolio cap must be increased above 13,154 shares\",\n                \"Price must trade below 75.00 EGP for entry\",\n                \"Volume must exceed 50% of 20-day average on entry day\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": 85.00, \"pct_of_position\": 33},\n                \"target_2\": {\"price\": 92.00, \"pct_of_position\": 33},\n                \"target_3\": {\"price\": 96.00, \"pct_of_position\": 34}\n            },\n            \"stop_loss\": {\n                \"price\": 64.00,\n                \"type\": \"mental_stop\",\n                \"note\": \"No market stop orders - use limit order at 64.00 EGP if triggered. Monitor daily for breach.\"\n            },\n            \"time_stop\": \"Exit if Q4 2024 earnings (Feb 2025) show NIM contraction or two consecutive flat NIM quarters. If no catalyst by June 2025, reduce to 50% position.\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"15% of position value (137,699 EGP at 64.00 stop)\",\n            \"max_daily_execution\": \"2,618,228 shares (10% of ADV)\",\n            \"price_limit_risk\": \"If stock hits -10% limit, do NOT panic sell. Wait for next day. If limit triggered on stop-loss day, use limit order at 64.00 EGP next session. If +10% limit hit on take-profit, consider accelerating partial exits.\",\n            \"liquidity_exit_plan\": \"If volume drops below 25% of 20-day average, extend exit to 5-7 days. Use iceberg orders at 50% of daily volume. Accept 1-2% slippage for execution certainty.\"\n        },\n        \"invalidation_triggers\": [\n            \"NIM contracts below 5% in Q4 2024 earnings\",\n            \"Two consecutive flat NIM quarters printed\",\n            \"NPL ratio exceeds 5%\",\n            \"CAR falls below 14%\",\n            \"CBE imposes capital controls\",\n            \"EGP devaluation exceeds 30% in single event\",\n            \"IMF program suspension\",\n            \"Insider selling by C-suite\",\n            \"Breakdown below 64.00 EGP with volume confirming trend reversal\",\n            \"RSI drops below 30 indicating momentum failure\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n## Key Rationale for HOLD Decision\n\n1. **Position Limit Constraint:** Current position (12,098 shares) is at 92% of portfolio cap (13,154). Only 1,056 shares of additional capacity exists — insufficient for the research team's proposed 2,000-3,500 share increase.\n\n2. **Favorable Risk-Reward:** The 1.8:1 to 3.9:1 risk-reward ratio supports holding. Current price (~75.90 EGP) offers 27% upside to base case (96 EGP) with -15% downside to stop-loss (64 EGP).\n\n3. **Catalyst Timeline:** Q4 2024 earnings in February 2025 is the key catalyst. Holding through this event allows thesis confirmation without premature exit.\n\n4. **Macro Context:** Positive real rate (1.45%), bullish EGX30, and active IMF program provide a supportive backdrop for bank stocks.\n\n5. **No Urgent Sell Signal:** Technicals are neutral (not bearish), fundamentals are healthy (ROE 32.7%, net margin 49.4%), and the bear case lacks a near-term catalyst.\n\n## Monitoring Checklist\n\n| Trigger | Action | Timeline |\n|---------|--------|----------|\n| Q4 2024 earnings beat with NIM expansion | Maintain HOLD, consider adding if cap increases | Feb 2025 |\n| NIM contraction or flat QoQ | Switch to SELL, exit over 5-7 days | Feb 2025 |\n| Price reaches 96 EGP | Take profit on 34% of position | 6-12 months |\n| Price breaks below 64 EGP | Execute stop-loss via limit order | Immediate |\n| Portfolio cap increased | Execute tactical add of 1,056 shares | As available |",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "COMI.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "moderate",
+        "position_sizing": {
+          "target_shares": 12098,
+          "max_shares_per_day": 2618228,
+          "execution_days": 1,
+          "pct_of_adv_per_day": "0.46%",
+          "portfolio_allocation": "100% of current position"
+        },
+        "entry_logic": {
+          "order_type": "limit",
+          "entry_zone": {
+            "limit_price": 75.9,
+            "price_range_low": 74.0,
+            "price_range_high": 77.0
+          },
+          "timing": "No new entry - maintain current position. If portfolio cap is increased, add up to 1,056 shares using limit orders at 74.00-75.00 EGP during first 30 minutes of trading over 2-3 days",
+          "conditions": [
+            "Portfolio cap must be increased above 13,154 shares",
+            "Price must trade below 75.00 EGP for entry",
+            "Volume must exceed 50% of 20-day average on entry day"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": 85.0,
+              "pct_of_position": 33
+            },
+            "target_2": {
+              "price": 92.0,
+              "pct_of_position": 33
+            },
+            "target_3": {
+              "price": 96.0,
+              "pct_of_position": 34
+            }
+          },
+          "stop_loss": {
+            "price": 64.0,
+            "type": "mental_stop",
+            "note": "No market stop orders - use limit order at 64.00 EGP if triggered. Monitor daily for breach."
+          },
+          "time_stop": "Exit if Q4 2024 earnings (Feb 2025) show NIM contraction or two consecutive flat NIM quarters. If no catalyst by June 2025, reduce to 50% position."
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "15% of position value (137,699 EGP at 64.00 stop)",
+          "max_daily_execution": "2,618,228 shares (10% of ADV)",
+          "price_limit_risk": "If stock hits -10% limit, do NOT panic sell. Wait for next day. If limit triggered on stop-loss day, use limit order at 64.00 EGP next session. If +10% limit hit on take-profit, consider accelerating partial exits.",
+          "liquidity_exit_plan": "If volume drops below 25% of 20-day average, extend exit to 5-7 days. Use iceberg orders at 50% of daily volume. Accept 1-2% slippage for execution certainty."
+        },
+        "invalidation_triggers": [
+          "NIM contracts below 5% in Q4 2024 earnings",
+          "Two consecutive flat NIM quarters printed",
+          "NPL ratio exceeds 5%",
+          "CAR falls below 14%",
+          "CBE imposes capital controls",
+          "EGP devaluation exceeds 30% in single event",
+          "IMF program suspension",
+          "Insider selling by C-suite",
+          "Breakdown below 64.00 EGP with volume confirming trend reversal",
+          "RSI drops below 30 indicating momentum failure"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "5c44c14f357f45b0c03bf8ade2a1a62b50035b931bba1b5b02682b8515734b52",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 13438.977334066294,
+  "timestamp_utc": "2026-06-19T00:20:58.575112+00:00",
+  "context_items": []
+}

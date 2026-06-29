@@ -1,0 +1,173 @@
+{
+  "run_id": "e9ce764ddaf04456babac4582c58a4d6",
+  "ticker": "ETEL",
+  "trade_date": "2024-10-06",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "49f00a26af7e0574376a3ab6aa96e6f8eca8dfdd56763b37fc7aa3b97044005a",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market news available for broader EGX context\",\n        \"Silence reduces confidence and implies lack of material events or investor attention\",\n        \"Data source errors indicate potential data collection issues, not necessarily company inactivity\"\n    ],\n    \"explanation\": \"No news articles were found for ETEL.CA during the September 29 to October 6, 2024 period, and broader EGX market news was also unavailable. This silence reduces confidence in any directional sentiment, as there are no catalysts, risks, or developments to assess. The neutral stance reflects the absence of information rather than a positive or negative outlook.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-09-29 to 2024-10-06\"\n    },\n    \"risks_from_news\": [\"No news identified; potential risk of low liquidity or market neglect\"],\n    \"catalysts_from_news\": [\"No news identified; no positive catalysts detected\"]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for the period\",\\n        \"No market news available for broader EGX context\",\\n        \"Silence reduces confidence and implies lack of material events or investor attention\",\\n        \"Data source errors indicate potential data collection issues, not necessarily company inactivity\"\\n    ],\\n    \"explanation\": \"No news articles were found for ETEL.CA during the September 29 to October 6, 2024 period, and broader EGX market news was also unavailable. This silence reduces confidence in any directional sentiment, as there are no catalysts, risks, or developments to assess. The neutral stance reflects the absence of information rather than a positive or negative outlook.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-09-29 to 2024-10-06\"\\n    },\\n    \"risks_from_news\": [\"No news identified; potential risk of low liquidity or market neglect\"],\\n    \"catalysts_from_news\": [\"No news identified; no positive catalysts detected\"]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 285, 'prompt_tokens': 664, 'total_tokens': 949, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 664}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '5ab21dd9-e7e5-44d4-9149-31e3bed938dd', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edd5b-ebe1-7750-bdea-c33c46351020-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 664, 'output_tokens': 285, 'total_tokens': 949, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market news available for broader EGX context\",\n        \"Silence reduces confidence and implies lack of material events or investor attention\",\n        \"Data source errors indicate potential data collection issues, not necessarily company inactivity\"\n    ],\n    \"explanation\": \"No news articles were found for ETEL.CA during the September 29 to October 6, 2024 period, and broader EGX market news was also unavailable. This silence reduces confidence in any directional sentiment, as there are no catalysts, risks, or developments to assess. The neutral stance reflects the absence of information rather than a positive or negative outlook.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-09-29 to 2024-10-06\"\n    },\n    \"risks_from_news\": [\"No news identified; potential risk of low liquidity or market neglect\"],\n    \"catalysts_from_news\": [\"No news identified; no positive catalysts detected\"]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for the period",
+        "No market news available for broader EGX context",
+        "Silence reduces confidence and implies lack of material events or investor attention",
+        "Data source errors indicate potential data collection issues, not necessarily company inactivity",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for ETEL.CA during the September 29 to October 6, 2024 period, and broader EGX market news was also unavailable. This silence reduces confidence in any directional sentiment, as there are no catalysts, risks, or developments to assess. The neutral stance reflects the absence of information rather than a positive or negative outlook.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-09-29 to 2024-10-06"
+      },
+      "risks_from_news": [
+        "No news identified; potential risk of low liquidity or market neglect"
+      ],
+      "catalysts_from_news": [
+        "No news identified; no positive catalysts detected"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.4237,
+        "label": "bearish",
+        "confidence": 0.6034,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for the period",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8298,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market news available for broader EGX context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9404,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence reduces confidence and implies lack of material events or investor attention",
+            "source": "quoted_in_report",
+            "score": -0.8111,
+            "label": "bearish",
+            "confidence": 0.8111,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data source errors indicate potential data collection issues, not necessarily company inactivity",
+            "source": "quoted_in_report",
+            "score": -0.9203,
+            "label": "bearish",
+            "confidence": 0.9203,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for ETEL.CA during the September 29 to October 6, 2024 period, and broad",
+            "source": "quoted_in_report",
+            "score": -0.8312,
+            "label": "bearish",
+            "confidence": 0.8312,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-09-29 to 2024-10-06",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9408,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news identified; potential risk of low liquidity or market neglect",
+            "source": "quoted_in_report",
+            "score": -0.9341,
+            "label": "bearish",
+            "confidence": 0.9341,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No news identified; no positive catalysts detected",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8331,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.2754,
+        "label": "bearish",
+        "confidence": 0.502
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "45d0f57307ffc30df55a734ff6ba67316bedfb197abe0b9b564bcf8144c9c39d",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 3402.555292006582,
+  "timestamp_utc": "2026-06-19T00:50:53.286948+00:00",
+  "context_items": []
+}

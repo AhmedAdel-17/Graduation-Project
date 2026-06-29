@@ -41,6 +41,17 @@ from .schemas import StockDataResponse, TechnicalSignals, NewsResponse, DataQual
 logger = logging.getLogger("tradingagents.gateway")
 
 
+def _record_data_fetch(data_type: str, source: str, status: str, elapsed: float = 0.0) -> None:
+    """Best-effort Prometheus counter/histogram increment for data fetches."""
+    try:
+        from tradingagents.observability.metrics import data_fetch_total, data_fetch_latency_seconds
+        data_fetch_total.labels(data_type=data_type, source=source, status=status).inc()
+        if elapsed > 0:
+            data_fetch_latency_seconds.labels(data_type=data_type, source=source).observe(elapsed)
+    except Exception:
+        pass
+
+
 class DataGateway:
     """
     Central data orchestrator. ALL data access should go through here.
@@ -107,11 +118,14 @@ class DataGateway:
         # Build provider chain
         providers = self._build_ohlcv_providers(symbol_normalized, start_date, end_date)
 
+        import time as _time
+        _fetch_start = _time.perf_counter()
         try:
             result, source_name = fetch_with_fallback(
                 providers=providers,
                 method_name=f"stock_data({symbol_normalized})",
             )
+            _elapsed = _time.perf_counter() - _fetch_start
 
             # Validate with schema
             if isinstance(result, dict):
@@ -125,15 +139,18 @@ class DataGateway:
 
             # Cache it
             self.cache.set(cache_key, result, data_type="ohlcv")
-            
+
             # Log quality
             self._log_quality("stock_data", source_name, True, len(result.get("data", [])))
-            
+            _record_data_fetch("ohlcv", source_name, "success", _elapsed)
+
             return result
 
         except RuntimeError as e:
+            _elapsed = _time.perf_counter() - _fetch_start
             logger.error("All providers failed for stock data: %s", e)
             self._log_quality("stock_data", "none", False, 0, str(e))
+            _record_data_fetch("ohlcv", "none", "error", _elapsed)
             
             # Return empty response (never crash the agent pipeline)
             return StockDataResponse(
@@ -527,8 +544,16 @@ class DataGateway:
     # =========================================================================
 
     def _normalize_symbol(self, symbol: str) -> str:
-        """Ensure EGX symbol has .CA suffix."""
-        symbol = symbol.upper().strip()
+        """Ensure EGX symbol has .CA suffix.
+
+        Index tickers (starting with ^ or $) are left unchanged — they are
+        not EGX equity symbols and should not receive the .CA suffix.
+        """
+        symbol = symbol.strip()
+        # Index tickers like ^EGX30, $TASI — pass through unchanged
+        if symbol.startswith("^") or symbol.startswith("$"):
+            return symbol.upper()
+        symbol = symbol.upper()
         if not symbol.endswith(".CA"):
             symbol += ".CA"
         return symbol

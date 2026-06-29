@@ -1,0 +1,107 @@
+groups:
+  - name: stockhive_data
+    interval: 60s
+    rules:
+      - alert: DataSourceStale
+        expr: tradingagents_data_stale_current > 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $value }} data source(s) are stale"
+          description: "One or more data sources have not been refreshed within their expected window. Check /api/data-freshness for details."
+
+      - alert: DataSourceMissing
+        expr: tradingagents_data_missing_current > 0
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $value }} data source(s) are missing"
+          description: "One or more data sources have no data at all. The pipeline may produce degraded recommendations."
+
+  - name: stockhive_llm
+    interval: 30s
+    rules:
+      - alert: LLMHighErrorRate
+        expr: |
+          (
+            sum(rate(tradingagents_llm_calls_total{status="error"}[10m]))
+            /
+            sum(rate(tradingagents_llm_calls_total[10m]))
+          ) > 0.10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LLM error rate above 10%"
+          description: "More than 10% of LLM calls are failing over the last 10 minutes. Check provider status and API key balance."
+
+      - alert: LLMFailoverActive
+        expr: increase(tradingagents_llm_failover_total[15m]) > 0
+        for: 1m
+        labels:
+          severity: info
+        annotations:
+          summary: "LLM failover triggered"
+          description: "The system has switched to a backup LLM provider. Primary provider may be degraded."
+
+  - name: stockhive_pipeline
+    interval: 30s
+    rules:
+      - alert: PipelineDurationHigh
+        expr: histogram_quantile(0.95, rate(tradingagents_pipeline_duration_seconds_bucket[30m])) > 600
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pipeline p95 duration exceeds 10 minutes"
+          description: "The 95th percentile pipeline duration is {{ $value | humanizeDuration }}. This may indicate LLM latency or network issues."
+
+      - alert: HighHoldRate
+        expr: |
+          (
+            increase(tradingagents_signal_total{signal="HOLD"}[1h])
+            / on() group_left()
+            increase(tradingagents_signal_total[1h])
+          ) > 0.90
+        for: 30m
+        labels:
+          severity: info
+        annotations:
+          summary: "HOLD rate above 90% in the last hour"
+          description: "{{ $value | humanizePercentage }} of recent signals are HOLD. This may indicate sparse data, LLM parsing failures, or overly conservative risk thresholds."
+
+      - alert: RiskVetoSpike
+        expr: increase(tradingagents_risk_veto_total[1h]) > 5
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "{{ $value }} risk vetoes in the last hour"
+          description: "Multiple recommendations were blocked by deterministic risk checks. Review risk limits if this is unexpected."
+
+  - name: stockhive_api
+    interval: 15s
+    rules:
+      - alert: APIHighErrorRate
+        expr: |
+          (
+            sum(rate(tradingagents_http_requests_total{status_code=~"5.."}[5m]))
+            / sum(rate(tradingagents_http_requests_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API 5xx error rate above 5%"
+          description: "{{ $value | humanizePercentage }} of HTTP requests are returning 5xx errors."
+
+      - alert: APIHighLatency
+        expr: histogram_quantile(0.95, sum(rate(tradingagents_http_request_duration_seconds_bucket[5m])) by (le)) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API p95 latency above 10 seconds"
+          description: "The 95th percentile API response time is {{ $value | humanizeDuration }}."

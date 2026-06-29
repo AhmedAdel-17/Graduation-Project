@@ -36,18 +36,20 @@ class StockstatsUtils:
             except FileNotFoundError:
                 raise Exception("Stockstats fail: Yahoo Finance data not fetched yet!")
         else:
-            # Get today's date as YYYY-mm-dd to add to cache
-            today_date = pd.Timestamp.today()
-            curr_date = pd.to_datetime(curr_date)
-
-            end_date = today_date
-            start_date = today_date - pd.DateOffset(years=15)
+            # Temporal safety: end_date = curr_date + 1 day (yfinance end
+            # is exclusive).  Never fetch beyond trade_date — prevents
+            # future price leakage in backtests.
+            curr_date_dt = pd.to_datetime(curr_date)
+            end_date_dt = curr_date_dt + pd.DateOffset(days=1)
+            start_date = curr_date_dt - pd.DateOffset(years=15)
             start_date = start_date.strftime("%Y-%m-%d")
-            end_date = end_date.strftime("%Y-%m-%d")
+            end_date = end_date_dt.strftime("%Y-%m-%d")
 
             # Get config and ensure cache directory exists
             os.makedirs(config["data_cache_dir"], exist_ok=True)
 
+            # Cache key includes end_date (derived from curr_date) so
+            # data cached for a different trade_date is not reused.
             data_file = os.path.join(
                 config["data_cache_dir"],
                 f"{symbol}-YFin-data-{start_date}-{end_date}.csv",
@@ -70,7 +72,7 @@ class StockstatsUtils:
 
             df = wrap(data)
             df["Date"] = df["Date"].dt.strftime("%Y-%m-%d")
-            curr_date = curr_date.strftime("%Y-%m-%d")
+            curr_date = curr_date_dt.strftime("%Y-%m-%d")
 
         df[indicator]  # trigger stockstats to calculate the indicator
         matching_rows = df[df["Date"].str.startswith(curr_date)]

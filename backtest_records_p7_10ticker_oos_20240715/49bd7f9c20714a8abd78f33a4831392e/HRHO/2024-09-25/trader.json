@@ -1,0 +1,113 @@
+{
+  "run_id": "49bd7f9c20714a8abd78f33a4831392e",
+  "ticker": "HRHO",
+  "trade_date": "2024-09-25",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "d8f7884fa7733aae1726f832e5437c9bb03820ffa96fb2c99cd23c6fdfbad4ad",
+  "raw_output": "# EXECUTION PLAN — HRHO.CA\n\n## Analysis & Decision Rationale\n\n### Investment Committee Verdict: HOLD\n\nAfter synthesizing all available data — macro environment, fundamental ratios, technical signals, sentiment, and past trade lessons — the correct decision is **HOLD**. Do not open a position.\n\n### Why HOLD Wins Over BUY\n\n| Factor | Assessment | Weight |\n|--------|-----------|--------|\n| **Balance Sheet Fragility** | Current ratio 0.83x (below 1.0x = cannot cover short-term liabilities), D/E 3.45x, interest expense 41.1% of revenue | **CRITICAL** |\n| **Earnings Yield vs Risk-Free** | EY = 6.35% vs T-bill 27.25% → -20.9% spread. Massive opportunity cost | **CRITICAL** |\n| **Technical Signal** | Neutral (0 bullish/0 bearish signals), confidence 40% — no confirmation | **MODERATE** |\n| **Sentiment** | Neutral-bearish (no news coverage, low institutional interest) | **LOW** |\n| **Momentum** | +29.7% in 60 days with zero news — speculative, not fundamental | **WARNING** |\n| **Macro Tailwind** | EGX30 bullish, IMF active — but stock-specific risk overrides | **MODERATE** |\n\n### The Asymmetric Risk\n\nThe bull case assumes 20% upside (base) to 40% upside (bull) with 15% downside → 2.3:1 risk/reward. However:\n\n- **Bear case worst-case**: EGP 10/share (from current ~EGP 24) = **58% downside**\n- **Balance sheet trigger**: A single quarter of margin compression could force refinancing at 27.25% rates\n- **Liquidity trap**: 0.83x current ratio means the company is technically insolvent on a liquidity basis\n- **No dividend buffer**: Zero income yield in a 27.25% rate environment\n\nThe asymmetry is **unfavorable** — the downside tail is much larger than the upside.\n\n### Past Trade Lesson Applied\n\n> \"ATR-based stops on HRHO: 2.0× ATR works in calm regimes (vol < 0.4), but use 3.0× ATR pre-earnings to avoid premature stop-out.\"\n\nThis confirms that even if we entered, position management would be difficult. The 3.0× ATR stop would be wide enough to absorb significant losses before triggering — not a good risk management setup.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"HRHO.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Do not enter. Monitor for invalidation conditions.\",\n            \"conditions\": [\n                \"Q3 2024 earnings show current ratio improving above 1.0x\",\n                \"Debt-to-equity falls below 2.5x\",\n                \"Stock pulls back to EGP 16-18 (50%+ correction) AND CBE signals rate cuts below 20%\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A\",\n                \"note\": \"No position to exit\"\n            },\n            \"time_stop\": \"Re-evaluate after Q3 2024 earnings release or if CBE cuts rates below 20%\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"0% — no capital at risk\",\n            \"max_daily_execution\": \"0 shares\",\n            \"price_limit_risk\": \"N/A — not exposed to ±10% daily limit\",\n            \"liquidity_exit_plan\": \"N/A — no position to exit\"\n        },\n        \"invalidation_triggers\": [\n            \"Q3 2024 earnings: current ratio improves above 1.0x AND D/E falls below 2.5x\",\n            \"Stock price corrects to EGP 16-18 range (50%+ drawdown from recent highs)\",\n            \"CBE policy rate cut below 20% (makes earnings yield spread positive)\",\n            \"Positive news coverage emerges with insider buying\",\n            \"Dividend initiated or resumed\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Monitoring Checklist (for potential future entry)\n\n| Trigger | Current Value | Target | Status |\n|---------|--------------|--------|--------|\n| Current Ratio | 0.83x | > 1.0x | ❌ Not met |\n| Debt-to-Equity | 3.45x | < 2.5x | ❌ Not met |\n| Stock Price | ~EGP 24 | EGP 16-18 | ❌ Not met |\n| CBE Policy Rate | 27.25% | < 20% | ❌ Not met |\n| News Coverage | Zero articles | Positive catalyst | ❌ Not met |\n| Insider Buying | None detected | Management buying | ❌ Not met |\n\n**All six conditions must be met before considering a BUY.** Until then, the 27.25% T-bill yield provides superior risk-adjusted returns with zero balance sheet risk.\n\n---\n\n## Key Takeaway\n\nThe Investment Committee correctly identified that **balance sheet fragility overrides macro tailwinds**. A 0.83x current ratio in a 27.25% rate environment is a ticking time bomb — not a buying opportunity. The 29.7% rally without news coverage is momentum-driven speculation, not fundamental re-rating. Stay in cash, earn 27.25% risk-free, and wait for the invalidation conditions to materialize before reconsidering.",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN — HRHO.CA\\n\\n## Analysis & Decision Rationale\\n\\n### Investment Committee Verdict: HOLD\\n\\nAfter synthesizing all available data — macro environment, fundamental ratios, technical signals, sentiment, and past trade lessons — the correct decision is **HOLD**. Do not open a position.\\n\\n### Why HOLD Wins Over BUY\\n\\n| Factor | Assessment | Weight |\\n|--------|-----------|--------|\\n| **Balance Sheet Fragility** | Current ratio 0.83x (below 1.0x = cannot cover short-term liabilities), D/E 3.45x, interest expense 41.1% of revenue | **CRITICAL** |\\n| **Earnings Yield vs Risk-Free** | EY = 6.35% vs T-bill 27.25% → -20.9% spread. Massive opportunity cost | **CRITICAL** |\\n| **Technical Signal** | Neutral (0 bullish/0 bearish signals), confidence 40% — no confirmation | **MODERATE** |\\n| **Sentiment** | Neutral-bearish (no news coverage, low institutional interest) | **LOW** |\\n| **Momentum** | +29.7% in 60 days with zero news — speculative, not fundamental | **WARNING** |\\n| **Macro Tailwind** | EGX30 bullish, IMF active — but stock-specific risk overrides | **MODERATE** |\\n\\n### The Asymmetric Risk\\n\\nThe bull case assumes 20% upside (base) to 40% upside (bull) with 15% downside → 2.3:1 risk/reward. However:\\n\\n- **Bear case worst-case**: EGP 10/share (from current ~EGP 24) = **58% downside**\\n- **Balance sheet trigger**: A single quarter of margin compression could force refinancing at 27.25% rates\\n- **Liquidity trap**: 0.83x current ratio means the company is technically insolvent on a liquidity basis\\n- **No dividend buffer**: Zero income yield in a 27.25% rate environment\\n\\nThe asymmetry is **unfavorable** — the downside tail is much larger than the upside.\\n\\n### Past Trade Lesson Applied\\n\\n> \"ATR-based stops on HRHO: 2.0× ATR works in calm regimes (vol < 0.4), but use 3.0× ATR pre-earnings to avoid premature stop-out.\"\\n\\nThis confirms that even if we entered, position management would be difficult. The 3.0× ATR stop would be wide enough to absorb significant losses before triggering — not a good risk management setup.\\n\\n---\\n\\n## Structured Execution Plan\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"HRHO.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A — no entry\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": null,\\n                \"price_range_high\": null\\n            },\\n            \"timing\": \"Do not enter. Monitor for invalidation conditions.\",\\n            \"conditions\": [\\n                \"Q3 2024 earnings show current ratio improving above 1.0x\",\\n                \"Debt-to-equity falls below 2.5x\",\\n                \"Stock pulls back to EGP 16-18 (50%+ correction) AND CBE signals rate cuts below 20%\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A\",\\n                \"note\": \"No position to exit\"\\n            },\\n            \"time_stop\": \"Re-evaluate after Q3 2024 earnings release or if CBE cuts rates below 20%\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"0% — no capital at risk\",\\n            \"max_daily_execution\": \"0 shares\",\\n            \"price_limit_risk\": \"N/A — not exposed to ±10% daily limit\",\\n            \"liquidity_exit_plan\": \"N/A — no position to exit\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"Q3 2024 earnings: current ratio improves above 1.0x AND D/E falls below 2.5x\",\\n            \"Stock price corrects to EGP 16-18 range (50%+ drawdown from recent highs)\",\\n            \"CBE policy rate cut below 20% (makes earnings yield spread positive)\",\\n            \"Positive news coverage emerges with insider buying\",\\n            \"Dividend initiated or resumed\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```\\n\\n---\\n\\n## Monitoring Checklist (for potential future entry)\\n\\n| Trigger | Current Value | Target | Status |\\n|---------|--------------|--------|--------|\\n| Current Ratio | 0.83x | > 1.0x | ❌ Not met |\\n| Debt-to-Equity | 3.45x | < 2.5x | ❌ Not met |\\n| Stock Price | ~EGP 24 | EGP 16-18 | ❌ Not met |\\n| CBE Policy Rate | 27.25% | < 20% | ❌ Not met |\\n| News Coverage | Zero articles | Positive catalyst | ❌ Not met |\\n| Insider Buying | None detected | Management buying | ❌ Not met |\\n\\n**All six conditions must be met before considering a BUY.** Until then, the 27.25% T-bill yield provides superior risk-adjusted returns with zero balance sheet risk.\\n\\n---\\n\\n## Key Takeaway\\n\\nThe Investment Committee correctly identified that **balance sheet fragility overrides macro tailwinds**. A 0.83x current ratio in a 27.25% rate environment is a ticking time bomb — not a buying opportunity. The 29.7% rally without news coverage is momentum-driven speculation, not fundamental re-rating. Stay in cash, earn 27.25% risk-free, and wait for the invalidation conditions to materialize before reconsidering.', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1446, 'prompt_tokens': 9686, 'total_tokens': 11132, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9686}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '1d3f4da9-1404-4432-a1f0-692b93d68966', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee061-745a-7930-8e76-6962ebc19449-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9686, 'output_tokens': 1446, 'total_tokens': 11132, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN — HRHO.CA\n\n## Analysis & Decision Rationale\n\n### Investment Committee Verdict: HOLD\n\nAfter synthesizing all available data — macro environment, fundamental ratios, technical signals, sentiment, and past trade lessons — the correct decision is **HOLD**. Do not open a position.\n\n### Why HOLD Wins Over BUY\n\n| Factor | Assessment | Weight |\n|--------|-----------|--------|\n| **Balance Sheet Fragility** | Current ratio 0.83x (below 1.0x = cannot cover short-term liabilities), D/E 3.45x, interest expense 41.1% of revenue | **CRITICAL** |\n| **Earnings Yield vs Risk-Free** | EY = 6.35% vs T-bill 27.25% → -20.9% spread. Massive opportunity cost | **CRITICAL** |\n| **Technical Signal** | Neutral (0 bullish/0 bearish signals), confidence 40% — no confirmation | **MODERATE** |\n| **Sentiment** | Neutral-bearish (no news coverage, low institutional interest) | **LOW** |\n| **Momentum** | +29.7% in 60 days with zero news — speculative, not fundamental | **WARNING** |\n| **Macro Tailwind** | EGX30 bullish, IMF active — but stock-specific risk overrides | **MODERATE** |\n\n### The Asymmetric Risk\n\nThe bull case assumes 20% upside (base) to 40% upside (bull) with 15% downside → 2.3:1 risk/reward. However:\n\n- **Bear case worst-case**: EGP 10/share (from current ~EGP 24) = **58% downside**\n- **Balance sheet trigger**: A single quarter of margin compression could force refinancing at 27.25% rates\n- **Liquidity trap**: 0.83x current ratio means the company is technically insolvent on a liquidity basis\n- **No dividend buffer**: Zero income yield in a 27.25% rate environment\n\nThe asymmetry is **unfavorable** — the downside tail is much larger than the upside.\n\n### Past Trade Lesson Applied\n\n> \"ATR-based stops on HRHO: 2.0× ATR works in calm regimes (vol < 0.4), but use 3.0× ATR pre-earnings to avoid premature stop-out.\"\n\nThis confirms that even if we entered, position management would be difficult. The 3.0× ATR stop would be wide enough to absorb significant losses before triggering — not a good risk management setup.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"HRHO.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Do not enter. Monitor for invalidation conditions.\",\n            \"conditions\": [\n                \"Q3 2024 earnings show current ratio improving above 1.0x\",\n                \"Debt-to-equity falls below 2.5x\",\n                \"Stock pulls back to EGP 16-18 (50%+ correction) AND CBE signals rate cuts below 20%\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A\",\n                \"note\": \"No position to exit\"\n            },\n            \"time_stop\": \"Re-evaluate after Q3 2024 earnings release or if CBE cuts rates below 20%\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"0% — no capital at risk\",\n            \"max_daily_execution\": \"0 shares\",\n            \"price_limit_risk\": \"N/A — not exposed to ±10% daily limit\",\n            \"liquidity_exit_plan\": \"N/A — no position to exit\"\n        },\n        \"invalidation_triggers\": [\n            \"Q3 2024 earnings: current ratio improves above 1.0x AND D/E falls below 2.5x\",\n            \"Stock price corrects to EGP 16-18 range (50%+ drawdown from recent highs)\",\n            \"CBE policy rate cut below 20% (makes earnings yield spread positive)\",\n            \"Positive news coverage emerges with insider buying\",\n            \"Dividend initiated or resumed\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Monitoring Checklist (for potential future entry)\n\n| Trigger | Current Value | Target | Status |\n|---------|--------------|--------|--------|\n| Current Ratio | 0.83x | > 1.0x | ❌ Not met |\n| Debt-to-Equity | 3.45x | < 2.5x | ❌ Not met |\n| Stock Price | ~EGP 24 | EGP 16-18 | ❌ Not met |\n| CBE Policy Rate | 27.25% | < 20% | ❌ Not met |\n| News Coverage | Zero articles | Positive catalyst | ❌ Not met |\n| Insider Buying | None detected | Management buying | ❌ Not met |\n\n**All six conditions must be met before considering a BUY.** Until then, the 27.25% T-bill yield provides superior risk-adjusted returns with zero balance sheet risk.\n\n---\n\n## Key Takeaway\n\nThe Investment Committee correctly identified that **balance sheet fragility overrides macro tailwinds**. A 0.83x current ratio in a 27.25% rate environment is a ticking time bomb — not a buying opportunity. The 29.7% rally without news coverage is momentum-driven speculation, not fundamental re-rating. Stay in cash, earn 27.25% risk-free, and wait for the invalidation conditions to materialize before reconsidering.",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "HRHO.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — remain 100% cash"
+        },
+        "entry_logic": {
+          "order_type": "N/A — no entry",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": null,
+            "price_range_high": null
+          },
+          "timing": "Do not enter. Monitor for invalidation conditions.",
+          "conditions": [
+            "Q3 2024 earnings show current ratio improving above 1.0x",
+            "Debt-to-equity falls below 2.5x",
+            "Stock pulls back to EGP 16-18 (50%+ correction) AND CBE signals rate cuts below 20%"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": null
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A",
+            "note": "No position to exit"
+          },
+          "time_stop": "Re-evaluate after Q3 2024 earnings release or if CBE cuts rates below 20%"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "0% — no capital at risk",
+          "max_daily_execution": "0 shares",
+          "price_limit_risk": "N/A — not exposed to ±10% daily limit",
+          "liquidity_exit_plan": "N/A — no position to exit"
+        },
+        "invalidation_triggers": [
+          "Q3 2024 earnings: current ratio improves above 1.0x AND D/E falls below 2.5x",
+          "Stock price corrects to EGP 16-18 range (50%+ drawdown from recent highs)",
+          "CBE policy rate cut below 20% (makes earnings yield spread positive)",
+          "Positive news coverage emerges with insider buying",
+          "Dividend initiated or resumed"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "5d4c79db09b7c08d480db452ce753068fd51801299e376f9e28af9ff845c2f7f",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 14077.747624949552,
+  "timestamp_utc": "2026-06-19T14:55:57.784788+00:00",
+  "context_items": []
+}

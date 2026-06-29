@@ -1,0 +1,114 @@
+{
+  "run_id": "b0dfdd32b9e24372830835bd9c5cd898",
+  "ticker": "EAST",
+  "trade_date": "2024-12-18",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "20a6f4512a1da77fdbb9bebdf474edf57c1a6f18abee292dd900a240d6abb653",
+  "raw_output": "# EXECUTION PLAN: EAST.CA\n\n## Analysis & Decision Framework\n\n### Investment Committee Verdict\nThe Investment Committee has delivered a clear **HOLD** decision with 75% confidence. The bear thesis wins decisively on stock-specific fundamental deterioration:\n\n**Critical Red Flags:**\n- **Piotroski Score 2/9** — powerful financial distress signal\n- **Liabilities up 63.9%** vs equity up only 0.3% — leverage trap forming\n- **Interest expense up 278%** — will consume earnings at 27.25% rates\n- **Operating margin down 5.8%** — pricing power eroding in regulated industry\n- **Negative 14.4% real earnings yield** — investors lose purchasing power vs 27.50% T-bills\n\n### Position Assessment\n- **Current Position:** 0 shares (100% cash)\n- **Available Actions:** BUY or HOLD only (no short selling on EGX)\n- **Decision:** **HOLD** — Do not open a position\n\n### Why HOLD Over BUY\n1. **No legitimate entry catalyst** — bull case relies on uncertain rate cuts\n2. **Financial distress is company-specific** — not macro-driven\n3. **27.50% risk-free return** in T-bills outperforms EAST's 12.86% earnings yield\n4. **Low volume ratio (0.20)** — price rally unconfirmed, distribution risk high\n5. **No news coverage** — information vacuum increases uncertainty premium\n\n### Re-Entry Triggers (Monitor Only)\nBefore considering a position, ALL FOUR conditions must be met:\n1. H1 FY2025 earnings (Feb/March 2025) — operating margin stabilization\n2. Debt-to-equity declining below 0.8x\n3. Piotroski score improving to 5+ out of 9\n4. CBE rate cut below 20%\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"EAST.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — 100% cash allocated to 27.50% T-bills\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"No entry until re-entry triggers are met. Monitor H1 FY2025 earnings (Feb/March 2025) and next CBE rate decision.\",\n            \"conditions\": [\n                \"H1 FY2025 earnings must show operating margin stabilization\",\n                \"Debt-to-equity must decline below 0.8x\",\n                \"Piotroski score must improve to 5+ out of 9\",\n                \"CBE policy rate must fall below 20%\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": \"N/A — no position\"},\n                \"target_2\": {\"price\": null, \"pct_of_position\": \"N/A — no position\"},\n                \"target_3\": {\"price\": null, \"pct_of_position\": \"N/A — no position\"}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position\",\n                \"note\": \"If EAST breaks below EGP 22.00 support with volume, bear thesis is confirmed — do not buy until fundamentals improve\"\n            },\n            \"time_stop\": \"Reassess after H1 FY2025 earnings release (Feb/March 2025) and next CBE rate decision\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"0% — capital preserved earning 27.50% risk-free\",\n            \"max_daily_execution\": \"0 shares — no execution required\",\n            \"price_limit_risk\": \"N/A — no position to be trapped in circuit breaker\",\n            \"liquidity_exit_plan\": \"N/A — no position to exit. Opportunity cost of missing rally is acceptable given financial distress signals\"\n        },\n        \"invalidation_triggers\": [\n            \"EAST reports revenue growth >15% AND operating margin improvement in H1 FY2025 — reassess with fresh fundamentals analysis\",\n            \"CBE cuts rates below 20% — re-evaluate earnings yield spread\",\n            \"Debt-to-equity declines below 0.8x — leverage risk reduced\",\n            \"Piotroski score improves to 5+ — financial distress signal reversed\",\n            \"Daily trading volume exceeds 20-day average by 2x for 5+ sessions — possible institutional accumulation\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Key Rationale Summary\n\n| Factor | Assessment |\n|--------|------------|\n| **Decision** | HOLD — 100% cash |\n| **Conviction** | High (75%) |\n| **Primary Risk** | Opportunity cost if EAST rallies without fundamental improvement |\n| **Capital Allocation** | 27.50% T-bills (risk-free) |\n| **Next Review** | H1 FY2025 earnings (Feb/March 2025) |\n| **Bear Case Confidence** | 82% from fundamentals analyst |\n| **Bull Case Dependency** | Macro rate cuts — uncertain timing |\n\n**Bottom Line:** The bear thesis identifies concrete, company-specific financial deterioration (Piotroski 2/9, 278% interest expense growth, leverage trap) that outweighs the cheap P/E valuation. Stay in cash earning 27.50% risk-free until fundamentals improve or rate cuts materialize.",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN: EAST.CA\\n\\n## Analysis & Decision Framework\\n\\n### Investment Committee Verdict\\nThe Investment Committee has delivered a clear **HOLD** decision with 75% confidence. The bear thesis wins decisively on stock-specific fundamental deterioration:\\n\\n**Critical Red Flags:**\\n- **Piotroski Score 2/9** — powerful financial distress signal\\n- **Liabilities up 63.9%** vs equity up only 0.3% — leverage trap forming\\n- **Interest expense up 278%** — will consume earnings at 27.25% rates\\n- **Operating margin down 5.8%** — pricing power eroding in regulated industry\\n- **Negative 14.4% real earnings yield** — investors lose purchasing power vs 27.50% T-bills\\n\\n### Position Assessment\\n- **Current Position:** 0 shares (100% cash)\\n- **Available Actions:** BUY or HOLD only (no short selling on EGX)\\n- **Decision:** **HOLD** — Do not open a position\\n\\n### Why HOLD Over BUY\\n1. **No legitimate entry catalyst** — bull case relies on uncertain rate cuts\\n2. **Financial distress is company-specific** — not macro-driven\\n3. **27.50% risk-free return** in T-bills outperforms EAST\\'s 12.86% earnings yield\\n4. **Low volume ratio (0.20)** — price rally unconfirmed, distribution risk high\\n5. **No news coverage** — information vacuum increases uncertainty premium\\n\\n### Re-Entry Triggers (Monitor Only)\\nBefore considering a position, ALL FOUR conditions must be met:\\n1. H1 FY2025 earnings (Feb/March 2025) — operating margin stabilization\\n2. Debt-to-equity declining below 0.8x\\n3. Piotroski score improving to 5+ out of 9\\n4. CBE rate cut below 20%\\n\\n---\\n\\n## Structured Execution Plan\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"EAST.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — 100% cash allocated to 27.50% T-bills\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A — no entry\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": null,\\n                \"price_range_high\": null\\n            },\\n            \"timing\": \"No entry until re-entry triggers are met. Monitor H1 FY2025 earnings (Feb/March 2025) and next CBE rate decision.\",\\n            \"conditions\": [\\n                \"H1 FY2025 earnings must show operating margin stabilization\",\\n                \"Debt-to-equity must decline below 0.8x\",\\n                \"Piotroski score must improve to 5+ out of 9\",\\n                \"CBE policy rate must fall below 20%\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": \"N/A — no position\"},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": \"N/A — no position\"},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": \"N/A — no position\"}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A — no position\",\\n                \"note\": \"If EAST breaks below EGP 22.00 support with volume, bear thesis is confirmed — do not buy until fundamentals improve\"\\n            },\\n            \"time_stop\": \"Reassess after H1 FY2025 earnings release (Feb/March 2025) and next CBE rate decision\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"0% — capital preserved earning 27.50% risk-free\",\\n            \"max_daily_execution\": \"0 shares — no execution required\",\\n            \"price_limit_risk\": \"N/A — no position to be trapped in circuit breaker\",\\n            \"liquidity_exit_plan\": \"N/A — no position to exit. Opportunity cost of missing rally is acceptable given financial distress signals\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"EAST reports revenue growth >15% AND operating margin improvement in H1 FY2025 — reassess with fresh fundamentals analysis\",\\n            \"CBE cuts rates below 20% — re-evaluate earnings yield spread\",\\n            \"Debt-to-equity declines below 0.8x — leverage risk reduced\",\\n            \"Piotroski score improves to 5+ — financial distress signal reversed\",\\n            \"Daily trading volume exceeds 20-day average by 2x for 5+ sessions — possible institutional accumulation\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```\\n\\n---\\n\\n## Key Rationale Summary\\n\\n| Factor | Assessment |\\n|--------|------------|\\n| **Decision** | HOLD — 100% cash |\\n| **Conviction** | High (75%) |\\n| **Primary Risk** | Opportunity cost if EAST rallies without fundamental improvement |\\n| **Capital Allocation** | 27.50% T-bills (risk-free) |\\n| **Next Review** | H1 FY2025 earnings (Feb/March 2025) |\\n| **Bear Case Confidence** | 82% from fundamentals analyst |\\n| **Bull Case Dependency** | Macro rate cuts — uncertain timing |\\n\\n**Bottom Line:** The bear thesis identifies concrete, company-specific financial deterioration (Piotroski 2/9, 278% interest expense growth, leverage trap) that outweighs the cheap P/E valuation. Stay in cash earning 27.50% risk-free until fundamentals improve or rate cuts materialize.', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1309, 'prompt_tokens': 9842, 'total_tokens': 11151, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9842}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'd1aed92b-2cd6-463f-9b1b-87b325aae788', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edff7-d31c-7783-8b53-d831085b1ee5-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9842, 'output_tokens': 1309, 'total_tokens': 11151, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN: EAST.CA\n\n## Analysis & Decision Framework\n\n### Investment Committee Verdict\nThe Investment Committee has delivered a clear **HOLD** decision with 75% confidence. The bear thesis wins decisively on stock-specific fundamental deterioration:\n\n**Critical Red Flags:**\n- **Piotroski Score 2/9** — powerful financial distress signal\n- **Liabilities up 63.9%** vs equity up only 0.3% — leverage trap forming\n- **Interest expense up 278%** — will consume earnings at 27.25% rates\n- **Operating margin down 5.8%** — pricing power eroding in regulated industry\n- **Negative 14.4% real earnings yield** — investors lose purchasing power vs 27.50% T-bills\n\n### Position Assessment\n- **Current Position:** 0 shares (100% cash)\n- **Available Actions:** BUY or HOLD only (no short selling on EGX)\n- **Decision:** **HOLD** — Do not open a position\n\n### Why HOLD Over BUY\n1. **No legitimate entry catalyst** — bull case relies on uncertain rate cuts\n2. **Financial distress is company-specific** — not macro-driven\n3. **27.50% risk-free return** in T-bills outperforms EAST's 12.86% earnings yield\n4. **Low volume ratio (0.20)** — price rally unconfirmed, distribution risk high\n5. **No news coverage** — information vacuum increases uncertainty premium\n\n### Re-Entry Triggers (Monitor Only)\nBefore considering a position, ALL FOUR conditions must be met:\n1. H1 FY2025 earnings (Feb/March 2025) — operating margin stabilization\n2. Debt-to-equity declining below 0.8x\n3. Piotroski score improving to 5+ out of 9\n4. CBE rate cut below 20%\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"EAST.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — 100% cash allocated to 27.50% T-bills\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"No entry until re-entry triggers are met. Monitor H1 FY2025 earnings (Feb/March 2025) and next CBE rate decision.\",\n            \"conditions\": [\n                \"H1 FY2025 earnings must show operating margin stabilization\",\n                \"Debt-to-equity must decline below 0.8x\",\n                \"Piotroski score must improve to 5+ out of 9\",\n                \"CBE policy rate must fall below 20%\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": \"N/A — no position\"},\n                \"target_2\": {\"price\": null, \"pct_of_position\": \"N/A — no position\"},\n                \"target_3\": {\"price\": null, \"pct_of_position\": \"N/A — no position\"}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position\",\n                \"note\": \"If EAST breaks below EGP 22.00 support with volume, bear thesis is confirmed — do not buy until fundamentals improve\"\n            },\n            \"time_stop\": \"Reassess after H1 FY2025 earnings release (Feb/March 2025) and next CBE rate decision\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"0% — capital preserved earning 27.50% risk-free\",\n            \"max_daily_execution\": \"0 shares — no execution required\",\n            \"price_limit_risk\": \"N/A — no position to be trapped in circuit breaker\",\n            \"liquidity_exit_plan\": \"N/A — no position to exit. Opportunity cost of missing rally is acceptable given financial distress signals\"\n        },\n        \"invalidation_triggers\": [\n            \"EAST reports revenue growth >15% AND operating margin improvement in H1 FY2025 — reassess with fresh fundamentals analysis\",\n            \"CBE cuts rates below 20% — re-evaluate earnings yield spread\",\n            \"Debt-to-equity declines below 0.8x — leverage risk reduced\",\n            \"Piotroski score improves to 5+ — financial distress signal reversed\",\n            \"Daily trading volume exceeds 20-day average by 2x for 5+ sessions — possible institutional accumulation\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Key Rationale Summary\n\n| Factor | Assessment |\n|--------|------------|\n| **Decision** | HOLD — 100% cash |\n| **Conviction** | High (75%) |\n| **Primary Risk** | Opportunity cost if EAST rallies without fundamental improvement |\n| **Capital Allocation** | 27.50% T-bills (risk-free) |\n| **Next Review** | H1 FY2025 earnings (Feb/March 2025) |\n| **Bear Case Confidence** | 82% from fundamentals analyst |\n| **Bull Case Dependency** | Macro rate cuts — uncertain timing |\n\n**Bottom Line:** The bear thesis identifies concrete, company-specific financial deterioration (Piotroski 2/9, 278% interest expense growth, leverage trap) that outweighs the cheap P/E valuation. Stay in cash earning 27.50% risk-free until fundamentals improve or rate cuts materialize.",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "EAST.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — 100% cash allocated to 27.50% T-bills"
+        },
+        "entry_logic": {
+          "order_type": "N/A — no entry",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": null,
+            "price_range_high": null
+          },
+          "timing": "No entry until re-entry triggers are met. Monitor H1 FY2025 earnings (Feb/March 2025) and next CBE rate decision.",
+          "conditions": [
+            "H1 FY2025 earnings must show operating margin stabilization",
+            "Debt-to-equity must decline below 0.8x",
+            "Piotroski score must improve to 5+ out of 9",
+            "CBE policy rate must fall below 20%"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": "N/A — no position"
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": "N/A — no position"
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": "N/A — no position"
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A — no position",
+            "note": "If EAST breaks below EGP 22.00 support with volume, bear thesis is confirmed — do not buy until fundamentals improve"
+          },
+          "time_stop": "Reassess after H1 FY2025 earnings release (Feb/March 2025) and next CBE rate decision"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "0% — capital preserved earning 27.50% risk-free",
+          "max_daily_execution": "0 shares — no execution required",
+          "price_limit_risk": "N/A — no position to be trapped in circuit breaker",
+          "liquidity_exit_plan": "N/A — no position to exit. Opportunity cost of missing rally is acceptable given financial distress signals"
+        },
+        "invalidation_triggers": [
+          "EAST reports revenue growth >15% AND operating margin improvement in H1 FY2025 — reassess with fresh fundamentals analysis",
+          "CBE cuts rates below 20% — re-evaluate earnings yield spread",
+          "Debt-to-equity declines below 0.8x — leverage risk reduced",
+          "Piotroski score improves to 5+ — financial distress signal reversed",
+          "Daily trading volume exceeds 20-day average by 2x for 5+ sessions — possible institutional accumulation"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "d3ee286ecd13d132d988bc04588f5c6a8c35c3a4376875539fea38d48d4d56cf",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 11412.706416100264,
+  "timestamp_utc": "2026-06-19T13:00:32.561381+00:00",
+  "context_items": []
+}

@@ -1,0 +1,116 @@
+{
+  "run_id": "314e3aa97da04d8ca842a187b676b3fa",
+  "ticker": "TMGH",
+  "trade_date": "2024-05-26",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "1b560dbc7d5f2a189881812e4b013f4739bd874dc8935a015e54b5a10c7f6847",
+  "raw_output": "# EXECUTION PLAN: TMGH.CA\n\n## Analysis Summary\n\nAfter synthesizing the macro environment, technical signals, fundamental data, and sentiment analysis, I concur with the research team's **HOLD** recommendation. Here is my institutional-grade reasoning:\n\n### Signal Alignment Assessment\n\n| Signal | Reading | Weight |\n|--------|---------|--------|\n| **Technical** | Bearish (-7.3% 20d return, below SMA50, negative trend slope -0.46) | HIGH |\n| **Fundamental** | Mixed/Concerning (revenue +43% YoY, but margins compressing, D/E 4.18x, negative EY spread -24.8%) | HIGH |\n| **Sentiment** | Neutral/Bearish (no news, transformer score -0.26) | LOW |\n| **Macro** | Bearish (EGX30 -7% monthly, 27.25% rates, tight monetary conditions) | HIGH |\n\n**Alignment Score: LOW** — Only 1 of 4 signals (fundamental revenue growth) is positive. The multi-signal alignment rule is NOT triggered.\n\n### Key Execution Considerations\n\n1. **No position exists** → Only BUY or HOLD are actionable\n2. **100% cash portfolio** → No urgency to deploy capital\n3. **Liquidity is normal** → Can execute full position in ~1 day if triggered\n4. **Price limits ±10%** → Must account for circuit breaker risk\n5. **No short selling** → Cannot hedge or profit from downside\n\n### Why HOLD is Correct\n\nThe bull case requires **three uncertain catalysts** to materialize:\n- Q1 earnings beat (expected June, 2-4 weeks away)\n- Technical reversal above SMA50 (EGP 63.5)\n- CBE rate cuts (H1 2025, 6-12 months away)\n\nThe bear case is **already observable**:\n- Price in confirmed downtrend\n- Margins compressing (gross -3.2%, operating -8.9% YoY)\n- Debt growing 22% YoY\n- Interest expense surging 64% YoY\n- Negative earnings yield vs 27.25% risk-free rate\n\n**Risk-reward is unfavorable**: 30% upside (bull case) vs 15-50% downside (bear case) with 2.5:1 ratio, but the probability of bear case materializing is higher given current momentum.\n\n### Entry Triggers (if reconsidering BUY)\n\nI would only consider entering if ONE of these triggers fires:\n\n1. **Technical reversal**: Price reclaims SMA50 (EGP 63.5) with volume >1.5x average\n2. **Fundamental confirmation**: Q1 2024 revenue growth >30% YoY AND gross margin stabilizes\n3. **Deep value pullback**: Price drops to EGP 50-53 support with bullish reversal pattern (hammer, engulfing)\n\n### Risk Controls for Future Entry\n\nIf any trigger fires, the execution would be:\n- **Position size**: Max 5% of portfolio (EGP ~8.5M based on ADV)\n- **Execution**: Accumulate over 3-5 days using limit orders at bid/mid\n- **Stop loss**: Mental stop at EGP 50 (-10% from entry)\n- **Take profit**: EGP 70-75 (+30% from entry at EGP 58)\n\n---\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"TMGH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry at current levels\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Wait for one of three triggers: (a) price reclaims SMA50 (EGP 63.5) with volume >1.5x avg, (b) Q1 earnings beat with revenue >30% YoY, (c) pullback to EGP 50-53 with bullish reversal\",\n            \"conditions\": [\n                \"No entry until technical or fundamental confirmation\",\n                \"Reassess after Q1 2024 earnings release (expected June 2024)\",\n                \"Reassess after CBE rate decision (next meeting TBD)\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position to stop out\",\n                \"note\": \"If position were entered, mental stop at EGP 50 (-10% from EGP 58 entry)\"\n            },\n            \"time_stop\": \"Reassess in 4 weeks (by June 23, 2024) after Q1 earnings and CBE decision\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A — no position\",\n            \"price_limit_risk\": \"If considering entry, avoid trading within 30 min of open/close to reduce limit-hit risk. If stock hits ±10% limit, wait for next session before entering.\",\n            \"liquidity_exit_plan\": \"N/A — no position. If entering, use iceberg orders for blocks > EGP 2M and avoid first/last 30 min of trading.\"\n        },\n        \"invalidation_triggers\": [\n            \"Breakdown below SMA200 (EGP 45-48) with volume — confirms bear case\",\n            \"Q1 2024 revenue growth < 20% YoY — fundamental thesis invalidated\",\n            \"Debt-to-equity rises above 5.5x — financial health deteriorates further\",\n            \"Gross margin falls below 25% — pricing power eroding\",\n            \"CBE raises rates above 30% — risk-free rate becomes even more attractive\",\n            \"EGP devalues > 50% in single event — disorderly macro collapse\",\n            \"IMF program suspension — loss of fiscal anchor\",\n            \"Negative news break (regulatory action, insider selling spike)\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN: TMGH.CA\\n\\n## Analysis Summary\\n\\nAfter synthesizing the macro environment, technical signals, fundamental data, and sentiment analysis, I concur with the research team\\'s **HOLD** recommendation. Here is my institutional-grade reasoning:\\n\\n### Signal Alignment Assessment\\n\\n| Signal | Reading | Weight |\\n|--------|---------|--------|\\n| **Technical** | Bearish (-7.3% 20d return, below SMA50, negative trend slope -0.46) | HIGH |\\n| **Fundamental** | Mixed/Concerning (revenue +43% YoY, but margins compressing, D/E 4.18x, negative EY spread -24.8%) | HIGH |\\n| **Sentiment** | Neutral/Bearish (no news, transformer score -0.26) | LOW |\\n| **Macro** | Bearish (EGX30 -7% monthly, 27.25% rates, tight monetary conditions) | HIGH |\\n\\n**Alignment Score: LOW** — Only 1 of 4 signals (fundamental revenue growth) is positive. The multi-signal alignment rule is NOT triggered.\\n\\n### Key Execution Considerations\\n\\n1. **No position exists** → Only BUY or HOLD are actionable\\n2. **100% cash portfolio** → No urgency to deploy capital\\n3. **Liquidity is normal** → Can execute full position in ~1 day if triggered\\n4. **Price limits ±10%** → Must account for circuit breaker risk\\n5. **No short selling** → Cannot hedge or profit from downside\\n\\n### Why HOLD is Correct\\n\\nThe bull case requires **three uncertain catalysts** to materialize:\\n- Q1 earnings beat (expected June, 2-4 weeks away)\\n- Technical reversal above SMA50 (EGP 63.5)\\n- CBE rate cuts (H1 2025, 6-12 months away)\\n\\nThe bear case is **already observable**:\\n- Price in confirmed downtrend\\n- Margins compressing (gross -3.2%, operating -8.9% YoY)\\n- Debt growing 22% YoY\\n- Interest expense surging 64% YoY\\n- Negative earnings yield vs 27.25% risk-free rate\\n\\n**Risk-reward is unfavorable**: 30% upside (bull case) vs 15-50% downside (bear case) with 2.5:1 ratio, but the probability of bear case materializing is higher given current momentum.\\n\\n### Entry Triggers (if reconsidering BUY)\\n\\nI would only consider entering if ONE of these triggers fires:\\n\\n1. **Technical reversal**: Price reclaims SMA50 (EGP 63.5) with volume >1.5x average\\n2. **Fundamental confirmation**: Q1 2024 revenue growth >30% YoY AND gross margin stabilizes\\n3. **Deep value pullback**: Price drops to EGP 50-53 support with bullish reversal pattern (hammer, engulfing)\\n\\n### Risk Controls for Future Entry\\n\\nIf any trigger fires, the execution would be:\\n- **Position size**: Max 5% of portfolio (EGP ~8.5M based on ADV)\\n- **Execution**: Accumulate over 3-5 days using limit orders at bid/mid\\n- **Stop loss**: Mental stop at EGP 50 (-10% from entry)\\n- **Take profit**: EGP 70-75 (+30% from entry at EGP 58)\\n\\n---\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"TMGH.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — 100% cash\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A — no entry at current levels\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": null,\\n                \"price_range_high\": null\\n            },\\n            \"timing\": \"Wait for one of three triggers: (a) price reclaims SMA50 (EGP 63.5) with volume >1.5x avg, (b) Q1 earnings beat with revenue >30% YoY, (c) pullback to EGP 50-53 with bullish reversal\",\\n            \"conditions\": [\\n                \"No entry until technical or fundamental confirmation\",\\n                \"Reassess after Q1 2024 earnings release (expected June 2024)\",\\n                \"Reassess after CBE rate decision (next meeting TBD)\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A — no position to stop out\",\\n                \"note\": \"If position were entered, mental stop at EGP 50 (-10% from EGP 58 entry)\"\\n            },\\n            \"time_stop\": \"Reassess in 4 weeks (by June 23, 2024) after Q1 earnings and CBE decision\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"N/A — no position\",\\n            \"max_daily_execution\": \"N/A — no position\",\\n            \"price_limit_risk\": \"If considering entry, avoid trading within 30 min of open/close to reduce limit-hit risk. If stock hits ±10% limit, wait for next session before entering.\",\\n            \"liquidity_exit_plan\": \"N/A — no position. If entering, use iceberg orders for blocks > EGP 2M and avoid first/last 30 min of trading.\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"Breakdown below SMA200 (EGP 45-48) with volume — confirms bear case\",\\n            \"Q1 2024 revenue growth < 20% YoY — fundamental thesis invalidated\",\\n            \"Debt-to-equity rises above 5.5x — financial health deteriorates further\",\\n            \"Gross margin falls below 25% — pricing power eroding\",\\n            \"CBE raises rates above 30% — risk-free rate becomes even more attractive\",\\n            \"EGP devalues > 50% in single event — disorderly macro collapse\",\\n            \"IMF program suspension — loss of fiscal anchor\",\\n            \"Negative news break (regulatory action, insider selling spike)\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1486, 'prompt_tokens': 9395, 'total_tokens': 10881, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 8883}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '8446e998-ed6a-410e-ae36-348410032367', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edce6-3ff4-7832-b3da-7d77ec386a9e-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9395, 'output_tokens': 1486, 'total_tokens': 10881, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN: TMGH.CA\n\n## Analysis Summary\n\nAfter synthesizing the macro environment, technical signals, fundamental data, and sentiment analysis, I concur with the research team's **HOLD** recommendation. Here is my institutional-grade reasoning:\n\n### Signal Alignment Assessment\n\n| Signal | Reading | Weight |\n|--------|---------|--------|\n| **Technical** | Bearish (-7.3% 20d return, below SMA50, negative trend slope -0.46) | HIGH |\n| **Fundamental** | Mixed/Concerning (revenue +43% YoY, but margins compressing, D/E 4.18x, negative EY spread -24.8%) | HIGH |\n| **Sentiment** | Neutral/Bearish (no news, transformer score -0.26) | LOW |\n| **Macro** | Bearish (EGX30 -7% monthly, 27.25% rates, tight monetary conditions) | HIGH |\n\n**Alignment Score: LOW** — Only 1 of 4 signals (fundamental revenue growth) is positive. The multi-signal alignment rule is NOT triggered.\n\n### Key Execution Considerations\n\n1. **No position exists** → Only BUY or HOLD are actionable\n2. **100% cash portfolio** → No urgency to deploy capital\n3. **Liquidity is normal** → Can execute full position in ~1 day if triggered\n4. **Price limits ±10%** → Must account for circuit breaker risk\n5. **No short selling** → Cannot hedge or profit from downside\n\n### Why HOLD is Correct\n\nThe bull case requires **three uncertain catalysts** to materialize:\n- Q1 earnings beat (expected June, 2-4 weeks away)\n- Technical reversal above SMA50 (EGP 63.5)\n- CBE rate cuts (H1 2025, 6-12 months away)\n\nThe bear case is **already observable**:\n- Price in confirmed downtrend\n- Margins compressing (gross -3.2%, operating -8.9% YoY)\n- Debt growing 22% YoY\n- Interest expense surging 64% YoY\n- Negative earnings yield vs 27.25% risk-free rate\n\n**Risk-reward is unfavorable**: 30% upside (bull case) vs 15-50% downside (bear case) with 2.5:1 ratio, but the probability of bear case materializing is higher given current momentum.\n\n### Entry Triggers (if reconsidering BUY)\n\nI would only consider entering if ONE of these triggers fires:\n\n1. **Technical reversal**: Price reclaims SMA50 (EGP 63.5) with volume >1.5x average\n2. **Fundamental confirmation**: Q1 2024 revenue growth >30% YoY AND gross margin stabilizes\n3. **Deep value pullback**: Price drops to EGP 50-53 support with bullish reversal pattern (hammer, engulfing)\n\n### Risk Controls for Future Entry\n\nIf any trigger fires, the execution would be:\n- **Position size**: Max 5% of portfolio (EGP ~8.5M based on ADV)\n- **Execution**: Accumulate over 3-5 days using limit orders at bid/mid\n- **Stop loss**: Mental stop at EGP 50 (-10% from entry)\n- **Take profit**: EGP 70-75 (+30% from entry at EGP 58)\n\n---\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"TMGH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry at current levels\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Wait for one of three triggers: (a) price reclaims SMA50 (EGP 63.5) with volume >1.5x avg, (b) Q1 earnings beat with revenue >30% YoY, (c) pullback to EGP 50-53 with bullish reversal\",\n            \"conditions\": [\n                \"No entry until technical or fundamental confirmation\",\n                \"Reassess after Q1 2024 earnings release (expected June 2024)\",\n                \"Reassess after CBE rate decision (next meeting TBD)\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position to stop out\",\n                \"note\": \"If position were entered, mental stop at EGP 50 (-10% from EGP 58 entry)\"\n            },\n            \"time_stop\": \"Reassess in 4 weeks (by June 23, 2024) after Q1 earnings and CBE decision\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A — no position\",\n            \"price_limit_risk\": \"If considering entry, avoid trading within 30 min of open/close to reduce limit-hit risk. If stock hits ±10% limit, wait for next session before entering.\",\n            \"liquidity_exit_plan\": \"N/A — no position. If entering, use iceberg orders for blocks > EGP 2M and avoid first/last 30 min of trading.\"\n        },\n        \"invalidation_triggers\": [\n            \"Breakdown below SMA200 (EGP 45-48) with volume — confirms bear case\",\n            \"Q1 2024 revenue growth < 20% YoY — fundamental thesis invalidated\",\n            \"Debt-to-equity rises above 5.5x — financial health deteriorates further\",\n            \"Gross margin falls below 25% — pricing power eroding\",\n            \"CBE raises rates above 30% — risk-free rate becomes even more attractive\",\n            \"EGP devalues > 50% in single event — disorderly macro collapse\",\n            \"IMF program suspension — loss of fiscal anchor\",\n            \"Negative news break (regulatory action, insider selling spike)\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "TMGH.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — 100% cash"
+        },
+        "entry_logic": {
+          "order_type": "N/A — no entry at current levels",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": null,
+            "price_range_high": null
+          },
+          "timing": "Wait for one of three triggers: (a) price reclaims SMA50 (EGP 63.5) with volume >1.5x avg, (b) Q1 earnings beat with revenue >30% YoY, (c) pullback to EGP 50-53 with bullish reversal",
+          "conditions": [
+            "No entry until technical or fundamental confirmation",
+            "Reassess after Q1 2024 earnings release (expected June 2024)",
+            "Reassess after CBE rate decision (next meeting TBD)"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": null
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A — no position to stop out",
+            "note": "If position were entered, mental stop at EGP 50 (-10% from EGP 58 entry)"
+          },
+          "time_stop": "Reassess in 4 weeks (by June 23, 2024) after Q1 earnings and CBE decision"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "N/A — no position",
+          "max_daily_execution": "N/A — no position",
+          "price_limit_risk": "If considering entry, avoid trading within 30 min of open/close to reduce limit-hit risk. If stock hits ±10% limit, wait for next session before entering.",
+          "liquidity_exit_plan": "N/A — no position. If entering, use iceberg orders for blocks > EGP 2M and avoid first/last 30 min of trading."
+        },
+        "invalidation_triggers": [
+          "Breakdown below SMA200 (EGP 45-48) with volume — confirms bear case",
+          "Q1 2024 revenue growth < 20% YoY — fundamental thesis invalidated",
+          "Debt-to-equity rises above 5.5x — financial health deteriorates further",
+          "Gross margin falls below 25% — pricing power eroding",
+          "CBE raises rates above 30% — risk-free rate becomes even more attractive",
+          "EGP devalues > 50% in single event — disorderly macro collapse",
+          "IMF program suspension — loss of fiscal anchor",
+          "Negative news break (regulatory action, insider selling spike)"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "eb4dcda85138b5762fc95be3551a9312679272cb3337def1601e8b98a46ae23e",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 13430.615874938667,
+  "timestamp_utc": "2026-06-18T22:42:31.146884+00:00",
+  "context_items": []
+}

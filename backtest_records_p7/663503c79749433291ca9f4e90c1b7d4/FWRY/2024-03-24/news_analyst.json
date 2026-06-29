@@ -1,0 +1,173 @@
+{
+  "run_id": "663503c79749433291ca9f4e90c1b7d4",
+  "ticker": "FWRY",
+  "trade_date": "2024-03-24",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "0256dcb49b880f934554b229af40e18a8c3bc3d0d729fa19f6c1915dddfc7d8f",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"No news articles found for FWRY.CA during the analysis period\",\n        \"Market news data also unavailable, limiting broader context\",\n        \"Absence of news reduces confidence and suggests low market attention or event-driven activity\",\n        \"Silence in news flow is interpreted as a lack of catalysts or risks, but also reduces predictability\"\n    ],\n    \"explanation\": \"No news articles were retrieved for FWRY.CA between March 17-24, 2024, and market-level news was also unavailable. The complete absence of coverage indicates a period of low informational flow, which typically reduces confidence in directional sentiment. Without any headlines or data points, the sentiment is assessed as neutral with weak strength.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-03-17 to 2024-03-24\"\n    },\n    \"risks_from_news\": [\"No risks identified due to absence of news coverage\"],\n    \"catalysts_from_news\": [\"No catalysts identified due to absence of news coverage\"]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"No news articles found for FWRY.CA during the analysis period\",\\n        \"Market news data also unavailable, limiting broader context\",\\n        \"Absence of news reduces confidence and suggests low market attention or event-driven activity\",\\n        \"Silence in news flow is interpreted as a lack of catalysts or risks, but also reduces predictability\"\\n    ],\\n    \"explanation\": \"No news articles were retrieved for FWRY.CA between March 17-24, 2024, and market-level news was also unavailable. The complete absence of coverage indicates a period of low informational flow, which typically reduces confidence in directional sentiment. Without any headlines or data points, the sentiment is assessed as neutral with weak strength.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-03-17 to 2024-03-24\"\\n    },\\n    \"risks_from_news\": [\"No risks identified due to absence of news coverage\"],\\n    \"catalysts_from_news\": [\"No catalysts identified due to absence of news coverage\"]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 292, 'prompt_tokens': 668, 'total_tokens': 960, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 640}, 'prompt_cache_hit_tokens': 640, 'prompt_cache_miss_tokens': 28}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '807c9215-1715-4206-aa19-496ad734b1d6', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edcb6-0fe6-7013-a4b5-8229b7343d20-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 668, 'output_tokens': 292, 'total_tokens': 960, 'input_token_details': {'cache_read': 640}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"No news articles found for FWRY.CA during the analysis period\",\n        \"Market news data also unavailable, limiting broader context\",\n        \"Absence of news reduces confidence and suggests low market attention or event-driven activity\",\n        \"Silence in news flow is interpreted as a lack of catalysts or risks, but also reduces predictability\"\n    ],\n    \"explanation\": \"No news articles were retrieved for FWRY.CA between March 17-24, 2024, and market-level news was also unavailable. The complete absence of coverage indicates a period of low informational flow, which typically reduces confidence in directional sentiment. Without any headlines or data points, the sentiment is assessed as neutral with weak strength.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-03-17 to 2024-03-24\"\n    },\n    \"risks_from_news\": [\"No risks identified due to absence of news coverage\"],\n    \"catalysts_from_news\": [\"No catalysts identified due to absence of news coverage\"]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "No news articles found for FWRY.CA during the analysis period",
+        "Market news data also unavailable, limiting broader context",
+        "Absence of news reduces confidence and suggests low market attention or event-driven activity",
+        "Silence in news flow is interpreted as a lack of catalysts or risks, but also reduces predictability",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were retrieved for FWRY.CA between March 17-24, 2024, and market-level news was also unavailable. The complete absence of coverage indicates a period of low informational flow, which typically reduces confidence in directional sentiment. Without any headlines or data points, the sentiment is assessed as neutral with weak strength.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-03-17 to 2024-03-24"
+      },
+      "risks_from_news": [
+        "No risks identified due to absence of news coverage"
+      ],
+      "catalysts_from_news": [
+        "No catalysts identified due to absence of news coverage"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.3646,
+        "label": "bearish",
+        "confidence": 0.5842,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No news articles found for FWRY.CA during the analysis period",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9402,
+            "model": "finbert"
+          },
+          {
+            "headline": "Market news data also unavailable, limiting broader context",
+            "source": "quoted_in_report",
+            "score": -0.8507,
+            "label": "bearish",
+            "confidence": 0.8507,
+            "model": "finbert"
+          },
+          {
+            "headline": "Absence of news reduces confidence and suggests low market attention or event-driven activity",
+            "source": "quoted_in_report",
+            "score": -0.9665,
+            "label": "bearish",
+            "confidence": 0.9665,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence in news flow is interpreted as a lack of catalysts or risks, but also reduces predictability",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.5362,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were retrieved for FWRY.CA between March 17-24, 2024, and market-level news was als",
+            "source": "quoted_in_report",
+            "score": -0.9478,
+            "label": "bearish",
+            "confidence": 0.9478,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-03-17 to 2024-03-24",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.939,
+            "model": "finbert"
+          },
+          {
+            "headline": "No risks identified due to absence of news coverage",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8124,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No catalysts identified due to absence of news coverage",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.818,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.237,
+        "label": "bearish",
+        "confidence": 0.4905
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "93fccb00041704a7279fb3e4c9f7e335079e050ec3a3d19670d113781fcf9a0a",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 3614.88562496379,
+  "timestamp_utc": "2026-06-18T21:49:43.480447+00:00",
+  "context_items": []
+}

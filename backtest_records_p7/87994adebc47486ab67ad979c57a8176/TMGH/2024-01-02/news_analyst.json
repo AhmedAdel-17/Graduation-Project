@@ -1,0 +1,173 @@
+{
+  "run_id": "87994adebc47486ab67ad979c57a8176",
+  "ticker": "TMGH",
+  "trade_date": "2024-01-02",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "39d77b479232df41e46b6799b4b18bf0392c24b86edc69dea00ba8da71383610",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for TMGH.CA in the specified date range\",\n        \"No market-wide EGX news available for context\",\n        \"Silence reduces confidence and suggests low market attention or no material events\",\n        \"Data source errors indicate potential data collection issues, not necessarily company inactivity\"\n    ],\n    \"explanation\": \"No news articles were found for TMGH.CA between December 26, 2023 and January 2, 2024. The absence of any corporate or market news during this period significantly reduces confidence in any directional sentiment, as silence typically indicates a lack of catalysts or risks being reported. Without any headlines or data, the sentiment is assessed as neutral with weak strength.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2023-12-26 to 2024-01-02\"\n    },\n    \"risks_from_news\": [\"No news identified; potential risk of low liquidity or market neglect\"],\n    \"catalysts_from_news\": [\"No catalysts identified due to absence of news\"]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for TMGH.CA in the specified date range\",\\n        \"No market-wide EGX news available for context\",\\n        \"Silence reduces confidence and suggests low market attention or no material events\",\\n        \"Data source errors indicate potential data collection issues, not necessarily company inactivity\"\\n    ],\\n    \"explanation\": \"No news articles were found for TMGH.CA between December 26, 2023 and January 2, 2024. The absence of any corporate or market news during this period significantly reduces confidence in any directional sentiment, as silence typically indicates a lack of catalysts or risks being reported. Without any headlines or data, the sentiment is assessed as neutral with weak strength.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2023-12-26 to 2024-01-02\"\\n    },\\n    \"risks_from_news\": [\"No news identified; potential risk of low liquidity or market neglect\"],\\n    \"catalysts_from_news\": [\"No catalysts identified due to absence of news\"]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 294, 'prompt_tokens': 664, 'total_tokens': 958, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 640}, 'prompt_cache_hit_tokens': 640, 'prompt_cache_miss_tokens': 24}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'b4c7e452-b791-4196-b204-339289c12805', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edcd9-c139-71d2-ae72-c8da8031b35c-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 664, 'output_tokens': 294, 'total_tokens': 958, 'input_token_details': {'cache_read': 640}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for TMGH.CA in the specified date range\",\n        \"No market-wide EGX news available for context\",\n        \"Silence reduces confidence and suggests low market attention or no material events\",\n        \"Data source errors indicate potential data collection issues, not necessarily company inactivity\"\n    ],\n    \"explanation\": \"No news articles were found for TMGH.CA between December 26, 2023 and January 2, 2024. The absence of any corporate or market news during this period significantly reduces confidence in any directional sentiment, as silence typically indicates a lack of catalysts or risks being reported. Without any headlines or data, the sentiment is assessed as neutral with weak strength.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2023-12-26 to 2024-01-02\"\n    },\n    \"risks_from_news\": [\"No news identified; potential risk of low liquidity or market neglect\"],\n    \"catalysts_from_news\": [\"No catalysts identified due to absence of news\"]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for TMGH.CA in the specified date range",
+        "No market-wide EGX news available for context",
+        "Silence reduces confidence and suggests low market attention or no material events",
+        "Data source errors indicate potential data collection issues, not necessarily company inactivity",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for TMGH.CA between December 26, 2023 and January 2, 2024. The absence of any corporate or market news during this period significantly reduces confidence in any directional sentiment, as silence typically indicates a lack of catalysts or risks being reported. Without any headlines or data, the sentiment is assessed as neutral with weak strength.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2023-12-26 to 2024-01-02"
+      },
+      "risks_from_news": [
+        "No news identified; potential risk of low liquidity or market neglect"
+      ],
+      "catalysts_from_news": [
+        "No catalysts identified due to absence of news"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.4542,
+        "label": "bearish",
+        "confidence": 0.6352,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for TMGH.CA in the specified date range",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9188,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market-wide EGX news available for context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.928,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence reduces confidence and suggests low market attention or no material events",
+            "source": "quoted_in_report",
+            "score": -0.9023,
+            "label": "bearish",
+            "confidence": 0.9023,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data source errors indicate potential data collection issues, not necessarily company inactivity",
+            "source": "quoted_in_report",
+            "score": -0.9203,
+            "label": "bearish",
+            "confidence": 0.9203,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for TMGH.CA between December 26, 2023 and January 2, 2024. The absence o",
+            "source": "quoted_in_report",
+            "score": -0.9635,
+            "label": "bearish",
+            "confidence": 0.9635,
+            "model": "finbert"
+          },
+          {
+            "headline": "2023-12-26 to 2024-01-02",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9433,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news identified; potential risk of low liquidity or market neglect",
+            "source": "quoted_in_report",
+            "score": -0.9341,
+            "label": "bearish",
+            "confidence": 0.9341,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No catalysts identified due to absence of news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9117,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.2952,
+        "label": "bearish",
+        "confidence": 0.5211
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "3023bec5ba75ff878f35d2e0d5736cc13543616cec860c7db4ce193c3e165696",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 3893.335707951337,
+  "timestamp_utc": "2026-06-18T22:28:43.162265+00:00",
+  "context_items": []
+}

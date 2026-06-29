@@ -1,0 +1,41 @@
+{
+  "run_id": "6f0fd43b66fa4ad99f5423b73f62866d",
+  "ticker": "ETEL",
+  "trade_date": "2024-11-17",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "cfe543ce1ddd587109825adde9937a5456156aed02963b0ea9a1c82fc47c86aa",
+  "raw_output": "```json\n{\n    \"narrative\": \"No retail investor discussions were found on Reddit for ETEL.CA within the analysis window. As a result, there are no themes, tone, or Arabic-language signals to report.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No retail investor discussions were found on Reddit for ETEL.CA within the analysis window. As a result, there are no themes, tone, or Arabic-language signals to report.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 56, 'prompt_tokens': 615, 'total_tokens': 671, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 103}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '16131c50-c40d-442c-a762-9265d28f614b', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edd66-f997-7c22-b2be-908127309c99-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 615, 'output_tokens': 56, 'total_tokens': 671, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for ETEL.CA]\nNo retail investor discussions were found on Reddit for ETEL.CA within the analysis window. As a result, there are no themes, tone, or Arabic-language signals to report.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"ETEL.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No retail investor discussions were found on Reddit for ETEL.CA within the analysis window. As a result, there are no themes, tone, or Arabic-language signals to report.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "b0a7ac5598245daad479dc8dff7c07b544b1262f3ccbe16a198f24b1ed7536f6",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 1938.497000024654,
+  "timestamp_utc": "2026-06-19T01:02:55.786958+00:00",
+  "context_items": []
+}

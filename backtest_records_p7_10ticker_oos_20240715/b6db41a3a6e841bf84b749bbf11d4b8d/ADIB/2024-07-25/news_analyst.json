@@ -1,0 +1,173 @@
+{
+  "run_id": "b6db41a3a6e841bf84b749bbf11d4b8d",
+  "ticker": "ADIB",
+  "trade_date": "2024-07-25",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "4d31fd94bc7234b4863d5b83449e9e2f202599c043bfd989360083d58519b148",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the review period\",\n        \"No market-wide EGX news available for context\",\n        \"Silence reduces confidence and implies no new catalysts or risks\",\n        \"Data source unavailability (missing directories/files) limits analysis\"\n    ],\n    \"explanation\": \"No news articles were found for ADIB.CA during the July 18-25, 2024 period, and no market-level EGX news was available. The lack of coverage reduces confidence and suggests a period of low volatility or no material developments. Sentiment is assessed as neutral with weak strength due to the absence of any signals.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-07-18 to 2024-07-25\"\n    },\n    \"risks_from_news\": [\"No news identified; risks cannot be assessed from available data\"],\n    \"catalysts_from_news\": [\"No news identified; catalysts cannot be assessed from available data\"]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for the review period\",\\n        \"No market-wide EGX news available for context\",\\n        \"Silence reduces confidence and implies no new catalysts or risks\",\\n        \"Data source unavailability (missing directories/files) limits analysis\"\\n    ],\\n    \"explanation\": \"No news articles were found for ADIB.CA during the July 18-25, 2024 period, and no market-level EGX news was available. The lack of coverage reduces confidence and suggests a period of low volatility or no material developments. Sentiment is assessed as neutral with weak strength due to the absence of any signals.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-07-18 to 2024-07-25\"\\n    },\\n    \"risks_from_news\": [\"No news identified; risks cannot be assessed from available data\"],\\n    \"catalysts_from_news\": [\"No news identified; catalysts cannot be assessed from available data\"]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 279, 'prompt_tokens': 664, 'total_tokens': 943, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 664}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '1b258fab-134b-44d6-af07-749d5bb35af7', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edfa7-49b8-7ae1-b1d6-c91d56c85f3d-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 664, 'output_tokens': 279, 'total_tokens': 943, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the review period\",\n        \"No market-wide EGX news available for context\",\n        \"Silence reduces confidence and implies no new catalysts or risks\",\n        \"Data source unavailability (missing directories/files) limits analysis\"\n    ],\n    \"explanation\": \"No news articles were found for ADIB.CA during the July 18-25, 2024 period, and no market-level EGX news was available. The lack of coverage reduces confidence and suggests a period of low volatility or no material developments. Sentiment is assessed as neutral with weak strength due to the absence of any signals.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-07-18 to 2024-07-25\"\n    },\n    \"risks_from_news\": [\"No news identified; risks cannot be assessed from available data\"],\n    \"catalysts_from_news\": [\"No news identified; catalysts cannot be assessed from available data\"]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for the review period",
+        "No market-wide EGX news available for context",
+        "Silence reduces confidence and implies no new catalysts or risks",
+        "Data source unavailability (missing directories/files) limits analysis",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for ADIB.CA during the July 18-25, 2024 period, and no market-level EGX news was available. The lack of coverage reduces confidence and suggests a period of low volatility or no material developments. Sentiment is assessed as neutral with weak strength due to the absence of any signals.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-07-18 to 2024-07-25"
+      },
+      "risks_from_news": [
+        "No news identified; risks cannot be assessed from available data"
+      ],
+      "catalysts_from_news": [
+        "No news identified; catalysts cannot be assessed from available data"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.2008,
+        "label": "bearish",
+        "confidence": 0.5836,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for the review period",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8911,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market-wide EGX news available for context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.928,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence reduces confidence and implies no new catalysts or risks",
+            "source": "quoted_in_report",
+            "score": -0.6946,
+            "label": "bearish",
+            "confidence": 0.6946,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data source unavailability (missing directories/files) limits analysis",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.5377,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for ADIB.CA during the July 18-25, 2024 period, and no market-level EGX ",
+            "source": "quoted_in_report",
+            "score": -0.9612,
+            "label": "bearish",
+            "confidence": 0.9612,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-07-18 to 2024-07-25",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9391,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news identified; risks cannot be assessed from available data",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9234,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No news identified; catalysts cannot be assessed from available data",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9276,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.1305,
+        "label": "neutral",
+        "confidence": 0.4902
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "neutral",
+  "prompt_hash": "81b5007df358fd3b0f304895f28d9d2ef110b3456a8007bea94636be6c41e8ca",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 3654.1209999704733,
+  "timestamp_utc": "2026-06-19T11:32:27.185128+00:00",
+  "context_items": []
+}
