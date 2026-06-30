@@ -120,8 +120,11 @@ class TradingAgentsGraph:
             _seed = int(self.config.get("llm_seed", 42))
             _metrics_cb = MetricsCallbackHandler()
             from tradingagents.agents.utils.llm_failover import build_resilient_llm
-            self.deep_thinking_llm = build_resilient_llm(self.config, role="deep", seed=_seed, callbacks=[_metrics_cb])
-            self.quick_thinking_llm = build_resilient_llm(self.config, role="quick", seed=_seed, callbacks=[_metrics_cb])
+            self.deep_thinking_llm = build_resilient_llm(self.config, role="deep", seed=_seed)
+            self.quick_thinking_llm = build_resilient_llm(self.config, role="quick", seed=_seed)
+            # Attach metrics callback (BaseChatModel field, not a build_resilient_llm param)
+            self.deep_thinking_llm.callbacks = [_metrics_cb]
+            self.quick_thinking_llm.callbacks = [_metrics_cb]
         elif self.config["llm_provider"].lower() == "anthropic":
             _metrics_cb = MetricsCallbackHandler()
             self.deep_thinking_llm = ChatAnthropic(model=self.config["deep_think_llm"], base_url=self.config["backend_url"], temperature=0, callbacks=[_metrics_cb])
