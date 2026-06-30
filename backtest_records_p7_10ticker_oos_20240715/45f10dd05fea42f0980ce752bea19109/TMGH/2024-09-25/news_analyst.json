@@ -1,0 +1,191 @@
+{
+  "run_id": "45f10dd05fea42f0980ce752bea19109",
+  "ticker": "TMGH",
+  "trade_date": "2024-09-25",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "82929cdecbb82d17b4e081114be07470afd91ce4118e4cb67228e0a16052ebfd",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market news available for broader EGX context\",\n        \"Data source errors indicate missing news directories and CSV files\",\n        \"Silence in news coverage reduces confidence in any directional bias\",\n        \"Cannot confirm any company-specific developments or catalysts\"\n    ],\n    \"explanation\": \"No news articles were found for TMGH.CA during the September 18-25, 2024 period, and broader EGX market news was also unavailable due to data retrieval errors. The absence of news is a signal that reduces confidence in any sentiment assessment, as there are no recent developments to analyze. Without any information, the sentiment defaults to neutral with weak strength.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-09-18 to 2024-09-25\"\n    },\n    \"risks_from_news\": [\n        \"Lack of news coverage may indicate low market attention or liquidity concerns\",\n        \"Data unavailability prevents identification of potential risks\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to absence of news\"\n    ]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for the period\",\\n        \"No market news available for broader EGX context\",\\n        \"Data source errors indicate missing news directories and CSV files\",\\n        \"Silence in news coverage reduces confidence in any directional bias\",\\n        \"Cannot confirm any company-specific developments or catalysts\"\\n    ],\\n    \"explanation\": \"No news articles were found for TMGH.CA during the September 18-25, 2024 period, and broader EGX market news was also unavailable due to data retrieval errors. The absence of news is a signal that reduces confidence in any sentiment assessment, as there are no recent developments to analyze. Without any information, the sentiment defaults to neutral with weak strength.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-09-18 to 2024-09-25\"\\n    },\\n    \"risks_from_news\": [\\n        \"Lack of news coverage may indicate low market attention or liquidity concerns\",\\n        \"Data unavailability prevents identification of potential risks\"\\n    ],\\n    \"catalysts_from_news\": [\\n        \"No positive catalysts identified due to absence of news\"\\n    ]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 314, 'prompt_tokens': 664, 'total_tokens': 978, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 664}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '10ee5b84-d776-4598-a692-20fa22f475fb', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edf8b-e43c-7902-a950-ed78cc56e826-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 664, 'output_tokens': 314, 'total_tokens': 978, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market news available for broader EGX context\",\n        \"Data source errors indicate missing news directories and CSV files\",\n        \"Silence in news coverage reduces confidence in any directional bias\",\n        \"Cannot confirm any company-specific developments or catalysts\"\n    ],\n    \"explanation\": \"No news articles were found for TMGH.CA during the September 18-25, 2024 period, and broader EGX market news was also unavailable due to data retrieval errors. The absence of news is a signal that reduces confidence in any sentiment assessment, as there are no recent developments to analyze. Without any information, the sentiment defaults to neutral with weak strength.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-09-18 to 2024-09-25\"\n    },\n    \"risks_from_news\": [\n        \"Lack of news coverage may indicate low market attention or liquidity concerns\",\n        \"Data unavailability prevents identification of potential risks\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to absence of news\"\n    ]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for the period",
+        "No market news available for broader EGX context",
+        "Data source errors indicate missing news directories and CSV files",
+        "Silence in news coverage reduces confidence in any directional bias",
+        "Cannot confirm any company-specific developments or catalysts",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for TMGH.CA during the September 18-25, 2024 period, and broader EGX market news was also unavailable due to data retrieval errors. The absence of news is a signal that reduces confidence in any sentiment assessment, as there are no recent developments to analyze. Without any information, the sentiment defaults to neutral with weak strength.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-09-18 to 2024-09-25"
+      },
+      "risks_from_news": [
+        "Lack of news coverage may indicate low market attention or liquidity concerns",
+        "Data unavailability prevents identification of potential risks"
+      ],
+      "catalysts_from_news": [
+        "No positive catalysts identified due to absence of news"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.3631,
+        "label": "bearish",
+        "confidence": 0.6572,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for the period",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8298,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market news available for broader EGX context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9404,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data source errors indicate missing news directories and CSV files",
+            "source": "quoted_in_report",
+            "score": -0.8475,
+            "label": "bearish",
+            "confidence": 0.8475,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence in news coverage reduces confidence in any directional bias",
+            "source": "quoted_in_report",
+            "score": -0.9322,
+            "label": "bearish",
+            "confidence": 0.9322,
+            "model": "finbert"
+          },
+          {
+            "headline": "Cannot confirm any company-specific developments or catalysts",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.92,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for TMGH.CA during the September 18-25, 2024 period, and broader EGX mar",
+            "source": "quoted_in_report",
+            "score": -0.9631,
+            "label": "bearish",
+            "confidence": 0.9631,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-09-18 to 2024-09-25",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9384,
+            "model": "finbert"
+          },
+          {
+            "headline": "Lack of news coverage may indicate low market attention or liquidity concerns",
+            "source": "quoted_in_report",
+            "score": -0.9087,
+            "label": "bearish",
+            "confidence": 0.9087,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data unavailability prevents identification of potential risks",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.847,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No positive catalysts identified due to absence of news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8737,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.236,
+        "label": "bearish",
+        "confidence": 0.5343
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "6c51176c8482eaa398a75d4f87e2fe82aae641ca743038a98c642adfb1fd0777",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 4406.031041056849,
+  "timestamp_utc": "2026-06-19T11:02:32.577563+00:00",
+  "context_items": []
+}

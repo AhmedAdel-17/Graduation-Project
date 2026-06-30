@@ -1,0 +1,172 @@
+{
+  "run_id": "c586bf0ca303407ca1f676b6d34f42f8",
+  "ticker": "EFIH",
+  "trade_date": "2024-09-15",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "aed674f5f972da574fd8085b856503f80b301dfdb69bd00fd9aeb4adf375a1cc",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market news available for broader EGX context\",\n        \"Data retrieval errors indicate potential data gap rather than true silence\",\n        \"Silence reduces confidence but cannot confirm directional bias without any information\"\n    ],\n    \"explanation\": \"No news articles were found for EFIH.CA during the September 8-15, 2024 period, and broader EGX market news was also unavailable due to data retrieval errors. The complete absence of coverage significantly reduces confidence in any sentiment assessment, as silence is interpreted as a negative signal for information availability but not necessarily for company fundamentals. Without any headlines, earnings reports, or market commentary, a neutral stance with weak conviction is the only responsible position.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-09-08 to 2024-09-15\"\n    },\n    \"risks_from_news\": [\n        \"Data gap risk: inability to verify if news exists but was not captured\",\n        \"Information asymmetry risk for traders relying on this analysis\"\n    ],\n    \"catalysts_from_news\": []\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for the period\",\\n        \"No market news available for broader EGX context\",\\n        \"Data retrieval errors indicate potential data gap rather than true silence\",\\n        \"Silence reduces confidence but cannot confirm directional bias without any information\"\\n    ],\\n    \"explanation\": \"No news articles were found for EFIH.CA during the September 8-15, 2024 period, and broader EGX market news was also unavailable due to data retrieval errors. The complete absence of coverage significantly reduces confidence in any sentiment assessment, as silence is interpreted as a negative signal for information availability but not necessarily for company fundamentals. Without any headlines, earnings reports, or market commentary, a neutral stance with weak conviction is the only responsible position.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-09-08 to 2024-09-15\"\\n    },\\n    \"risks_from_news\": [\\n        \"Data gap risk: inability to verify if news exists but was not captured\",\\n        \"Information asymmetry risk for traders relying on this analysis\"\\n    ],\\n    \"catalysts_from_news\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 310, 'prompt_tokens': 664, 'total_tokens': 974, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 664}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'ff79d0c5-76f7-46e8-8b93-b9799b043018', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee034-fd64-72c2-b758-d1a53a1c212f-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 664, 'output_tokens': 310, 'total_tokens': 974, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market news available for broader EGX context\",\n        \"Data retrieval errors indicate potential data gap rather than true silence\",\n        \"Silence reduces confidence but cannot confirm directional bias without any information\"\n    ],\n    \"explanation\": \"No news articles were found for EFIH.CA during the September 8-15, 2024 period, and broader EGX market news was also unavailable due to data retrieval errors. The complete absence of coverage significantly reduces confidence in any sentiment assessment, as silence is interpreted as a negative signal for information availability but not necessarily for company fundamentals. Without any headlines, earnings reports, or market commentary, a neutral stance with weak conviction is the only responsible position.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-09-08 to 2024-09-15\"\n    },\n    \"risks_from_news\": [\n        \"Data gap risk: inability to verify if news exists but was not captured\",\n        \"Information asymmetry risk for traders relying on this analysis\"\n    ],\n    \"catalysts_from_news\": []\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for the period",
+        "No market news available for broader EGX context",
+        "Data retrieval errors indicate potential data gap rather than true silence",
+        "Silence reduces confidence but cannot confirm directional bias without any information",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for EFIH.CA during the September 8-15, 2024 period, and broader EGX market news was also unavailable due to data retrieval errors. The complete absence of coverage significantly reduces confidence in any sentiment assessment, as silence is interpreted as a negative signal for information availability but not necessarily for company fundamentals. Without any headlines, earnings reports, or market commentary, a neutral stance with weak conviction is the only responsible position.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-09-08 to 2024-09-15"
+      },
+      "risks_from_news": [
+        "Data gap risk: inability to verify if news exists but was not captured",
+        "Information asymmetry risk for traders relying on this analysis"
+      ],
+      "catalysts_from_news": [],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.2515,
+        "label": "bearish",
+        "confidence": 0.5828,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for the period",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8298,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market news available for broader EGX context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9404,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data retrieval errors indicate potential data gap rather than true silence",
+            "source": "quoted_in_report",
+            "score": -0.9257,
+            "label": "bearish",
+            "confidence": 0.9257,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence reduces confidence but cannot confirm directional bias without any information",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.7104,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for EFIH.CA during the September 8-15, 2024 period, and broader EGX mark",
+            "source": "quoted_in_report",
+            "score": -0.9498,
+            "label": "bearish",
+            "confidence": 0.9498,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-09-08 to 2024-09-15",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9325,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data gap risk: inability to verify if news exists but was not captured",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.5916,
+            "model": "finbert"
+          },
+          {
+            "headline": "Information asymmetry risk for traders relying on this analysis",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9133,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.1635,
+        "label": "bearish",
+        "confidence": 0.4897
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "ebec80bd80cd8afb6e9e4d2e5078041ae5a4d4aa6d9d07b8b5f86787139a5abe",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 4303.949250024743,
+  "timestamp_utc": "2026-06-19T14:07:14.534519+00:00",
+  "context_items": []
+}

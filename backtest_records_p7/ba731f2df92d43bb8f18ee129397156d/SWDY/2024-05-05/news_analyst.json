@@ -1,0 +1,182 @@
+{
+  "run_id": "ba731f2df92d43bb8f18ee129397156d",
+  "ticker": "SWDY",
+  "trade_date": "2024-05-05",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "d663a28e2e208df74a27bbc16dca3cdb59819747378d3b904273eb7afcd3e0c2",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for SWDY.CA in the specified date range\",\n        \"No market-level news available for EGX context\",\n        \"Data source errors indicate potential data collection failure, not necessarily true news silence\",\n        \"Lack of any headlines, sources, or market signals reduces analytical confidence significantly\"\n    ],\n    \"explanation\": \"No news articles were found for SWDY.CA between April 28 and May 5, 2024, and no market-level EGX news was available. While silence can indicate reduced market attention or a lack of material events, the data source errors suggest this may be a data retrieval issue rather than genuine news absence. As a result, sentiment is assessed as neutral with very low confidence due to insufficient information.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-04-28 to 2024-05-05\"\n    },\n    \"risks_from_news\": [\n        \"No news identified — risk of unknown material events or market-moving developments not captured\",\n        \"Data collection gaps may hide negative news that could impact the stock\"\n    ],\n    \"catalysts_from_news\": [\n        \"No news identified — potential positive catalysts may have been missed due to data unavailability\"\n    ]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for SWDY.CA in the specified date range\",\\n        \"No market-level news available for EGX context\",\\n        \"Data source errors indicate potential data collection failure, not necessarily true news silence\",\\n        \"Lack of any headlines, sources, or market signals reduces analytical confidence significantly\"\\n    ],\\n    \"explanation\": \"No news articles were found for SWDY.CA between April 28 and May 5, 2024, and no market-level EGX news was available. While silence can indicate reduced market attention or a lack of material events, the data source errors suggest this may be a data retrieval issue rather than genuine news absence. As a result, sentiment is assessed as neutral with very low confidence due to insufficient information.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-04-28 to 2024-05-05\"\\n    },\\n    \"risks_from_news\": [\\n        \"No news identified — risk of unknown material events or market-moving developments not captured\",\\n        \"Data collection gaps may hide negative news that could impact the stock\"\\n    ],\\n    \"catalysts_from_news\": [\\n        \"No news identified — potential positive catalysts may have been missed due to data unavailability\"\\n    ]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 339, 'prompt_tokens': 664, 'total_tokens': 1003, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 640}, 'prompt_cache_hit_tokens': 640, 'prompt_cache_miss_tokens': 24}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '99336745-0418-4e51-acae-8016187e1499', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edcd0-a835-7672-93d1-2c4e6ada7e61-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 664, 'output_tokens': 339, 'total_tokens': 1003, 'input_token_details': {'cache_read': 640}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for SWDY.CA in the specified date range\",\n        \"No market-level news available for EGX context\",\n        \"Data source errors indicate potential data collection failure, not necessarily true news silence\",\n        \"Lack of any headlines, sources, or market signals reduces analytical confidence significantly\"\n    ],\n    \"explanation\": \"No news articles were found for SWDY.CA between April 28 and May 5, 2024, and no market-level EGX news was available. While silence can indicate reduced market attention or a lack of material events, the data source errors suggest this may be a data retrieval issue rather than genuine news absence. As a result, sentiment is assessed as neutral with very low confidence due to insufficient information.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-04-28 to 2024-05-05\"\n    },\n    \"risks_from_news\": [\n        \"No news identified — risk of unknown material events or market-moving developments not captured\",\n        \"Data collection gaps may hide negative news that could impact the stock\"\n    ],\n    \"catalysts_from_news\": [\n        \"No news identified — potential positive catalysts may have been missed due to data unavailability\"\n    ]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for SWDY.CA in the specified date range",
+        "No market-level news available for EGX context",
+        "Data source errors indicate potential data collection failure, not necessarily true news silence",
+        "Lack of any headlines, sources, or market signals reduces analytical confidence significantly",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for SWDY.CA between April 28 and May 5, 2024, and no market-level EGX news was available. While silence can indicate reduced market attention or a lack of material events, the data source errors suggest this may be a data retrieval issue rather than genuine news absence. As a result, sentiment is assessed as neutral with very low confidence due to insufficient information.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-04-28 to 2024-05-05"
+      },
+      "risks_from_news": [
+        "No news identified — risk of unknown material events or market-moving developments not captured",
+        "Data collection gaps may hide negative news that could impact the stock"
+      ],
+      "catalysts_from_news": [
+        "No news identified — potential positive catalysts may have been missed due to data unavailability"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.5133,
+        "label": "bearish",
+        "confidence": 0.6612,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for SWDY.CA in the specified date range",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9214,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market-level news available for EGX context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9195,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data source errors indicate potential data collection failure, not necessarily true news silence",
+            "source": "quoted_in_report",
+            "score": -0.9275,
+            "label": "bearish",
+            "confidence": 0.9275,
+            "model": "finbert"
+          },
+          {
+            "headline": "Lack of any headlines, sources, or market signals reduces analytical confidence significantly",
+            "source": "quoted_in_report",
+            "score": -0.9663,
+            "label": "bearish",
+            "confidence": 0.9663,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for SWDY.CA between April 28 and May 5, 2024, and no market-level EGX ne",
+            "source": "quoted_in_report",
+            "score": -0.9414,
+            "label": "bearish",
+            "confidence": 0.9414,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-04-28 to 2024-05-05",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9351,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news identified — risk of unknown material events or market-moving developments not captured",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9241,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data collection gaps may hide negative news that could impact the stock",
+            "source": "quoted_in_report",
+            "score": -0.9494,
+            "label": "bearish",
+            "confidence": 0.9494,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No news identified — potential positive catalysts may have been missed due to data unavailability",
+            "source": "quoted_in_report",
+            "score": -0.9115,
+            "label": "bearish",
+            "confidence": 0.9115,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.3336,
+        "label": "bearish",
+        "confidence": 0.5367
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "61261992a91a84274f9f22c976add427c1737965360c365223e85d57ab7e8297",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 4028.3947499701753,
+  "timestamp_utc": "2026-06-18T22:18:47.133743+00:00",
+  "context_items": []
+}

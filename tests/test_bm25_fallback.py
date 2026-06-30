@@ -12,6 +12,17 @@ from __future__ import annotations
 
 import pytest
 
+try:
+    import rank_bm25  # noqa: F401
+    _HAS_BM25 = True
+except ImportError:
+    _HAS_BM25 = False
+
+_skip_no_bm25 = pytest.mark.skipif(
+    not _HAS_BM25,
+    reason="rank_bm25 not installed (optional dependency)",
+)
+
 from tradingagents.agents.utils.memory import FinancialSituationMemory
 
 
@@ -60,6 +71,7 @@ def test_disable_seed_memories_flag_respected(monkeypatch, tmp_path):
 # ─── BM25 retrieval (embeddings disabled) ─────────────────────────────────────
 
 
+@_skip_no_bm25
 def test_bm25_returns_relevant_seed_when_embeddings_disabled(monkeypatch, tmp_path):
     """The headline assertion: a DeepSeek/Groq config that used to return
     ``[]`` now returns relevant seed memories via BM25."""
@@ -109,6 +121,7 @@ def test_bm25_empty_query_returns_empty(monkeypatch, tmp_path):
     assert mem.get_memories("   ", n_matches=2) == []
 
 
+@_skip_no_bm25
 def test_bm25_returned_metadata_preserves_canonical_keys(monkeypatch, tmp_path):
     monkeypatch.setenv("OPENAI_API_KEY", "test-dummy-key")
     mem = FinancialSituationMemory("bull_memory", _config_no_embeddings(str(tmp_path)))
@@ -129,6 +142,7 @@ def test_bm25_returned_metadata_preserves_canonical_keys(monkeypatch, tmp_path):
 # ─── add_situations integrates BM25 corpus ────────────────────────────────────
 
 
+@_skip_no_bm25
 def test_add_situations_appends_to_bm25_when_embeddings_disabled(monkeypatch, tmp_path):
     """Reflection writes must be searchable even when embeddings are off."""
     monkeypatch.setenv("OPENAI_API_KEY", "test-dummy-key")
@@ -154,6 +168,7 @@ def test_add_situations_appends_to_bm25_when_embeddings_disabled(monkeypatch, tm
 # ─── Vector path: empty Chroma falls back to BM25 over seeds ──────────────────
 
 
+@_skip_no_bm25
 def test_empty_chroma_with_embeddings_falls_back_to_bm25(monkeypatch, tmp_path):
     """When embeddings are enabled but Chroma is empty (e.g., seeding into
     Chroma failed), the vector path still returns BM25 hits over seeds rather

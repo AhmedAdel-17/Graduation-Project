@@ -155,13 +155,35 @@ def _rebuild_graph(tag, exp_config: dict, call_log: List[LLMCallLog]):
             is_det = True
         elif explicit == "llm":
             is_det = False
-        elif is_egx and atype in ("market", "fundamentals"):
-            # Mirror setup.py: EGX market uses deterministic analysts by default
+        elif is_egx and atype == "market":
+            # Mirror setup.py: EGX market analyst is always deterministic
             is_det = True
+        elif is_egx and atype == "fundamentals":
+            # Mirror setup.py: EGX fundamentals uses hybrid when config says so
+            is_det = not _cfg.get("use_hybrid_fundamental_analyst", False)
         else:
             is_det = False
 
-        if is_det:
+        # EGX hybrid fundamentals: single-node analyst (no tool loop), but
+        # uses LLM calls internally via the CoT pipeline. Treated like a
+        # deterministic node in graph topology (START → Analyst → sync barrier).
+        _is_hybrid_fund = (
+            is_egx and atype == "fundamentals"
+            and _cfg.get("use_hybrid_fundamental_analyst", False)
+            and explicit != "det"  # explicit "det" override wins
+        )
+
+        if _is_hybrid_fund:
+            from tradingagents.agents.analysts.fundamentals_analyst import (
+                create_hybrid_fundamentals_analyst,
+            )
+            quick_llm = InstrumentedLLM(tag.quick_thinking_llm, "fundamentals_analyst", call_log)
+            deep_llm = InstrumentedLLM(tag.deep_thinking_llm, "fundamentals_analyst_deep", call_log)
+            node = create_hybrid_fundamentals_analyst(quick_llm, deep_llm)
+            workflow.add_node("Fundamentals Analyst", node)
+            workflow.add_edge(START, "Fundamentals Analyst")
+            analysts_needing_sync.append("Fundamentals Analyst")
+        elif is_det:
             # Deterministic analyst: single node, no tool loop, no msg-clear
             if atype == "market":
                 workflow.add_node("Market Analyst", deterministic_market_analyst)

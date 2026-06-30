@@ -30,6 +30,7 @@ from tradingagents.runner import (
     VALID_MODES,
     run_analysis,
 )
+from tradingagents.observability import setup_logging
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -73,7 +74,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s")
+    setup_logging()
     args = _build_parser().parse_args()
 
     analysts = (

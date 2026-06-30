@@ -18,11 +18,32 @@ export interface MarketIndicesResponse {
   indices: MarketIndex[];
 }
 
+export interface Headline {
+  title: string;
+  url?: string;
+  source?: string;
+  timestamp?: string;
+}
+
+export interface HeadlinesResponse {
+  status: string;
+  headlines: Headline[];
+}
+
 export function useMarketIndices() {
   return useQuery<MarketIndicesResponse>({
     queryKey: ["market-indices"],
     queryFn: () => api.get<MarketIndicesResponse>("/market/indices"),
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useHeadlines() {
+  return useQuery<HeadlinesResponse>({
+    queryKey: ["market-headlines"],
+    queryFn: () => api.get<HeadlinesResponse>("/market/headlines?limit=10&lang=en"),
+    staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
   });
 }

@@ -35,9 +35,12 @@ __MACOSX/
 tradingagents/dataflows/data_cache/
 tradingagents/dataflows/social_v2/_cache/
 backtest_results/
+backtest_records/
 eval_results/
 results/
+reports/
 audit_logs/
+logs/
 
 # ChromaDB persistent vector store (agent memory)
 chroma_db/

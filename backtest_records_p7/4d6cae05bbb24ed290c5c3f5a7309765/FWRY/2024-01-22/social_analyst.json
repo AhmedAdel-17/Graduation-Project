@@ -1,0 +1,41 @@
+{
+  "run_id": "4d6cae05bbb24ed290c5c3f5a7309765",
+  "ticker": "FWRY",
+  "trade_date": "2024-01-22",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "d6399c5ec19f4958760f841969cb736e38fe2cf55adf8dd5e835b3307591c63b",
+  "raw_output": "```json\n{\n    \"narrative\": \"No retail investor discussions were detected for FWRY.CA across the monitored social media platforms during the analysis window. There are no Arabic-language signals or Egyptian dialect mentions available to assess community tone or thematic trends. The absence of social data suggests either low retail engagement with this ticker or that conversations occurred outside the tracked channels.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No retail investor discussions were detected for FWRY.CA across the monitored social media platforms during the analysis window. There are no Arabic-language signals or Egyptian dialect mentions available to assess community tone or thematic trends. The absence of social data suggests either low retail engagement with this ticker or that conversations occurred outside the tracked channels.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 84, 'prompt_tokens': 618, 'total_tokens': 702, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 106}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '69a61118-4ce6-49ae-b989-04395b61d748', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edcaf-777a-7160-a1c9-b6e6d365292d-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 618, 'output_tokens': 84, 'total_tokens': 702, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for FWRY.CA]\nNo retail investor discussions were detected for FWRY.CA across the monitored social media platforms during the analysis window. There are no Arabic-language signals or Egyptian dialect mentions available to assess community tone or thematic trends. The absence of social data suggests either low retail engagement with this ticker or that conversations occurred outside the tracked channels.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"FWRY.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No retail investor discussions were detected for FWRY.CA across the monitored social media platforms during the analysis window. There are no Arabic-language signals or Egyptian dialect mentions available to assess community tone or thematic trends. The absence of social data suggests either low retail engagement with this ticker or that conversations occurred outside the tracked channels.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "178b48e91b2bd8d24cc450cd4f3e3a2b13f679c4dcc625384d392c8340aed83d",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 2129.908666945994,
+  "timestamp_utc": "2026-06-18T21:42:29.582072+00:00",
+  "context_items": []
+}

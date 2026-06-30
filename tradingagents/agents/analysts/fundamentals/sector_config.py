@@ -18,6 +18,8 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional, Set
 
+from tradingagents.dataflows.config import get_config
+
 # =============================================================================
 # Sector → Ticker mapping
 # Known EGX30 tickers assigned to their correct sector profile.
@@ -50,6 +52,7 @@ SECTOR_MAP: Dict[str, str] = {
     "EMFD": "real_estate",
     "TALAAT": "real_estate",   # Talaat Moustafa Group
     "TMG": "real_estate",
+    "TMGH": "real_estate",     # Talaat Moustafa Group Holding (Yahoo: TMGH.CA)
     "SODIC": "real_estate",
     "HELI": "real_estate",     # Heliopolis Housing
 
@@ -78,9 +81,11 @@ SECTOR_MAP: Dict[str, str] = {
 def classify_sector(ticker: str) -> str:
     """
     Return the sector for a given EGX ticker.
+    Strips the .CA suffix (Yahoo Finance convention) before lookup.
     Defaults to 'operational' for unknown tickers.
     """
-    return SECTOR_MAP.get(ticker.upper(), "operational")
+    key = ticker.upper().removesuffix(".CA")
+    return SECTOR_MAP.get(key, "operational")
 
 
 # =============================================================================
@@ -188,6 +193,33 @@ EY_SPREAD_FLAGS = {
     },
 }
 
+# P2: High-rate regime context note for EARNINGS_YIELD_COMPRESSED.
+# When CBE > 15%, negative EY spread is structurally common for most EGX equities.
+# This note provides context without suppressing the original flag.
+EARNINGS_YIELD_HIGH_RATE_CONTEXT = (
+    "EARNINGS_YIELD_HIGH_RATE_CONTEXT: Negative EY spread is structurally common "
+    "when CBE policy rate exceeds 15%. In high-rate EM regimes, this flag indicates "
+    "regime-level yield compression, not necessarily company-specific overvaluation. "
+    "Evaluate sector-specific valuation anchors (NAV for real estate, franchise value "
+    "for banks, pricing power for industrials) alongside the EY spread."
+)
+
+# P3: NAV inflation context note for real_estate and holdings in high-rate regimes.
+# Injected into the evidence narrative by data_cot.py when inflation_regime == "high"
+# and sector is real_estate or holdings.  Interpretive context only — not a computed NAV.
+NAV_INFLATION_NOTE = (
+    "REAL ASSET REPRICING CONTEXT: In high-inflation environments (CBE > 15%), "
+    "Egyptian real estate assets are typically carried at historical cost on the "
+    "balance sheet, significantly understating current replacement value. "
+    "Companies with large land banks and development pipelines may have "
+    "book-value NAVs 2-5x below market-implied replacement cost. P/B ratios "
+    "should be interpreted in this context — a P/B of 1.5x on historical-cost "
+    "books may represent a significant discount to replacement value."
+)
+
+# Threshold for high-rate regime classification (must match data_cot._HIGH_RATE_REGIME_THRESHOLD)
+_HIGH_RATE_REGIME_THRESHOLD = 0.15
+
 
 # =============================================================================
 # SectorConfig — main interface
@@ -224,6 +256,7 @@ class SectorConfig:
         pe_ratio: Optional[float],
         roe: Optional[float],
         earnings_yield_spread: Optional[float] = None,
+        risk_free_rate: Optional[float] = None,
     ) -> List[str]:
         """
         Generate the list of distress_flags and informational flags for this company.
@@ -239,7 +272,8 @@ class SectorConfig:
             if self.sector in SAFETY_FLOORS["NEGATIVE_MARGIN_ALERT"]["sectors"]:
                 flags.append("NEGATIVE_MARGIN_ALERT")
 
-        if SAFETY_FLOORS["HIGH_LEVERAGE_ALERT"]["condition"](debt_to_equity):
+        _leverage_threshold = get_config().get("leverage_alert_threshold", 5.0)
+        if debt_to_equity is not None and debt_to_equity > _leverage_threshold:
             if self.sector in SAFETY_FLOORS["HIGH_LEVERAGE_ALERT"]["sectors"]:
                 flags.append("HIGH_LEVERAGE_ALERT")
 
@@ -277,6 +311,11 @@ class SectorConfig:
                 flags.append("EARNINGS_YIELD_ATTRACTIVE")
             elif earnings_yield_spread < EY_SPREAD_FLAGS["EARNINGS_YIELD_COMPRESSED"]["threshold"]:
                 flags.append("EARNINGS_YIELD_COMPRESSED")
+                # P2: In high-rate regimes, add context note alongside the flag.
+                # The original flag is preserved; the note provides interpretation context.
+                if (risk_free_rate is not None
+                        and risk_free_rate > _HIGH_RATE_REGIME_THRESHOLD):
+                    flags.append(EARNINGS_YIELD_HIGH_RATE_CONTEXT)
 
         return flags
 

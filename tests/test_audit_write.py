@@ -19,6 +19,18 @@ import pytest
 
 from tradingagents.db import audit_writer
 
+_psycopg2_available = pytest.importorskip is not None  # always True, just a namespace anchor
+try:
+    import psycopg2  # noqa: F401
+    _HAS_PSYCOPG2 = True
+except ImportError:
+    _HAS_PSYCOPG2 = False
+
+_skip_no_psycopg2 = pytest.mark.skipif(
+    not _HAS_PSYCOPG2,
+    reason="psycopg2 not installed (optional dependency)",
+)
+
 
 # ─── helpers ───────────────────────────────────────────────────────────────────
 
@@ -146,8 +158,22 @@ def test_build_model_fingerprint_captures_canonical_keys():
     assert fp["llm_provider"] == "openai"
     assert fp["deep_think_llm"] == "deepseek-chat"
     assert fp["temperature"] == 0
-    assert fp["seed"] is None  # not yet pinned — MEMORY.md §B
+    assert fp["seed"] == 42  # pinned in trading_graph.py for OpenAI-compatible providers
     assert fp["target_market"] == "EGX"
+
+
+def test_build_model_fingerprint_seed_none_for_anthropic():
+    """Anthropic does not support seed — fingerprint should record None."""
+    config = {
+        "llm_provider": "anthropic",
+        "deep_think_llm": "claude-sonnet-4-20250514",
+        "quick_think_llm": "claude-haiku-4-5-20251001",
+        "backend_url": "https://api.anthropic.com",
+        "target_market": "EGX",
+    }
+    fp = audit_writer.build_model_fingerprint(config)
+    assert fp["seed"] is None
+    assert fp["temperature"] == 0
 
 
 # ─── write_analysis_session ───────────────────────────────────────────────────
@@ -255,6 +281,7 @@ def test_write_agent_events_noop_when_postgres_unavailable(monkeypatch):
     cursor_mock.assert_not_called()
 
 
+@_skip_no_psycopg2
 def test_write_agent_events_uses_execute_values(monkeypatch):
     """When Postgres is available, execute_values is called with N rows."""
     monkeypatch.setattr(audit_writer, "is_postgres_available", lambda: True)
@@ -297,6 +324,7 @@ def test_write_agent_events_empty_state_returns_zero(monkeypatch):
     cursor_mock.assert_not_called()
 
 
+@_skip_no_psycopg2
 def test_write_agent_events_swallows_cursor_exception(monkeypatch):
     """A bulk-insert failure must not raise."""
     monkeypatch.setattr(audit_writer, "is_postgres_available", lambda: True)

@@ -1,0 +1,115 @@
+{
+  "run_id": "585b009e442e43d1a8cb3f94b149338d",
+  "ticker": "FWRY",
+  "trade_date": "2024-04-14",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "66da508e5cbdf79b4070877334ff86cfd2c10ebbca67109a8bbdf64e44441322",
+  "raw_output": "# EXECUTION PLAN: FWRY.CA\n\n## Analysis Summary\n\n### Decision: HOLD (Do Not Initiate Position)\n\nThe research team's recommendation is **SELL/AVOID**, and I concur. However, since we hold **zero shares** and EGX prohibits short selling, the actionable decision is **HOLD** — meaning we maintain our 100% cash position and do not enter FWRY.CA.\n\n### Key Reasons for Avoidance\n\n1. **Extreme Valuation**: P/E of 93.6x with 1.07% earnings yield vs. 27.25% risk-free rate — the earnings yield spread of -26.18% is among the worst in the market\n2. **Technical Deterioration**: 12.9% decline on only 63% of average volume — price falling with no buying support\n3. **Information Vacuum**: Zero news coverage, zero analyst coverage, only 1 year of financial data — cannot verify earnings quality or trend\n4. **Debt Exposure**: 1.48x debt/equity in a 27.25% rate environment — interest costs will compress margins\n5. **Bearish Macro**: EGX30 down -7.94% in 1 month, EGP depreciating, no rate cuts imminent\n\n### Bull Case Assessment\n\nThe bull thesis relies on a bounce from SMA20 support (7.6-7.8 EGP) with 2:1 risk/reward. However:\n- Technical signals are neutral at best (0 bullish, 0 bearish signals)\n- No catalysts are confirmed — only \"hoped-for\" events\n- The 93.6x P/E cannot be justified without extraordinary earnings growth\n\n### Invalidation Conditions to Monitor\n\nIf **any two** of these trigger simultaneously, reassess:\n1. Volume surge to 2x average on +5%+ up day\n2. FY2023 earnings: revenue growth >15% AND net margin >12%\n3. CBE rate cut of 500+ bps\n4. Price breaks above 8.5 EGP on volume >1.5x average\n5. Institutional filing reveals >5% stake\n6. P/E compresses below 40x or earnings yield exceeds 5%\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"FWRY.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — maintain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Do not enter. Monitor for invalidation conditions.\",\n            \"conditions\": [\n                \"Do NOT enter until P/E compresses below 40x OR earnings yield exceeds 5%\",\n                \"Do NOT enter until at least 2 invalidation conditions trigger simultaneously\",\n                \"Re-entry requires fresh fundamental analysis with updated financial data\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position to exit\",\n                \"note\": \"If position were held, mental stop at 6.4 EGP (support level 1)\"\n            },\n            \"time_stop\": \"Reassess after FY2023 earnings release or if any 2 invalidation conditions trigger\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"0 shares — 0% of ADV\",\n            \"price_limit_risk\": \"If monitoring and stock hits -10% limit, do NOT buy the dip — wait for confirmation\",\n            \"liquidity_exit_plan\": \"N/A — no position. If entering in future, limit to 10% of ADV per day\"\n        },\n        \"invalidation_triggers\": [\n            \"Volume surges to 2x average on +5%+ up day — genuine institutional accumulation\",\n            \"FY2023 earnings show revenue growth >15% and net margin >12% — justifies premium multiple\",\n            \"CBE rate cut of 500+ basis points — compresses earnings yield gap\",\n            \"Price breaks above 8.5 EGP on volume >1.5x average — negates technical deterioration\",\n            \"Company announces buyback or special dividend — management confidence signal\",\n            \"Institutional filing reveals >5% stake by reputable foreign investor\",\n            \"P/E compresses below 40x OR earnings yield exceeds 5%\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n## Monitoring Checklist\n\n| Condition | Trigger Level | Status | Action if Triggered |\n|-----------|--------------|--------|---------------------|\n| Volume surge | 2x avg on +5% day | Not triggered | Flag for reassessment |\n| Earnings quality | Rev >15%, Margin >12% | Unknown (FY2023 pending) | Reassess after release |\n| Rate cut | 500+ bps cut | Not triggered (27.25%) | Monitor CBE meetings |\n| Price breakout | >8.5 EGP on 1.5x vol | Not triggered (current ~7.5) | Flag for reassessment |\n| Institutional stake | >5% filing | Not triggered | Flag for reassessment |\n| P/E compression | <40x or EY >5% | Not triggered (93.6x) | Reassess with new data |\n\n**Next review**: After FY2023 earnings release or if any 2 invalidation conditions trigger simultaneously.",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN: FWRY.CA\\n\\n## Analysis Summary\\n\\n### Decision: HOLD (Do Not Initiate Position)\\n\\nThe research team\\'s recommendation is **SELL/AVOID**, and I concur. However, since we hold **zero shares** and EGX prohibits short selling, the actionable decision is **HOLD** — meaning we maintain our 100% cash position and do not enter FWRY.CA.\\n\\n### Key Reasons for Avoidance\\n\\n1. **Extreme Valuation**: P/E of 93.6x with 1.07% earnings yield vs. 27.25% risk-free rate — the earnings yield spread of -26.18% is among the worst in the market\\n2. **Technical Deterioration**: 12.9% decline on only 63% of average volume — price falling with no buying support\\n3. **Information Vacuum**: Zero news coverage, zero analyst coverage, only 1 year of financial data — cannot verify earnings quality or trend\\n4. **Debt Exposure**: 1.48x debt/equity in a 27.25% rate environment — interest costs will compress margins\\n5. **Bearish Macro**: EGX30 down -7.94% in 1 month, EGP depreciating, no rate cuts imminent\\n\\n### Bull Case Assessment\\n\\nThe bull thesis relies on a bounce from SMA20 support (7.6-7.8 EGP) with 2:1 risk/reward. However:\\n- Technical signals are neutral at best (0 bullish, 0 bearish signals)\\n- No catalysts are confirmed — only \"hoped-for\" events\\n- The 93.6x P/E cannot be justified without extraordinary earnings growth\\n\\n### Invalidation Conditions to Monitor\\n\\nIf **any two** of these trigger simultaneously, reassess:\\n1. Volume surge to 2x average on +5%+ up day\\n2. FY2023 earnings: revenue growth >15% AND net margin >12%\\n3. CBE rate cut of 500+ bps\\n4. Price breaks above 8.5 EGP on volume >1.5x average\\n5. Institutional filing reveals >5% stake\\n6. P/E compresses below 40x or earnings yield exceeds 5%\\n\\n---\\n\\n## Structured Execution Plan\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"FWRY.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — maintain 100% cash\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A — no entry\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": null,\\n                \"price_range_high\": null\\n            },\\n            \"timing\": \"Do not enter. Monitor for invalidation conditions.\",\\n            \"conditions\": [\\n                \"Do NOT enter until P/E compresses below 40x OR earnings yield exceeds 5%\",\\n                \"Do NOT enter until at least 2 invalidation conditions trigger simultaneously\",\\n                \"Re-entry requires fresh fundamental analysis with updated financial data\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A — no position to exit\",\\n                \"note\": \"If position were held, mental stop at 6.4 EGP (support level 1)\"\\n            },\\n            \"time_stop\": \"Reassess after FY2023 earnings release or if any 2 invalidation conditions trigger\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"N/A — no position\",\\n            \"max_daily_execution\": \"0 shares — 0% of ADV\",\\n            \"price_limit_risk\": \"If monitoring and stock hits -10% limit, do NOT buy the dip — wait for confirmation\",\\n            \"liquidity_exit_plan\": \"N/A — no position. If entering in future, limit to 10% of ADV per day\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"Volume surges to 2x average on +5%+ up day — genuine institutional accumulation\",\\n            \"FY2023 earnings show revenue growth >15% and net margin >12% — justifies premium multiple\",\\n            \"CBE rate cut of 500+ basis points — compresses earnings yield gap\",\\n            \"Price breaks above 8.5 EGP on volume >1.5x average — negates technical deterioration\",\\n            \"Company announces buyback or special dividend — management confidence signal\",\\n            \"Institutional filing reveals >5% stake by reputable foreign investor\",\\n            \"P/E compresses below 40x OR earnings yield exceeds 5%\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```\\n\\n## Monitoring Checklist\\n\\n| Condition | Trigger Level | Status | Action if Triggered |\\n|-----------|--------------|--------|---------------------|\\n| Volume surge | 2x avg on +5% day | Not triggered | Flag for reassessment |\\n| Earnings quality | Rev >15%, Margin >12% | Unknown (FY2023 pending) | Reassess after release |\\n| Rate cut | 500+ bps cut | Not triggered (27.25%) | Monitor CBE meetings |\\n| Price breakout | >8.5 EGP on 1.5x vol | Not triggered (current ~7.5) | Flag for reassessment |\\n| Institutional stake | >5% filing | Not triggered | Flag for reassessment |\\n| P/E compression | <40x or EY >5% | Not triggered (93.6x) | Reassess with new data |\\n\\n**Next review**: After FY2023 earnings release or if any 2 invalidation conditions trigger simultaneously.', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1364, 'prompt_tokens': 7790, 'total_tokens': 9154, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 896}, 'prompt_cache_hit_tokens': 896, 'prompt_cache_miss_tokens': 6894}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '6a02d023-0bc0-46f3-9d2f-b54e4a19cf3e', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edcb9-707e-7ea0-aaf0-8fd51d303ca7-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 7790, 'output_tokens': 1364, 'total_tokens': 9154, 'input_token_details': {'cache_read': 896}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN: FWRY.CA\n\n## Analysis Summary\n\n### Decision: HOLD (Do Not Initiate Position)\n\nThe research team's recommendation is **SELL/AVOID**, and I concur. However, since we hold **zero shares** and EGX prohibits short selling, the actionable decision is **HOLD** — meaning we maintain our 100% cash position and do not enter FWRY.CA.\n\n### Key Reasons for Avoidance\n\n1. **Extreme Valuation**: P/E of 93.6x with 1.07% earnings yield vs. 27.25% risk-free rate — the earnings yield spread of -26.18% is among the worst in the market\n2. **Technical Deterioration**: 12.9% decline on only 63% of average volume — price falling with no buying support\n3. **Information Vacuum**: Zero news coverage, zero analyst coverage, only 1 year of financial data — cannot verify earnings quality or trend\n4. **Debt Exposure**: 1.48x debt/equity in a 27.25% rate environment — interest costs will compress margins\n5. **Bearish Macro**: EGX30 down -7.94% in 1 month, EGP depreciating, no rate cuts imminent\n\n### Bull Case Assessment\n\nThe bull thesis relies on a bounce from SMA20 support (7.6-7.8 EGP) with 2:1 risk/reward. However:\n- Technical signals are neutral at best (0 bullish, 0 bearish signals)\n- No catalysts are confirmed — only \"hoped-for\" events\n- The 93.6x P/E cannot be justified without extraordinary earnings growth\n\n### Invalidation Conditions to Monitor\n\nIf **any two** of these trigger simultaneously, reassess:\n1. Volume surge to 2x average on +5%+ up day\n2. FY2023 earnings: revenue growth >15% AND net margin >12%\n3. CBE rate cut of 500+ bps\n4. Price breaks above 8.5 EGP on volume >1.5x average\n5. Institutional filing reveals >5% stake\n6. P/E compresses below 40x or earnings yield exceeds 5%\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"FWRY.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — maintain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Do not enter. Monitor for invalidation conditions.\",\n            \"conditions\": [\n                \"Do NOT enter until P/E compresses below 40x OR earnings yield exceeds 5%\",\n                \"Do NOT enter until at least 2 invalidation conditions trigger simultaneously\",\n                \"Re-entry requires fresh fundamental analysis with updated financial data\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position to exit\",\n                \"note\": \"If position were held, mental stop at 6.4 EGP (support level 1)\"\n            },\n            \"time_stop\": \"Reassess after FY2023 earnings release or if any 2 invalidation conditions trigger\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"0 shares — 0% of ADV\",\n            \"price_limit_risk\": \"If monitoring and stock hits -10% limit, do NOT buy the dip — wait for confirmation\",\n            \"liquidity_exit_plan\": \"N/A — no position. If entering in future, limit to 10% of ADV per day\"\n        },\n        \"invalidation_triggers\": [\n            \"Volume surges to 2x average on +5%+ up day — genuine institutional accumulation\",\n            \"FY2023 earnings show revenue growth >15% and net margin >12% — justifies premium multiple\",\n            \"CBE rate cut of 500+ basis points — compresses earnings yield gap\",\n            \"Price breaks above 8.5 EGP on volume >1.5x average — negates technical deterioration\",\n            \"Company announces buyback or special dividend — management confidence signal\",\n            \"Institutional filing reveals >5% stake by reputable foreign investor\",\n            \"P/E compresses below 40x OR earnings yield exceeds 5%\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n## Monitoring Checklist\n\n| Condition | Trigger Level | Status | Action if Triggered |\n|-----------|--------------|--------|---------------------|\n| Volume surge | 2x avg on +5% day | Not triggered | Flag for reassessment |\n| Earnings quality | Rev >15%, Margin >12% | Unknown (FY2023 pending) | Reassess after release |\n| Rate cut | 500+ bps cut | Not triggered (27.25%) | Monitor CBE meetings |\n| Price breakout | >8.5 EGP on 1.5x vol | Not triggered (current ~7.5) | Flag for reassessment |\n| Institutional stake | >5% filing | Not triggered | Flag for reassessment |\n| P/E compression | <40x or EY >5% | Not triggered (93.6x) | Reassess with new data |\n\n**Next review**: After FY2023 earnings release or if any 2 invalidation conditions trigger simultaneously.",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "FWRY.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — maintain 100% cash"
+        },
+        "entry_logic": {
+          "order_type": "N/A — no entry",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": null,
+            "price_range_high": null
+          },
+          "timing": "Do not enter. Monitor for invalidation conditions.",
+          "conditions": [
+            "Do NOT enter until P/E compresses below 40x OR earnings yield exceeds 5%",
+            "Do NOT enter until at least 2 invalidation conditions trigger simultaneously",
+            "Re-entry requires fresh fundamental analysis with updated financial data"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": null
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A — no position to exit",
+            "note": "If position were held, mental stop at 6.4 EGP (support level 1)"
+          },
+          "time_stop": "Reassess after FY2023 earnings release or if any 2 invalidation conditions trigger"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "N/A — no position",
+          "max_daily_execution": "0 shares — 0% of ADV",
+          "price_limit_risk": "If monitoring and stock hits -10% limit, do NOT buy the dip — wait for confirmation",
+          "liquidity_exit_plan": "N/A — no position. If entering in future, limit to 10% of ADV per day"
+        },
+        "invalidation_triggers": [
+          "Volume surges to 2x average on +5%+ up day — genuine institutional accumulation",
+          "FY2023 earnings show revenue growth >15% and net margin >12% — justifies premium multiple",
+          "CBE rate cut of 500+ basis points — compresses earnings yield gap",
+          "Price breaks above 8.5 EGP on volume >1.5x average — negates technical deterioration",
+          "Company announces buyback or special dividend — management confidence signal",
+          "Institutional filing reveals >5% stake by reputable foreign investor",
+          "P/E compresses below 40x OR earnings yield exceeds 5%"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "9871561016fa21adcc9949bb196afc8bd12acb506cbb672f30e3ad7a2607f67a",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 11154.655124992132,
+  "timestamp_utc": "2026-06-18T21:53:32.177869+00:00",
+  "context_items": []
+}

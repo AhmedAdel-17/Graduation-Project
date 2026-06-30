@@ -26,12 +26,13 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
+from tradingagents.dataflows.config import get_config
 
-# Weights for data_confidence formula
-_FIELD_COVERAGE_WEIGHT = 0.45
-_OPTIONAL_COVERAGE_WEIGHT = 0.15
-_STALENESS_WEIGHT = 0.25
-_PERIOD_DEPTH_WEIGHT = 0.15
+# Default weights for data_confidence formula (overridden by config)
+_DEFAULT_FIELD_COVERAGE_WEIGHT = 0.45
+_DEFAULT_OPTIONAL_COVERAGE_WEIGHT = 0.15
+_DEFAULT_STALENESS_WEIGHT = 0.25
+_DEFAULT_PERIOD_DEPTH_WEIGHT = 0.15
 
 # Required fields for data_confidence
 _REQUIRED_INCOME_FIELDS = {"revenue", "gross_profit", "operating_income", "net_income"}
@@ -114,12 +115,19 @@ def compute_data_confidence(
     # Normalize to 8 periods (8 years ~ meaningful trend visibility).
     period_depth = min(n_annual_periods, 8) / 8.0
 
-    # ── Weighted sum ─────────────────────────────────────────────────────────
+    # ── Weighted sum (weights from config, fallback to defaults) ────────────
+    cfg = get_config()
+    _weights = cfg.get("data_confidence_weights", {})
+    w_fc = _weights.get("field_coverage", _DEFAULT_FIELD_COVERAGE_WEIGHT)
+    w_oc = _weights.get("optional_coverage", _DEFAULT_OPTIONAL_COVERAGE_WEIGHT)
+    w_st = _weights.get("staleness", _DEFAULT_STALENESS_WEIGHT)
+    w_pd = _weights.get("period_depth", _DEFAULT_PERIOD_DEPTH_WEIGHT)
+
     score = (
-        field_coverage * _FIELD_COVERAGE_WEIGHT
-        + optional_coverage * _OPTIONAL_COVERAGE_WEIGHT
-        + staleness * _STALENESS_WEIGHT
-        + period_depth * _PERIOD_DEPTH_WEIGHT
+        field_coverage * w_fc
+        + optional_coverage * w_oc
+        + staleness * w_st
+        + period_depth * w_pd
     ) * 100
 
     return min(100, max(0, round(score)))

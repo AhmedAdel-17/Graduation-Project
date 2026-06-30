@@ -26,7 +26,7 @@ _MID: frozenset[str] = frozenset(
     {
         "ADIB", "CIEB", "EXPA", "HDBK", "QNBA", "SAUD",
         "HELI", "PHDC", "OCDI", "ORAS", "EMFD",
-        "EAST", "ESRS", "SWDY", "ABUK", "MFPC", "EGAL", "EGCH", "EFIC",
+        "EAST", "SWDY", "ABUK", "MFPC", "EGAL", "EGCH", "EFIC",
         "EFIH", "RAYA",
         "BTFH", "CICH",
         "JUFO", "EFID", "DOMT",

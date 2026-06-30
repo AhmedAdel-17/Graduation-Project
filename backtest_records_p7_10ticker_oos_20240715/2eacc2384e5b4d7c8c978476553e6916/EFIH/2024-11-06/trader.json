@@ -1,0 +1,117 @@
+{
+  "run_id": "2eacc2384e5b4d7c8c978476553e6916",
+  "ticker": "EFIH",
+  "trade_date": "2024-11-06",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "f051004e82e7c7656d1b2475af4c10a5c10dfe062940f0f7d3c3f624903e76ca",
+  "raw_output": "# EXECUTION PLAN: EFIH.CA — HOLD\n\n## Analysis Summary\n\nAfter synthesizing all available data — macro environment, technical signals, fundamental health, sentiment, and liquidity profile — the decision is clear: **HOLD**. Do not initiate a position.\n\n### Why HOLD, Not BUY\n\n| Factor | Assessment | Impact |\n|--------|-----------|--------|\n| **Valuation** | 63.6x P/E vs EGX avg ~28x | Extreme premium with no earnings yield buffer |\n| **Earnings Yield Spread** | 1.57% vs 27.25% risk-free rate | -25.7% negative spread — structural headwind |\n| **Liquidity** | Volume at 18.7% of normal | Exit would be costly; slippage risk high |\n| **Technical Momentum** | Moderate downside, underperforming | No bullish confirmation |\n| **Fundamental Health** | Concerning (Piotroski 4/9) | Distress flags present |\n| **Sentiment** | Neutral-bearish (no news coverage) | Information vacuum increases uncertainty |\n| **Dividend** | Zero yield | No income buffer — total return = price only |\n\n### The Asymmetric Risk/Reward\n\n- **Upside (bull case):** 15–30% — requires sustained 40%+ growth AND rate cuts\n- **Downside (bear case):** -45% to -53% — P/E mean reversion to 30–40x\n- **Ratio:** ~1:2.5 risk/reward in favor of downside\n\n### Liquidity Trap Analysis\n\nVolume at **18.7% of normal** means:\n- Daily ADV constraint: 1,825,452 shares max per day (pre-computed)\n- Portfolio cap: 47,230 shares total\n- **Full position could be accumulated in ~1 day** — but exiting would be problematic\n- Any adverse move could trap capital for days/weeks\n\n### Key Invalidation Conditions (for future re-evaluation)\n\n1. P/E compresses below **40x** (entry becomes attractive)\n2. Volume increases to **>1.5x average** for 3 consecutive days (liquidity improves)\n3. Q3 2024 earnings confirm **>40% revenue growth** (growth story intact)\n4. CBE cuts rates by **500+ bps** (macro environment shifts)\n5. Dividend initiated at **>3% yield** (income buffer established)\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"EFIH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — stay in cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Do not enter. Re-evaluate after Q3 2024 earnings or if P/E drops below 40x.\",\n            \"conditions\": [\n                \"P/E ratio compresses below 40x\",\n                \"Volume increases to >1.5x 20-day average for 3 consecutive days\",\n                \"Q3 2024 earnings confirm >40% YoY revenue growth\",\n                \"CBE cuts policy rate by at least 500 bps\",\n                \"Dividend initiated at >3% yield\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position to exit\",\n                \"note\": \"If position existed, mental stop at -15% from entry with limit order exit over 2-3 days\"\n            },\n            \"time_stop\": \"Re-evaluate after Q3 2024 earnings release or 90 days from today\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A — no position\",\n            \"price_limit_risk\": \"If considering entry, never buy on a +10% limit-up day. If holding, do not attempt to exit on a -10% limit-down day.\",\n            \"liquidity_exit_plan\": \"If position existed: reduce 25% per day over 4 days using limit orders at market. Expect 3-8% slippage.\"\n        },\n        \"invalidation_triggers\": [\n            \"P/E ratio drops below 40x (entry becomes attractive)\",\n            \"Volume increases to >1.5x 20-day average for 3 consecutive days (liquidity improves)\",\n            \"Q3 2024 earnings confirm >40% YoY revenue growth (growth story intact)\",\n            \"CBE cuts policy rate by at least 500 bps (macro environment shifts)\",\n            \"Dividend initiated at >3% yield (income buffer established)\",\n            \"Price breaks above SMA50 with volume >1.5x average for 3 consecutive days (technical reversal)\",\n            \"Institutional ownership increases by >5% in a quarter (smart money accumulating)\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n## Monitoring Checklist (for re-evaluation)\n\n| Trigger | Current Status | Target for Entry |\n|---------|---------------|------------------|\n| P/E Ratio | 63.6x | <40x |\n| Volume Ratio (20d) | 0.187 (18.7%) | >1.5x normal |\n| Revenue Growth (YoY) | 47.5% | >40% confirmed in Q3 |\n| CBE Policy Rate | 27.25% | <22.25% (500 bps cut) |\n| Dividend Yield | 0% | >3% |\n| Technical Trend | Neutral (below SMA50) | Bullish (above SMA50 with volume) |\n\n**Next review date:** After Q3 2024 earnings release or 90 days from today (February 4, 2025), whichever comes first.",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN: EFIH.CA — HOLD\\n\\n## Analysis Summary\\n\\nAfter synthesizing all available data — macro environment, technical signals, fundamental health, sentiment, and liquidity profile — the decision is clear: **HOLD**. Do not initiate a position.\\n\\n### Why HOLD, Not BUY\\n\\n| Factor | Assessment | Impact |\\n|--------|-----------|--------|\\n| **Valuation** | 63.6x P/E vs EGX avg ~28x | Extreme premium with no earnings yield buffer |\\n| **Earnings Yield Spread** | 1.57% vs 27.25% risk-free rate | -25.7% negative spread — structural headwind |\\n| **Liquidity** | Volume at 18.7% of normal | Exit would be costly; slippage risk high |\\n| **Technical Momentum** | Moderate downside, underperforming | No bullish confirmation |\\n| **Fundamental Health** | Concerning (Piotroski 4/9) | Distress flags present |\\n| **Sentiment** | Neutral-bearish (no news coverage) | Information vacuum increases uncertainty |\\n| **Dividend** | Zero yield | No income buffer — total return = price only |\\n\\n### The Asymmetric Risk/Reward\\n\\n- **Upside (bull case):** 15–30% — requires sustained 40%+ growth AND rate cuts\\n- **Downside (bear case):** -45% to -53% — P/E mean reversion to 30–40x\\n- **Ratio:** ~1:2.5 risk/reward in favor of downside\\n\\n### Liquidity Trap Analysis\\n\\nVolume at **18.7% of normal** means:\\n- Daily ADV constraint: 1,825,452 shares max per day (pre-computed)\\n- Portfolio cap: 47,230 shares total\\n- **Full position could be accumulated in ~1 day** — but exiting would be problematic\\n- Any adverse move could trap capital for days/weeks\\n\\n### Key Invalidation Conditions (for future re-evaluation)\\n\\n1. P/E compresses below **40x** (entry becomes attractive)\\n2. Volume increases to **>1.5x average** for 3 consecutive days (liquidity improves)\\n3. Q3 2024 earnings confirm **>40% revenue growth** (growth story intact)\\n4. CBE cuts rates by **500+ bps** (macro environment shifts)\\n5. Dividend initiated at **>3% yield** (income buffer established)\\n\\n---\\n\\n## Structured Execution Plan\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"EFIH.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — stay in cash\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A — no entry\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": null,\\n                \"price_range_high\": null\\n            },\\n            \"timing\": \"Do not enter. Re-evaluate after Q3 2024 earnings or if P/E drops below 40x.\",\\n            \"conditions\": [\\n                \"P/E ratio compresses below 40x\",\\n                \"Volume increases to >1.5x 20-day average for 3 consecutive days\",\\n                \"Q3 2024 earnings confirm >40% YoY revenue growth\",\\n                \"CBE cuts policy rate by at least 500 bps\",\\n                \"Dividend initiated at >3% yield\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A — no position to exit\",\\n                \"note\": \"If position existed, mental stop at -15% from entry with limit order exit over 2-3 days\"\\n            },\\n            \"time_stop\": \"Re-evaluate after Q3 2024 earnings release or 90 days from today\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"N/A — no position\",\\n            \"max_daily_execution\": \"N/A — no position\",\\n            \"price_limit_risk\": \"If considering entry, never buy on a +10% limit-up day. If holding, do not attempt to exit on a -10% limit-down day.\",\\n            \"liquidity_exit_plan\": \"If position existed: reduce 25% per day over 4 days using limit orders at market. Expect 3-8% slippage.\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"P/E ratio drops below 40x (entry becomes attractive)\",\\n            \"Volume increases to >1.5x 20-day average for 3 consecutive days (liquidity improves)\",\\n            \"Q3 2024 earnings confirm >40% YoY revenue growth (growth story intact)\",\\n            \"CBE cuts policy rate by at least 500 bps (macro environment shifts)\",\\n            \"Dividend initiated at >3% yield (income buffer established)\",\\n            \"Price breaks above SMA50 with volume >1.5x average for 3 consecutive days (technical reversal)\",\\n            \"Institutional ownership increases by >5% in a quarter (smart money accumulating)\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```\\n\\n## Monitoring Checklist (for re-evaluation)\\n\\n| Trigger | Current Status | Target for Entry |\\n|---------|---------------|------------------|\\n| P/E Ratio | 63.6x | <40x |\\n| Volume Ratio (20d) | 0.187 (18.7%) | >1.5x normal |\\n| Revenue Growth (YoY) | 47.5% | >40% confirmed in Q3 |\\n| CBE Policy Rate | 27.25% | <22.25% (500 bps cut) |\\n| Dividend Yield | 0% | >3% |\\n| Technical Trend | Neutral (below SMA50) | Bullish (above SMA50 with volume) |\\n\\n**Next review date:** After Q3 2024 earnings release or 90 days from today (February 4, 2025), whichever comes first.', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1440, 'prompt_tokens': 9451, 'total_tokens': 10891, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9451}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '19c68312-5d60-4a6a-818b-107300651c4b', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee042-125c-7840-a7d0-6f7b16ad7291-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9451, 'output_tokens': 1440, 'total_tokens': 10891, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN: EFIH.CA — HOLD\n\n## Analysis Summary\n\nAfter synthesizing all available data — macro environment, technical signals, fundamental health, sentiment, and liquidity profile — the decision is clear: **HOLD**. Do not initiate a position.\n\n### Why HOLD, Not BUY\n\n| Factor | Assessment | Impact |\n|--------|-----------|--------|\n| **Valuation** | 63.6x P/E vs EGX avg ~28x | Extreme premium with no earnings yield buffer |\n| **Earnings Yield Spread** | 1.57% vs 27.25% risk-free rate | -25.7% negative spread — structural headwind |\n| **Liquidity** | Volume at 18.7% of normal | Exit would be costly; slippage risk high |\n| **Technical Momentum** | Moderate downside, underperforming | No bullish confirmation |\n| **Fundamental Health** | Concerning (Piotroski 4/9) | Distress flags present |\n| **Sentiment** | Neutral-bearish (no news coverage) | Information vacuum increases uncertainty |\n| **Dividend** | Zero yield | No income buffer — total return = price only |\n\n### The Asymmetric Risk/Reward\n\n- **Upside (bull case):** 15–30% — requires sustained 40%+ growth AND rate cuts\n- **Downside (bear case):** -45% to -53% — P/E mean reversion to 30–40x\n- **Ratio:** ~1:2.5 risk/reward in favor of downside\n\n### Liquidity Trap Analysis\n\nVolume at **18.7% of normal** means:\n- Daily ADV constraint: 1,825,452 shares max per day (pre-computed)\n- Portfolio cap: 47,230 shares total\n- **Full position could be accumulated in ~1 day** — but exiting would be problematic\n- Any adverse move could trap capital for days/weeks\n\n### Key Invalidation Conditions (for future re-evaluation)\n\n1. P/E compresses below **40x** (entry becomes attractive)\n2. Volume increases to **>1.5x average** for 3 consecutive days (liquidity improves)\n3. Q3 2024 earnings confirm **>40% revenue growth** (growth story intact)\n4. CBE cuts rates by **500+ bps** (macro environment shifts)\n5. Dividend initiated at **>3% yield** (income buffer established)\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"EFIH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — stay in cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Do not enter. Re-evaluate after Q3 2024 earnings or if P/E drops below 40x.\",\n            \"conditions\": [\n                \"P/E ratio compresses below 40x\",\n                \"Volume increases to >1.5x 20-day average for 3 consecutive days\",\n                \"Q3 2024 earnings confirm >40% YoY revenue growth\",\n                \"CBE cuts policy rate by at least 500 bps\",\n                \"Dividend initiated at >3% yield\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position to exit\",\n                \"note\": \"If position existed, mental stop at -15% from entry with limit order exit over 2-3 days\"\n            },\n            \"time_stop\": \"Re-evaluate after Q3 2024 earnings release or 90 days from today\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A — no position\",\n            \"price_limit_risk\": \"If considering entry, never buy on a +10% limit-up day. If holding, do not attempt to exit on a -10% limit-down day.\",\n            \"liquidity_exit_plan\": \"If position existed: reduce 25% per day over 4 days using limit orders at market. Expect 3-8% slippage.\"\n        },\n        \"invalidation_triggers\": [\n            \"P/E ratio drops below 40x (entry becomes attractive)\",\n            \"Volume increases to >1.5x 20-day average for 3 consecutive days (liquidity improves)\",\n            \"Q3 2024 earnings confirm >40% YoY revenue growth (growth story intact)\",\n            \"CBE cuts policy rate by at least 500 bps (macro environment shifts)\",\n            \"Dividend initiated at >3% yield (income buffer established)\",\n            \"Price breaks above SMA50 with volume >1.5x average for 3 consecutive days (technical reversal)\",\n            \"Institutional ownership increases by >5% in a quarter (smart money accumulating)\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n## Monitoring Checklist (for re-evaluation)\n\n| Trigger | Current Status | Target for Entry |\n|---------|---------------|------------------|\n| P/E Ratio | 63.6x | <40x |\n| Volume Ratio (20d) | 0.187 (18.7%) | >1.5x normal |\n| Revenue Growth (YoY) | 47.5% | >40% confirmed in Q3 |\n| CBE Policy Rate | 27.25% | <22.25% (500 bps cut) |\n| Dividend Yield | 0% | >3% |\n| Technical Trend | Neutral (below SMA50) | Bullish (above SMA50 with volume) |\n\n**Next review date:** After Q3 2024 earnings release or 90 days from today (February 4, 2025), whichever comes first.",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "EFIH.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — stay in cash"
+        },
+        "entry_logic": {
+          "order_type": "N/A — no entry",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": null,
+            "price_range_high": null
+          },
+          "timing": "Do not enter. Re-evaluate after Q3 2024 earnings or if P/E drops below 40x.",
+          "conditions": [
+            "P/E ratio compresses below 40x",
+            "Volume increases to >1.5x 20-day average for 3 consecutive days",
+            "Q3 2024 earnings confirm >40% YoY revenue growth",
+            "CBE cuts policy rate by at least 500 bps",
+            "Dividend initiated at >3% yield"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": null
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A — no position to exit",
+            "note": "If position existed, mental stop at -15% from entry with limit order exit over 2-3 days"
+          },
+          "time_stop": "Re-evaluate after Q3 2024 earnings release or 90 days from today"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "N/A — no position",
+          "max_daily_execution": "N/A — no position",
+          "price_limit_risk": "If considering entry, never buy on a +10% limit-up day. If holding, do not attempt to exit on a -10% limit-down day.",
+          "liquidity_exit_plan": "If position existed: reduce 25% per day over 4 days using limit orders at market. Expect 3-8% slippage."
+        },
+        "invalidation_triggers": [
+          "P/E ratio drops below 40x (entry becomes attractive)",
+          "Volume increases to >1.5x 20-day average for 3 consecutive days (liquidity improves)",
+          "Q3 2024 earnings confirm >40% YoY revenue growth (growth story intact)",
+          "CBE cuts policy rate by at least 500 bps (macro environment shifts)",
+          "Dividend initiated at >3% yield (income buffer established)",
+          "Price breaks above SMA50 with volume >1.5x average for 3 consecutive days (technical reversal)",
+          "Institutional ownership increases by >5% in a quarter (smart money accumulating)"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "ee292fefc3e6b213e97d5d1884f368a6518c7b4f3fa5f910c04991482af11dbf",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 15349.446291918866,
+  "timestamp_utc": "2026-06-19T14:21:42.354993+00:00",
+  "context_items": []
+}

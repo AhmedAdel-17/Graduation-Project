@@ -105,14 +105,25 @@ class CacheManager:
             if value is not None:
                 self._stats["hits"] += 1
                 logger.debug("Cache HIT: %s", key)
+                self._record_fetch("cache", "cache_hit")
             else:
                 self._stats["misses"] += 1
                 logger.debug("Cache MISS: %s", key)
+                self._record_fetch("cache", "cache_miss")
             return value
         except Exception as e:
             self._stats["errors"] += 1
             logger.warning("Cache get error for key '%s': %s", key, e)
             return None
+
+    @staticmethod
+    def _record_fetch(source: str, status: str) -> None:
+        """Increment the data_fetch_total Prometheus counter (best-effort)."""
+        try:
+            from tradingagents.observability.metrics import data_fetch_total
+            data_fetch_total.labels(data_type="cache", source=source, status=status).inc()
+        except Exception:
+            pass
 
     def set(self, key: str, value: Any, ttl: Optional[int] = None, data_type: str = "default") -> bool:
         """

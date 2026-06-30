@@ -1,0 +1,115 @@
+{
+  "run_id": "a6df7dd077664cc0b60cd6141a3303a5",
+  "ticker": "ETEL",
+  "trade_date": "2024-08-14",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "bccced7827d348781c86b9687a0081cddc4e7dbcc30a1b998f6f05c90186beab",
+  "raw_output": "# EXECUTION PLAN — ETEL.CA\n\n## Analysis & Decision Rationale\n\n### Investment Committee Verdict: HOLD\n\nThe research team has delivered a clear **HOLD** recommendation with 85% confidence. The multi-signal alignment framework identifies a **Legitimate HOLD Blocker**: solvency/liquidity deterioration that overrides the positive EGX30 momentum.\n\n### Key Deterioration Signals (Bear Case Dominates)\n\n| Metric | Current | Trend | Signal |\n|--------|---------|-------|--------|\n| Debt-to-Equity | 1.95x | +23.8% YoY | Deteriorating |\n| Current Ratio | 0.54x | -9.8% YoY | Below 1.0 — critical |\n| Interest Expense Growth | +238% YoY | Accelerating | Cash flow bleed |\n| Operating Income Growth | +29% YoY | Slowing vs interest | Coverage collapsing |\n| Piotroski Score | 4/9 | — | Value trap pattern |\n| Volume Ratio | 0.15x | Low | 5-20 days to exit |\n\n### Why Not BUY Despite Cheap Valuation\n\n- **P/E of 5.4x** is optically cheap, but the earnings yield spread is **-8.8%** vs 27.25% risk-free rate\n- **23% ROE** is impressive, but debt-funded — equity multiplier at 2.95x amplifies risk\n- **No catalyst** for re-rating: zero news coverage, no analyst sponsorship, no dividend, no institutional accumulation\n- **Liquidity trap**: 0.15x volume ratio means any attempt to build a position risks moving the market against us\n\n### Why Not SELL (No Position to Reduce)\n\n- Portfolio is 100% cash — no shares held\n- EGX prohibits short selling\n- Only actionable decisions: **BUY** or **HOLD**\n\n### Re-Entry Triggers (Watchlist Conditions)\n\nThe research team has specified four concrete triggers. I will monitor these:\n\n1. **Debt-to-equity declines below 1.5x** — next quarterly filing (likely late August 2024)\n2. **Current ratio improves above 0.7x** — same filing\n3. **CBE cuts policy rate below 20%** — next MPC meeting\n4. **Volume ratio exceeds 0.5x for 20 consecutive days** — institutional accumulation signal\n\n**Action**: If any two triggers are met, re-evaluate for BUY.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"ETEL.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — maintain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry at current levels\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Re-evaluate only after fundamental triggers are met\",\n            \"conditions\": [\n                \"Debt-to-equity declines below 1.5x (next quarterly filing)\",\n                \"Current ratio improves above 0.7x\",\n                \"CBE policy rate cut below 20%\",\n                \"Volume ratio exceeds 0.5x for 20 consecutive days\",\n                \"At least 2 of 4 triggers must be confirmed before re-evaluation\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position\",\n                \"note\": \"If position were held, mental stop at EGP 28.00 (support level 1)\"\n            },\n            \"time_stop\": \"Re-evaluate after Q2 2024 earnings release (expected late August 2024)\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"0 shares — 0% of ADV\",\n            \"price_limit_risk\": \"N/A — no position. If re-entering later, plan for ±10% daily limit: never use market orders, use limit orders only, allow 5-10 days for full exit under normal conditions\",\n            \"liquidity_exit_plan\": \"N/A — no position. If re-entering later: position size at max 10% of 20-day ADV, exit over 3-5 days using limit orders, model 0.8% spread cost\"\n        },\n        \"invalidation_triggers\": [\n            \"Any improvement in balance sheet metrics (D/E below 1.5x, current ratio above 0.7x)\",\n            \"CBE rate cut below 20%\",\n            \"Institutional accumulation confirmed (volume ratio >0.5x for 20 days)\",\n            \"Price breaks above SMA50 with volume and holds for 10+ trading days\",\n            \"Dividend policy announced with minimum 30% payout ratio\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Monitoring Schedule\n\n| Trigger | Data Source | Check Frequency | Current Status |\n|---------|-------------|-----------------|----------------|\n| D/E < 1.5x | Next quarterly filing (Q2 2024) | Upon release | 1.95x — NOT MET |\n| Current ratio > 0.7x | Same filing | Upon release | 0.54x — NOT MET |\n| CBE rate < 20% | MPC calendar | Next meeting | 27.25% — NOT MET |\n| Volume ratio > 0.5x (20 days) | Daily market data | Weekly | 0.15x — NOT MET |\n\n**Next review date**: Upon Q2 2024 earnings release or next CBE MPC meeting, whichever comes first.\n\n**FINAL TRANSACTION PROPOSAL: **HOLD****",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN — ETEL.CA\\n\\n## Analysis & Decision Rationale\\n\\n### Investment Committee Verdict: HOLD\\n\\nThe research team has delivered a clear **HOLD** recommendation with 85% confidence. The multi-signal alignment framework identifies a **Legitimate HOLD Blocker**: solvency/liquidity deterioration that overrides the positive EGX30 momentum.\\n\\n### Key Deterioration Signals (Bear Case Dominates)\\n\\n| Metric | Current | Trend | Signal |\\n|--------|---------|-------|--------|\\n| Debt-to-Equity | 1.95x | +23.8% YoY | Deteriorating |\\n| Current Ratio | 0.54x | -9.8% YoY | Below 1.0 — critical |\\n| Interest Expense Growth | +238% YoY | Accelerating | Cash flow bleed |\\n| Operating Income Growth | +29% YoY | Slowing vs interest | Coverage collapsing |\\n| Piotroski Score | 4/9 | — | Value trap pattern |\\n| Volume Ratio | 0.15x | Low | 5-20 days to exit |\\n\\n### Why Not BUY Despite Cheap Valuation\\n\\n- **P/E of 5.4x** is optically cheap, but the earnings yield spread is **-8.8%** vs 27.25% risk-free rate\\n- **23% ROE** is impressive, but debt-funded — equity multiplier at 2.95x amplifies risk\\n- **No catalyst** for re-rating: zero news coverage, no analyst sponsorship, no dividend, no institutional accumulation\\n- **Liquidity trap**: 0.15x volume ratio means any attempt to build a position risks moving the market against us\\n\\n### Why Not SELL (No Position to Reduce)\\n\\n- Portfolio is 100% cash — no shares held\\n- EGX prohibits short selling\\n- Only actionable decisions: **BUY** or **HOLD**\\n\\n### Re-Entry Triggers (Watchlist Conditions)\\n\\nThe research team has specified four concrete triggers. I will monitor these:\\n\\n1. **Debt-to-equity declines below 1.5x** — next quarterly filing (likely late August 2024)\\n2. **Current ratio improves above 0.7x** — same filing\\n3. **CBE cuts policy rate below 20%** — next MPC meeting\\n4. **Volume ratio exceeds 0.5x for 20 consecutive days** — institutional accumulation signal\\n\\n**Action**: If any two triggers are met, re-evaluate for BUY.\\n\\n---\\n\\n## Structured Execution Plan\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"ETEL.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — maintain 100% cash\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A — no entry at current levels\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": null,\\n                \"price_range_high\": null\\n            },\\n            \"timing\": \"Re-evaluate only after fundamental triggers are met\",\\n            \"conditions\": [\\n                \"Debt-to-equity declines below 1.5x (next quarterly filing)\",\\n                \"Current ratio improves above 0.7x\",\\n                \"CBE policy rate cut below 20%\",\\n                \"Volume ratio exceeds 0.5x for 20 consecutive days\",\\n                \"At least 2 of 4 triggers must be confirmed before re-evaluation\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A — no position\",\\n                \"note\": \"If position were held, mental stop at EGP 28.00 (support level 1)\"\\n            },\\n            \"time_stop\": \"Re-evaluate after Q2 2024 earnings release (expected late August 2024)\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"N/A — no position\",\\n            \"max_daily_execution\": \"0 shares — 0% of ADV\",\\n            \"price_limit_risk\": \"N/A — no position. If re-entering later, plan for ±10% daily limit: never use market orders, use limit orders only, allow 5-10 days for full exit under normal conditions\",\\n            \"liquidity_exit_plan\": \"N/A — no position. If re-entering later: position size at max 10% of 20-day ADV, exit over 3-5 days using limit orders, model 0.8% spread cost\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"Any improvement in balance sheet metrics (D/E below 1.5x, current ratio above 0.7x)\",\\n            \"CBE rate cut below 20%\",\\n            \"Institutional accumulation confirmed (volume ratio >0.5x for 20 days)\",\\n            \"Price breaks above SMA50 with volume and holds for 10+ trading days\",\\n            \"Dividend policy announced with minimum 30% payout ratio\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```\\n\\n---\\n\\n## Monitoring Schedule\\n\\n| Trigger | Data Source | Check Frequency | Current Status |\\n|---------|-------------|-----------------|----------------|\\n| D/E < 1.5x | Next quarterly filing (Q2 2024) | Upon release | 1.95x — NOT MET |\\n| Current ratio > 0.7x | Same filing | Upon release | 0.54x — NOT MET |\\n| CBE rate < 20% | MPC calendar | Next meeting | 27.25% — NOT MET |\\n| Volume ratio > 0.5x (20 days) | Daily market data | Weekly | 0.15x — NOT MET |\\n\\n**Next review date**: Upon Q2 2024 earnings release or next CBE MPC meeting, whichever comes first.\\n\\n**FINAL TRANSACTION PROPOSAL: **HOLD****', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1417, 'prompt_tokens': 9435, 'total_tokens': 10852, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9435}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'e4cf9e9b-3574-49dc-a0b8-9f13054ecdc9', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edd4d-9484-7ab0-ad23-03cd4b244835-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9435, 'output_tokens': 1417, 'total_tokens': 10852, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN — ETEL.CA\n\n## Analysis & Decision Rationale\n\n### Investment Committee Verdict: HOLD\n\nThe research team has delivered a clear **HOLD** recommendation with 85% confidence. The multi-signal alignment framework identifies a **Legitimate HOLD Blocker**: solvency/liquidity deterioration that overrides the positive EGX30 momentum.\n\n### Key Deterioration Signals (Bear Case Dominates)\n\n| Metric | Current | Trend | Signal |\n|--------|---------|-------|--------|\n| Debt-to-Equity | 1.95x | +23.8% YoY | Deteriorating |\n| Current Ratio | 0.54x | -9.8% YoY | Below 1.0 — critical |\n| Interest Expense Growth | +238% YoY | Accelerating | Cash flow bleed |\n| Operating Income Growth | +29% YoY | Slowing vs interest | Coverage collapsing |\n| Piotroski Score | 4/9 | — | Value trap pattern |\n| Volume Ratio | 0.15x | Low | 5-20 days to exit |\n\n### Why Not BUY Despite Cheap Valuation\n\n- **P/E of 5.4x** is optically cheap, but the earnings yield spread is **-8.8%** vs 27.25% risk-free rate\n- **23% ROE** is impressive, but debt-funded — equity multiplier at 2.95x amplifies risk\n- **No catalyst** for re-rating: zero news coverage, no analyst sponsorship, no dividend, no institutional accumulation\n- **Liquidity trap**: 0.15x volume ratio means any attempt to build a position risks moving the market against us\n\n### Why Not SELL (No Position to Reduce)\n\n- Portfolio is 100% cash — no shares held\n- EGX prohibits short selling\n- Only actionable decisions: **BUY** or **HOLD**\n\n### Re-Entry Triggers (Watchlist Conditions)\n\nThe research team has specified four concrete triggers. I will monitor these:\n\n1. **Debt-to-equity declines below 1.5x** — next quarterly filing (likely late August 2024)\n2. **Current ratio improves above 0.7x** — same filing\n3. **CBE cuts policy rate below 20%** — next MPC meeting\n4. **Volume ratio exceeds 0.5x for 20 consecutive days** — institutional accumulation signal\n\n**Action**: If any two triggers are met, re-evaluate for BUY.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"ETEL.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — maintain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry at current levels\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Re-evaluate only after fundamental triggers are met\",\n            \"conditions\": [\n                \"Debt-to-equity declines below 1.5x (next quarterly filing)\",\n                \"Current ratio improves above 0.7x\",\n                \"CBE policy rate cut below 20%\",\n                \"Volume ratio exceeds 0.5x for 20 consecutive days\",\n                \"At least 2 of 4 triggers must be confirmed before re-evaluation\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position\",\n                \"note\": \"If position were held, mental stop at EGP 28.00 (support level 1)\"\n            },\n            \"time_stop\": \"Re-evaluate after Q2 2024 earnings release (expected late August 2024)\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"0 shares — 0% of ADV\",\n            \"price_limit_risk\": \"N/A — no position. If re-entering later, plan for ±10% daily limit: never use market orders, use limit orders only, allow 5-10 days for full exit under normal conditions\",\n            \"liquidity_exit_plan\": \"N/A — no position. If re-entering later: position size at max 10% of 20-day ADV, exit over 3-5 days using limit orders, model 0.8% spread cost\"\n        },\n        \"invalidation_triggers\": [\n            \"Any improvement in balance sheet metrics (D/E below 1.5x, current ratio above 0.7x)\",\n            \"CBE rate cut below 20%\",\n            \"Institutional accumulation confirmed (volume ratio >0.5x for 20 days)\",\n            \"Price breaks above SMA50 with volume and holds for 10+ trading days\",\n            \"Dividend policy announced with minimum 30% payout ratio\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Monitoring Schedule\n\n| Trigger | Data Source | Check Frequency | Current Status |\n|---------|-------------|-----------------|----------------|\n| D/E < 1.5x | Next quarterly filing (Q2 2024) | Upon release | 1.95x — NOT MET |\n| Current ratio > 0.7x | Same filing | Upon release | 0.54x — NOT MET |\n| CBE rate < 20% | MPC calendar | Next meeting | 27.25% — NOT MET |\n| Volume ratio > 0.5x (20 days) | Daily market data | Weekly | 0.15x — NOT MET |\n\n**Next review date**: Upon Q2 2024 earnings release or next CBE MPC meeting, whichever comes first.\n\n**FINAL TRANSACTION PROPOSAL: **HOLD****",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "ETEL.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — maintain 100% cash"
+        },
+        "entry_logic": {
+          "order_type": "N/A — no entry at current levels",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": null,
+            "price_range_high": null
+          },
+          "timing": "Re-evaluate only after fundamental triggers are met",
+          "conditions": [
+            "Debt-to-equity declines below 1.5x (next quarterly filing)",
+            "Current ratio improves above 0.7x",
+            "CBE policy rate cut below 20%",
+            "Volume ratio exceeds 0.5x for 20 consecutive days",
+            "At least 2 of 4 triggers must be confirmed before re-evaluation"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": null
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A — no position",
+            "note": "If position were held, mental stop at EGP 28.00 (support level 1)"
+          },
+          "time_stop": "Re-evaluate after Q2 2024 earnings release (expected late August 2024)"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "N/A — no position",
+          "max_daily_execution": "0 shares — 0% of ADV",
+          "price_limit_risk": "N/A — no position. If re-entering later, plan for ±10% daily limit: never use market orders, use limit orders only, allow 5-10 days for full exit under normal conditions",
+          "liquidity_exit_plan": "N/A — no position. If re-entering later: position size at max 10% of 20-day ADV, exit over 3-5 days using limit orders, model 0.8% spread cost"
+        },
+        "invalidation_triggers": [
+          "Any improvement in balance sheet metrics (D/E below 1.5x, current ratio above 0.7x)",
+          "CBE rate cut below 20%",
+          "Institutional accumulation confirmed (volume ratio >0.5x for 20 days)",
+          "Price breaks above SMA50 with volume and holds for 10+ trading days",
+          "Dividend policy announced with minimum 30% payout ratio"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "02face9e7ad808f6a9a67345772faa5d5f21d029adb1d4db72b0615ddea8bdd4",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 13065.550457919016,
+  "timestamp_utc": "2026-06-19T00:35:22.638384+00:00",
+  "context_items": []
+}

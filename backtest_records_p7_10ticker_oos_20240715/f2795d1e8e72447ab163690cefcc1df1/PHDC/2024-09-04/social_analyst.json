@@ -1,0 +1,41 @@
+{
+  "run_id": "f2795d1e8e72447ab163690cefcc1df1",
+  "ticker": "PHDC",
+  "trade_date": "2024-09-04",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "c09b1f10a45e384337cba804351046bc358b7a59c90852d97f1e502e4dd76c8f",
+  "raw_output": "```json\n{\n    \"narrative\": \"No retail investor discussion was detected for PHDC.CA across the monitored social platforms during the analysis window. The absence of any posts, whether in Arabic or English, indicates a complete lack of social media chatter or sentiment signals for this ticker. As a result, no themes, tone, or Arabic-language signals can be identified.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No retail investor discussion was detected for PHDC.CA across the monitored social platforms during the analysis window. The absence of any posts, whether in Arabic or English, indicates a complete lack of social media chatter or sentiment signals for this ticker. As a result, no themes, tone, or Arabic-language signals can be identified.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 86, 'prompt_tokens': 618, 'total_tokens': 704, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 106}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '6cda14bc-ae72-4d8c-9767-04a4d230e10d', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee007-890b-7e92-9f62-7a76a99cbad0-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 618, 'output_tokens': 86, 'total_tokens': 704, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for PHDC.CA]\nNo retail investor discussion was detected for PHDC.CA across the monitored social platforms during the analysis window. The absence of any posts, whether in Arabic or English, indicates a complete lack of social media chatter or sentiment signals for this ticker. As a result, no themes, tone, or Arabic-language signals can be identified.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"PHDC.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No retail investor discussion was detected for PHDC.CA across the monitored social platforms during the analysis window. The absence of any posts, whether in Arabic or English, indicates a complete lack of social media chatter or sentiment signals for this ticker. As a result, no themes, tone, or Arabic-language signals can be identified.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "8320f02fcc5ef1e825a9ab0b0aa454f338b776da33d146ac1cd0a2b7b69e42b4",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 2024.9728750204667,
+  "timestamp_utc": "2026-06-19T13:17:32.789141+00:00",
+  "context_items": []
+}

@@ -15,6 +15,14 @@ from langgraph.prebuilt import ToolNode
 from tradingagents.agents import *
 from tradingagents.default_config import DEFAULT_CONFIG
 from tradingagents.agents.utils.memory import FinancialSituationMemory
+from tradingagents.observability.llm_metrics import MetricsCallbackHandler
+from tradingagents.observability.logging_config import set_trace_context
+from tradingagents.observability.metrics import (
+    active_analysis_sessions,
+    pipeline_duration_seconds,
+    signal_total,
+    risk_veto_total,
+)
 
 from tradingagents.agents.utils.agent_states import (
     AgentState,
@@ -108,23 +116,21 @@ class TradingAgentsGraph:
 
         # Initialize LLMs
         if self.config["llm_provider"].lower() == "openai" or self.config["llm_provider"] == "ollama" or self.config["llm_provider"] == "openrouter":
-            # Multi-provider failover: NVIDIA (primary) -> Gemini -> Groq, per
-            # config["llm_failover_priority"]. ReliableChatModel auto-rotates to
-            # the next provider on rate-limit (429) / overload (503/504), so a
-            # flaky primary endpoint no longer fails a whole run. This is the
-            # SHARED path — live AND backtest both benefit. See llm_failover.py.
+            # Multi-provider failover with metrics callbacks.
             _seed = int(self.config.get("llm_seed", 42))
+            _metrics_cb = MetricsCallbackHandler()
             from tradingagents.agents.utils.llm_failover import build_resilient_llm
-            self.deep_thinking_llm = build_resilient_llm(self.config, role="deep", seed=_seed)
-            self.quick_thinking_llm = build_resilient_llm(self.config, role="quick", seed=_seed)
+            self.deep_thinking_llm = build_resilient_llm(self.config, role="deep", seed=_seed, callbacks=[_metrics_cb])
+            self.quick_thinking_llm = build_resilient_llm(self.config, role="quick", seed=_seed, callbacks=[_metrics_cb])
         elif self.config["llm_provider"].lower() == "anthropic":
-            # ChatAnthropic has no seed parameter; temperature=0 is the only knob.
-            self.deep_thinking_llm = ChatAnthropic(model=self.config["deep_think_llm"], base_url=self.config["backend_url"], temperature=0)
-            self.quick_thinking_llm = ChatAnthropic(model=self.config["quick_think_llm"], base_url=self.config["backend_url"], temperature=0)
+            _metrics_cb = MetricsCallbackHandler()
+            self.deep_thinking_llm = ChatAnthropic(model=self.config["deep_think_llm"], base_url=self.config["backend_url"], temperature=0, callbacks=[_metrics_cb])
+            self.quick_thinking_llm = ChatAnthropic(model=self.config["quick_think_llm"], base_url=self.config["backend_url"], temperature=0, callbacks=[_metrics_cb])
         elif self.config["llm_provider"].lower() == "google":
             _seed = int(self.config.get("llm_seed", 42))
-            self.deep_thinking_llm = ChatGoogleGenerativeAI(model=self.config["deep_think_llm"], temperature=0, seed=_seed)
-            self.quick_thinking_llm = ChatGoogleGenerativeAI(model=self.config["quick_think_llm"], temperature=0, seed=_seed)
+            _metrics_cb = MetricsCallbackHandler()
+            self.deep_thinking_llm = ChatGoogleGenerativeAI(model=self.config["deep_think_llm"], temperature=0, seed=_seed, callbacks=[_metrics_cb])
+            self.quick_thinking_llm = ChatGoogleGenerativeAI(model=self.config["quick_think_llm"], temperature=0, seed=_seed, callbacks=[_metrics_cb])
         else:
             raise ValueError(f"Unsupported LLM provider: {self.config['llm_provider']}")
         
@@ -210,8 +216,67 @@ class TradingAgentsGraph:
             ),
         }
 
+    def _check_manifest_freshness(
+        self, company_name: str, trade_date: str
+    ) -> Tuple[bool, List[str], List[str]]:
+        """Run manifest-based freshness check for the requested ticker."""
+        import logging as _logging
+        _log = _logging.getLogger("tradingagents")
+
+        try:
+            from tradingagents.dataflows.manifest_scanner import (
+                scan_fundamentals,
+                write_manifest,
+                check_manifest_freshness,
+            )
+            from tradingagents.dataflows.config import DATA_DIR
+            from tradingagents.dataflows.local import EGX_FUNDAMENTALS_DIR
+        except ImportError as e:
+            _log.warning("Manifest freshness check skipped (import error): %s", e)
+            return None, [], []
+
+        try:
+            data_dir = self.config.get("data_dir", DATA_DIR)
+            entries = scan_fundamentals(data_dir=data_dir)
+            manifest_path = os.path.join(
+                data_dir or "", EGX_FUNDAMENTALS_DIR, "manifest.json"
+            )
+            write_manifest(entries, output_path=manifest_path)
+        except Exception as e:
+            _log.warning("Manifest scan/write failed: %s", e)
+            return None, [], []
+
+        from tradingagents.dataflows.symbol_utils import normalize_egx_ticker
+        ticker_bare = normalize_egx_ticker(company_name)
+        checked_tickers = [ticker_bare]
+
+        result = check_manifest_freshness(
+            manifest_path=manifest_path,
+            as_of_date=trade_date,
+            required_tickers=checked_tickers,
+        )
+
+        if not result.fresh:
+            enforce = self.config.get("enforce_fundamentals_manifest_freshness", False)
+            if enforce:
+                msg = (
+                    f"Fundamentals manifest freshness check FAILED for "
+                    f"{checked_tickers}: {result.reasons}"
+                )
+                _log.error(msg)
+                raise RuntimeError(msg)
+            else:
+                _log.warning(
+                    "Fundamentals manifest freshness WARNING for %s: %s "
+                    "(enforce_fundamentals_manifest_freshness=False, continuing)",
+                    checked_tickers, result.reasons,
+                )
+
+        return result.fresh, result.reasons, checked_tickers
+
     def propagate(self, company_name, trade_date, *, user_id: Optional[str] = None,
-                  run_type: str = "live"):
+                  run_type: str = "live",
+                  investor_context: Optional[Dict] = None):
         """Run the trading agents graph for a company on a specific date.
 
         Args:
@@ -221,13 +286,19 @@ class TradingAgentsGraph:
                 auth lands (MEMORY.md §E); the analysis_sessions.user_id
                 column accepts NULL.
             run_type: ``'live'`` for a user-triggered analysis, ``'backtest'``
-                for the per-interval analyses the backtester emits. The
-                dashboard history shows only ``'live'`` rows.
+                for the per-interval analyses the backtester emits.
+            investor_context: optional InvestorContext dict built from the
+                investor profile. When provided, profile-aware agents
+                use it to calibrate recommendations and position sizing.
         """
         import uuid
 
         session_id = uuid.uuid4().hex
         self.session_id = session_id
+
+        # Observability: set trace context for structured logging correlation
+        set_trace_context(session_id=session_id, ticker=company_name, trade_date=trade_date)
+        active_analysis_sessions.inc()
 
         # Pre-flight data freshness check (zero LLM tokens)
         if (self.config.get("target_market") == "EGX"
@@ -255,10 +326,48 @@ class TradingAgentsGraph:
             if get_config().get("trade_date"):
                 set_config({"trade_date": None})
 
+        # ── Manifest-based fundamentals freshness pre-flight (Phase 2C) ──
+        manifest_fresh: bool | None = None
+        manifest_reasons: list[str] = []
+        manifest_checked: list[str] = []
+        if self.config.get("target_market") == "EGX":
+            manifest_fresh, manifest_reasons, manifest_checked = (
+                self._check_manifest_freshness(company_name, trade_date)
+            )
+
         # Initialize state
         init_agent_state = self.propagator.create_initial_state(
             company_name, trade_date
         )
+
+        # Inject manifest freshness results into state for audit trail
+        if manifest_fresh is not None:
+            init_agent_state["fundamentals_manifest_fresh"] = manifest_fresh
+            init_agent_state["fundamentals_manifest_reasons"] = manifest_reasons
+            init_agent_state["fundamentals_manifest_checked_tickers"] = manifest_checked
+
+        # Inject investor context into state (Phase 1: profile only)
+        if investor_context:
+            init_agent_state["investor_context"] = investor_context
+            if investor_context.get("capital_size"):
+                init_agent_state["portfolio_value"] = investor_context["capital_size"]
+
+        # Inject node recorder into state when backtest recording is enabled.
+        # Nodes call get_recorder(state) — returns None when recording is off.
+        # Check both self.config (passed at construction) and get_config() (set
+        # by backtester CLI via set_config) so either activation path works.
+        _effective_cfg = {**self.config, **get_config()}
+        if _effective_cfg.get("backtest_record_outputs", False):
+            from tradingagents.graph.node_record import NodeRecorder
+            from tradingagents.dataflows.symbol_utils import normalize_egx_ticker
+            init_agent_state["_node_recorder"] = NodeRecorder(
+                run_id=session_id,
+                ticker=normalize_egx_ticker(company_name),
+                records_dir=_effective_cfg.get("backtest_records_dir", "./backtest_records"),
+                record_full_prompts=_effective_cfg.get("record_full_prompts", False),
+                config=_effective_cfg,
+            )
+
         args = self.propagator.get_graph_args()
 
         # Redis publisher — real-time event streaming to the WebSocket dashboard.
@@ -290,6 +399,28 @@ class TradingAgentsGraph:
                     "DataPrefetcher failed, falling back to tool-call mode: %s", e
                 )
 
+        # Fix C (P8): market breadth — computed synchronously (not in prefetch)
+        # because the 15-ticker yfinance batch is too slow for prefetch timeout.
+        if self.config.get("market_breadth_enabled"):
+            try:
+                from tradingagents.dataflows.macro_provider import compute_market_breadth
+                breadth = compute_market_breadth(
+                    as_of_date=str(trade_date),
+                    lookback_days=self.config.get("market_breadth_lookback_days", 20),
+                    rally_threshold=self.config.get("market_breadth_rally_threshold", 0.70),
+                    downturn_threshold=self.config.get("market_breadth_downturn_threshold", 0.30),
+                )
+                if breadth is not None:
+                    init_agent_state["market_breadth"] = breadth
+            except Exception as e:
+                import logging
+                logging.getLogger("tradingagents").warning(
+                    "Market breadth computation failed: %s", e
+                )
+
+        import time as _time
+        _pipeline_start = _time.perf_counter()
+
         if self.debug:
             # Debug mode with tracing
             trace = []
@@ -304,6 +435,9 @@ class TradingAgentsGraph:
         else:
             # Standard mode without tracing
             final_state = self.graph.invoke(init_agent_state, **args)
+
+        pipeline_duration_seconds.observe(_time.perf_counter() - _pipeline_start)
+        active_analysis_sessions.dec()
 
         # Compute overall confidence from analyst structured outputs and inject
         # into final_state so the backtester can use it for position sizing.
@@ -325,22 +459,27 @@ class TradingAgentsGraph:
         # (analysis_sessions + agent_events). Never crashes the graph — the
         # writer logs on failure and degrades silently when Postgres is
         # unavailable. See MEMORY.md §G.
+        #
+        # Strip private state keys (e.g. _node_recorder) before serializing
+        # to Postgres — these are infrastructure objects, not audit data.
         try:
             from tradingagents.db import audit_writer
+            from tradingagents.graph.node_record import strip_private_state_keys
 
+            clean_state = strip_private_state_keys(final_state)
             fingerprint = audit_writer.build_model_fingerprint(self.config)
             audit_writer.write_analysis_session(
                 session_id=session_id,
                 ticker=company_name,
                 trade_date=trade_date,
-                final_state=final_state,
+                final_state=clean_state,
                 model_fingerprint=fingerprint,
                 user_id=user_id,
                 run_type=run_type,
             )
             audit_writer.write_agent_events(
                 session_id=session_id,
-                final_state=final_state,
+                final_state=clean_state,
                 model_fingerprint=fingerprint,
             )
         except Exception as _e:
@@ -355,8 +494,14 @@ class TradingAgentsGraph:
             confidence=final_state.get("confidence_scores", {}).get("overall"),
         )
 
+        # Observability: record signal and veto metrics
+        _signal = self.process_signal(final_state["final_trade_decision"])
+        signal_total.labels(signal=_signal).inc()
+        if _signal == "HOLD" and "veto" in final_state.get("final_trade_decision", "").lower():
+            risk_veto_total.labels(veto_reason="risk_manager").inc()
+
         # Return decision and processed signal
-        return final_state, self.process_signal(final_state["final_trade_decision"])
+        return final_state, _signal
 
     def _log_state(self, trade_date, final_state):
         """Log the final state to a JSON file with EGX-specific fields."""
@@ -421,6 +566,11 @@ class TradingAgentsGraph:
                 # Confidence tracking
                 "confidence_scores": final_state.get("confidence_scores", {}),
                 "data_quality": final_state.get("data_quality", {}),
+
+                # Manifest freshness pre-flight (Phase 2C)
+                "fundamentals_manifest_fresh": final_state.get("fundamentals_manifest_fresh"),
+                "fundamentals_manifest_reasons": final_state.get("fundamentals_manifest_reasons", []),
+                "fundamentals_manifest_checked_tickers": final_state.get("fundamentals_manifest_checked_tickers", []),
             })
 
         # Phase 3 (PR 9): always attach sentiment audit record, EGX or not.
@@ -485,6 +635,13 @@ class TradingAgentsGraph:
         Batch-process all queued reflections accumulated during a backtest run.
         Call once after the full backtest completes to persist memory updates.
         Only the most recent entry per date is processed to avoid redundancy.
+
+        WARNING — LOOK-AHEAD SAFETY: This method MUST NOT be called during a
+        backtest loop. Reflections encode outcome knowledge (forward returns)
+        that would leak into earlier trade decisions via memory retrieval.
+        The backtester intentionally never calls this — the queue is accumulated
+        and discarded. Only call this in live/production mode where outcomes
+        are realized in wall-clock time.
         """
         queue = getattr(self, "_reflection_queue", [])
         if not queue:

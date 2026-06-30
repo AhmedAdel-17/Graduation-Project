@@ -445,8 +445,6 @@ def analyze_ticker_for_api(ticker):
                 seed=int(DEFAULT_CONFIG.get("llm_seed", 42)),
             )
         except Exception:
-            # Last-ditch: raw single-endpoint client (keeps Quick working even if
-            # the failover module can't be imported for some reason).
             llm = ChatOpenAI(
                 model=DEFAULT_CONFIG["quick_think_llm"],
                 base_url=DEFAULT_CONFIG["backend_url"],

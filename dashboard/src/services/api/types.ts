@@ -26,6 +26,8 @@ export interface HealthMemoryBlock {
   chroma_total_documents?: number | null;
   seeded?: Record<string, boolean>;
   min_similarity?: number;
+  embeddings_active?: boolean;
+  retrieval_mode?: string;
 }
 
 export interface HealthPostgresBlock {
@@ -144,6 +146,18 @@ export interface TechnicalPanel {
   panel?: TechnicalPanelData | null;
 }
 
+export interface DecisionStep {
+  agent: string;
+  signal: string;
+  detail: string;
+}
+
+export interface DecisionExplanation {
+  headline: string;
+  steps: DecisionStep[];
+  risk_blocked: boolean;
+}
+
 export interface PredictionResult {
   error?: string;
   session_id?: string;
@@ -152,6 +166,7 @@ export interface PredictionResult {
   price?: PriceBlock;
   indicators?: IndicatorsBlock;
   recommendation?: Recommendation;
+  decision_explanation?: DecisionExplanation;
   price_history?: StockBar[];
   technical_panel?: TechnicalPanel | null;
   llm_error?: string | null;
@@ -684,4 +699,169 @@ export interface ConfigUpdateRequest {
 export interface ConfigUpdateResponse {
   status: string;
   applied: string[];
+}
+
+// ─── Profiles & Shadow Runs ─────────────────────────────────────────────
+
+export interface InvestorProfile {
+  id: string;
+  name: string;
+  risk_tolerance: string;
+  investment_horizon: string;
+  capital_size: number;
+  max_position_pct: number;
+  sector_preferences: string[];
+  sector_exclusions: string[];
+  trading_style: string;
+  benchmark_target: string;
+  investor_category: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShadowRun {
+  id: string;
+  ticker: string;
+  trade_date: string;
+  signal: string;
+  confidence_overall: number | null;
+  confidence_technical: number | null;
+  confidence_fundamental: number | null;
+  confidence_sentiment: number | null;
+  latest_price: number | null;
+  price_date: string;
+  judge_decision_summary: string;
+  bull_thesis_summary: string;
+  bear_thesis_summary: string;
+  trader_plan_summary: string;
+  risk_rationale_summary: string;
+  macro_context: Record<string, unknown> | null;
+  market_breadth: Record<string, unknown> | null;
+  memory_status: Record<string, unknown> | null;
+  warnings: string[];
+  errors: string[];
+  model_provider: string;
+  model_name: string;
+  duration_seconds: number | null;
+  status: string;
+  backtest_mode: boolean;
+  profile_id: string;
+  report_path: string;
+  log_path: string;
+  records_dir: string;
+  investor_context_snapshot?: Record<string, unknown> | null;
+  pipeline_audit?: {
+    investor_context_injected?: boolean;
+    portfolio_value_used?: number | null;
+    position_cap?: {
+      profile_cap_pct?: number | null;
+      system_cap_pct?: number;
+      liquidity_target_pct?: number | null;
+      liquidity_max_pct?: number | null;
+      policy_cap_pct?: number;
+      policy_cap_source?: string;
+      effective_cap_pct?: number;
+    };
+    trader_decision?: string | null;
+    risk_action?: string | null;
+    risk_veto?: boolean;
+    signal_chain?: {
+      research_manager?: string | null;
+      trader?: string | null;
+      risk_scorer?: string;
+      final?: string;
+    };
+  } | null;
+  created_at: string;
+}
+
+export interface FundamentalsQualityStatus {
+  level: "full" | "partial" | "deterministic_only" | "unavailable";
+  reasons: string[];
+  data_available: boolean;
+  enrichment_attempted: boolean;
+  enrichment_succeeded: boolean;
+}
+
+export interface ServiceStatus {
+  status: "up" | "down" | "unknown";
+  url: string;
+  login?: string;
+}
+
+export interface SystemStatus {
+  api_server: ServiceStatus;
+  dashboard: ServiceStatus;
+  grafana: ServiceStatus;
+  prometheus: ServiceStatus;
+  loki: ServiceStatus;
+  redis: ServiceStatus;
+  last_shadow_run: {
+    id: string;
+    ticker: string;
+    signal: string;
+    created_at: string;
+  } | null;
+}
+
+// ─── Data Freshness ───────────────────────────────────────────────────
+
+export interface MacroSubSource {
+  name: string;
+  status: string;
+  age_human: string | null;
+  note: string;
+}
+
+export interface DataSourceFreshness {
+  source: string;
+  latest_timestamp: string | null;
+  age_seconds: number | null;
+  age_human: string | null;
+  status: "Fresh" | "Fresh (market closed)" | "Stale" | "Missing" | "Available";
+  label?: string | null;
+  timestamp_meaning?: string | null;
+  detail?: string;
+  affected_tickers?: string[] | null;
+  cached_tickers?: number;
+  total_files?: number;
+  total_documents?: number;
+  collections?: Record<string, number>;
+  sub_sources?: MacroSubSource[];
+  error?: string;
+}
+
+export interface MarketStatus {
+  is_trading_hours: boolean;
+  last_trading_day: string;
+  current_time_cairo: string;
+  note: string;
+}
+
+export interface DataFreshnessSummary {
+  total_sources: number;
+  fresh: number;
+  stale: number;
+  missing: number;
+  available: number;
+}
+
+export interface DataFreshnessResponse {
+  checked_at: string;
+  market_status: MarketStatus;
+  summary: DataFreshnessSummary;
+  sources: DataSourceFreshness[];
+}
+
+export interface MetricsSummary {
+  active_sessions?: number;
+  active_websockets?: number;
+  pipeline_runs?: number;
+  pipeline_duration_total?: number;
+  avg_pipeline_seconds?: number;
+  server_uptime_seconds?: number;
+  llm_calls?: Record<string, number>;
+  signals?: Record<string, number>;
+  error?: string;
 }

@@ -1,0 +1,117 @@
+{
+  "run_id": "6f7cebf063b846b5b9bbeff4c9b1561e",
+  "ticker": "ADIB",
+  "trade_date": "2024-08-14",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "5c01ae110dcd726c029cdb2dcc728b123d24d9f68196f78ccc661d46a041d70f",
+  "raw_output": "# ADIB.CA EXECUTION PLAN\n\n## Decision Analysis\n\nAfter synthesizing the research team's investment thesis, macro environment, and trading constraints:\n\n**Decision: BUY**\n\nThe bull case presents concrete, stock-specific evidence (25%+ ROE, 30%+ net income growth trajectory, 10.3x P/E) that outweighs the bear's generic high-rate regime argument. The Multi-Signal Alignment Rule applies: positive momentum (60-day spike of +26%), reasonable valuation, strong fundamentals with growth trajectory, and near-term catalysts (H1 2024 earnings) all align. No Legitimate HOLD Blocker exists.\n\n### Key Risk Considerations\n- **Earnings yield spread (-17.6% vs 27.25% risk-free):** This is the widest negative gap in ADIB's history — a legitimate concern, but it's a market-wide condition, not a stock-specific blocker\n- **Technical data completeness (0%):** Cannot assess trend quality — this is a data gap, not a confirmed deterioration signal\n- **Volume declining (0.87x ratio) on +26% price move:** Bearish divergence — requires monitoring\n- **No dividend yield:** Total return depends entirely on price appreciation\n\n### Position Sizing Rationale\n- **Portfolio allocation:** 2.5% (within recommended 2-3% range)\n- **Max shares total (portfolio cap):** 25,679 shares\n- **Max shares per day (ADV-based):** 809,549 shares — but we'll use much less\n- **Target shares:** 25,679 shares (full portfolio allocation)\n- **Execution days:** 5-7 trading days (conservative build)\n- **Daily execution:** ~3,668-5,136 shares per day (well within ADV constraint)\n\n### Entry Zone Analysis\n- **Current price:** ~EGP 39.00 (based on P/E of 10.3x and EPS of 3.775)\n- **Entry zone:** EGP 38-42 (as recommended by research team)\n- **Limit orders:** Use 1% tolerance from mid-price\n\n### Exit Strategy\n- **Take-profit 1:** EGP 46 (+15%) — scale 50% of position\n- **Take-profit 2:** EGP 50 (+25%) — scale 30% of position\n- **Hold 20%** for H1 2024 earnings catalyst\n- **Stop-loss:** EGP 35.0 (SMA50 level) — mental stop, use limit order to exit\n\n### Risk Controls\n- **Max loss per trade:** 10.3% (from entry at EGP 39 to stop at EGP 35)\n- **Circuit breaker risk:** If -10% limit hits, wait for next session to resume\n- **Liquidity exit plan:** If ADV drops below EGP 2 million for 5 consecutive days, reduce position by 50%\n\n---\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"ADIB.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"BUY\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 25679,\n            \"max_shares_per_day\": 5136,\n            \"execution_days\": 5,\n            \"pct_of_adv_per_day\": \"0.63%\",\n            \"portfolio_allocation\": \"2.5%\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"limit\",\n            \"entry_zone\": {\n                \"limit_price\": 39.00,\n                \"price_range_low\": 38.00,\n                \"price_range_high\": 42.00\n            },\n            \"timing\": \"Build over 5 trading days using limit orders with 1% tolerance. Execute mid-session (11:00-13:30 Cairo time), avoiding first and last 30 minutes. If circuit breaker triggers (-10%), wait for next session to resume accumulation.\",\n            \"conditions\": [\n                \"Price within EGP 38-42 range\",\n                \"Bid-ask spread < 2%\",\n                \"No circuit breaker in current session\",\n                \"Daily volume > EGP 2 million\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": 46.00, \"pct_of_position\": 50},\n                \"target_2\": {\"price\": 50.00, \"pct_of_position\": 30},\n                \"target_3\": {\"price\": null, \"pct_of_position\": 20}\n            },\n            \"stop_loss\": {\n                \"price\": 35.00,\n                \"type\": \"mental_stop\",\n                \"note\": \"Use limit order to exit if price closes below EGP 35 with volume. No market orders allowed.\"\n            },\n            \"time_stop\": \"Exit remaining position if H1 2024 net income growth < 30% YoY (expected Aug-Sep 2024)\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"10.3% (EGP 4.00 per share from entry at EGP 39 to stop at EGP 35)\",\n            \"max_daily_execution\": \"5,136 shares (0.63% of ADV)\",\n            \"price_limit_risk\": \"If -10% circuit breaker triggers, do NOT buy into the halt. Wait for next session to assess if breakdown is valid. If price gaps below EGP 35 on resumption, cancel remaining buy orders.\",\n            \"liquidity_exit_plan\": \"If daily ADV drops below EGP 2 million for 5 consecutive days, reduce position by 50% using limit orders over 3-5 days. If bid-ask spread widens above 3%, reduce daily execution by 50%.\"\n        },\n        \"invalidation_triggers\": [\n            \"Price closes below EGP 35 (SMA50 level) with above-average volume\",\n            \"H1 2024 net income growth < 30% YoY\",\n            \"NPL ratio spikes above 5%\",\n            \"ROE drops below 20%\",\n            \"CBE policy rate raised above 30%\",\n            \"EGP devaluation > 20% in single event\",\n            \"Daily ADV drops below EGP 2 million for 5 consecutive days\",\n            \"Bid-ask spread widens above 3% for 3 consecutive days\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **BUY**\"\n}\n```",
+  "state_update": {
+    "messages": "[AIMessage(content='# ADIB.CA EXECUTION PLAN\\n\\n## Decision Analysis\\n\\nAfter synthesizing the research team\\'s investment thesis, macro environment, and trading constraints:\\n\\n**Decision: BUY**\\n\\nThe bull case presents concrete, stock-specific evidence (25%+ ROE, 30%+ net income growth trajectory, 10.3x P/E) that outweighs the bear\\'s generic high-rate regime argument. The Multi-Signal Alignment Rule applies: positive momentum (60-day spike of +26%), reasonable valuation, strong fundamentals with growth trajectory, and near-term catalysts (H1 2024 earnings) all align. No Legitimate HOLD Blocker exists.\\n\\n### Key Risk Considerations\\n- **Earnings yield spread (-17.6% vs 27.25% risk-free):** This is the widest negative gap in ADIB\\'s history — a legitimate concern, but it\\'s a market-wide condition, not a stock-specific blocker\\n- **Technical data completeness (0%):** Cannot assess trend quality — this is a data gap, not a confirmed deterioration signal\\n- **Volume declining (0.87x ratio) on +26% price move:** Bearish divergence — requires monitoring\\n- **No dividend yield:** Total return depends entirely on price appreciation\\n\\n### Position Sizing Rationale\\n- **Portfolio allocation:** 2.5% (within recommended 2-3% range)\\n- **Max shares total (portfolio cap):** 25,679 shares\\n- **Max shares per day (ADV-based):** 809,549 shares — but we\\'ll use much less\\n- **Target shares:** 25,679 shares (full portfolio allocation)\\n- **Execution days:** 5-7 trading days (conservative build)\\n- **Daily execution:** ~3,668-5,136 shares per day (well within ADV constraint)\\n\\n### Entry Zone Analysis\\n- **Current price:** ~EGP 39.00 (based on P/E of 10.3x and EPS of 3.775)\\n- **Entry zone:** EGP 38-42 (as recommended by research team)\\n- **Limit orders:** Use 1% tolerance from mid-price\\n\\n### Exit Strategy\\n- **Take-profit 1:** EGP 46 (+15%) — scale 50% of position\\n- **Take-profit 2:** EGP 50 (+25%) — scale 30% of position\\n- **Hold 20%** for H1 2024 earnings catalyst\\n- **Stop-loss:** EGP 35.0 (SMA50 level) — mental stop, use limit order to exit\\n\\n### Risk Controls\\n- **Max loss per trade:** 10.3% (from entry at EGP 39 to stop at EGP 35)\\n- **Circuit breaker risk:** If -10% limit hits, wait for next session to resume\\n- **Liquidity exit plan:** If ADV drops below EGP 2 million for 5 consecutive days, reduce position by 50%\\n\\n---\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"ADIB.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"BUY\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 25679,\\n            \"max_shares_per_day\": 5136,\\n            \"execution_days\": 5,\\n            \"pct_of_adv_per_day\": \"0.63%\",\\n            \"portfolio_allocation\": \"2.5%\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"limit\",\\n            \"entry_zone\": {\\n                \"limit_price\": 39.00,\\n                \"price_range_low\": 38.00,\\n                \"price_range_high\": 42.00\\n            },\\n            \"timing\": \"Build over 5 trading days using limit orders with 1% tolerance. Execute mid-session (11:00-13:30 Cairo time), avoiding first and last 30 minutes. If circuit breaker triggers (-10%), wait for next session to resume accumulation.\",\\n            \"conditions\": [\\n                \"Price within EGP 38-42 range\",\\n                \"Bid-ask spread < 2%\",\\n                \"No circuit breaker in current session\",\\n                \"Daily volume > EGP 2 million\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": 46.00, \"pct_of_position\": 50},\\n                \"target_2\": {\"price\": 50.00, \"pct_of_position\": 30},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": 20}\\n            },\\n            \"stop_loss\": {\\n                \"price\": 35.00,\\n                \"type\": \"mental_stop\",\\n                \"note\": \"Use limit order to exit if price closes below EGP 35 with volume. No market orders allowed.\"\\n            },\\n            \"time_stop\": \"Exit remaining position if H1 2024 net income growth < 30% YoY (expected Aug-Sep 2024)\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"10.3% (EGP 4.00 per share from entry at EGP 39 to stop at EGP 35)\",\\n            \"max_daily_execution\": \"5,136 shares (0.63% of ADV)\",\\n            \"price_limit_risk\": \"If -10% circuit breaker triggers, do NOT buy into the halt. Wait for next session to assess if breakdown is valid. If price gaps below EGP 35 on resumption, cancel remaining buy orders.\",\\n            \"liquidity_exit_plan\": \"If daily ADV drops below EGP 2 million for 5 consecutive days, reduce position by 50% using limit orders over 3-5 days. If bid-ask spread widens above 3%, reduce daily execution by 50%.\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"Price closes below EGP 35 (SMA50 level) with above-average volume\",\\n            \"H1 2024 net income growth < 30% YoY\",\\n            \"NPL ratio spikes above 5%\",\\n            \"ROE drops below 20%\",\\n            \"CBE policy rate raised above 30%\",\\n            \"EGP devaluation > 20% in single event\",\\n            \"Daily ADV drops below EGP 2 million for 5 consecutive days\",\\n            \"Bid-ask spread widens above 3% for 3 consecutive days\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **BUY**\"\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1417, 'prompt_tokens': 9387, 'total_tokens': 10804, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9387}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '056e5250-7ca8-47b5-979e-b40b0657d433', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edfad-ea65-7091-a25f-b7796e3cd505-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9387, 'output_tokens': 1417, 'total_tokens': 10804, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# ADIB.CA EXECUTION PLAN\n\n## Decision Analysis\n\nAfter synthesizing the research team's investment thesis, macro environment, and trading constraints:\n\n**Decision: BUY**\n\nThe bull case presents concrete, stock-specific evidence (25%+ ROE, 30%+ net income growth trajectory, 10.3x P/E) that outweighs the bear's generic high-rate regime argument. The Multi-Signal Alignment Rule applies: positive momentum (60-day spike of +26%), reasonable valuation, strong fundamentals with growth trajectory, and near-term catalysts (H1 2024 earnings) all align. No Legitimate HOLD Blocker exists.\n\n### Key Risk Considerations\n- **Earnings yield spread (-17.6% vs 27.25% risk-free):** This is the widest negative gap in ADIB's history — a legitimate concern, but it's a market-wide condition, not a stock-specific blocker\n- **Technical data completeness (0%):** Cannot assess trend quality — this is a data gap, not a confirmed deterioration signal\n- **Volume declining (0.87x ratio) on +26% price move:** Bearish divergence — requires monitoring\n- **No dividend yield:** Total return depends entirely on price appreciation\n\n### Position Sizing Rationale\n- **Portfolio allocation:** 2.5% (within recommended 2-3% range)\n- **Max shares total (portfolio cap):** 25,679 shares\n- **Max shares per day (ADV-based):** 809,549 shares — but we'll use much less\n- **Target shares:** 25,679 shares (full portfolio allocation)\n- **Execution days:** 5-7 trading days (conservative build)\n- **Daily execution:** ~3,668-5,136 shares per day (well within ADV constraint)\n\n### Entry Zone Analysis\n- **Current price:** ~EGP 39.00 (based on P/E of 10.3x and EPS of 3.775)\n- **Entry zone:** EGP 38-42 (as recommended by research team)\n- **Limit orders:** Use 1% tolerance from mid-price\n\n### Exit Strategy\n- **Take-profit 1:** EGP 46 (+15%) — scale 50% of position\n- **Take-profit 2:** EGP 50 (+25%) — scale 30% of position\n- **Hold 20%** for H1 2024 earnings catalyst\n- **Stop-loss:** EGP 35.0 (SMA50 level) — mental stop, use limit order to exit\n\n### Risk Controls\n- **Max loss per trade:** 10.3% (from entry at EGP 39 to stop at EGP 35)\n- **Circuit breaker risk:** If -10% limit hits, wait for next session to resume\n- **Liquidity exit plan:** If ADV drops below EGP 2 million for 5 consecutive days, reduce position by 50%\n\n---\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"ADIB.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"BUY\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 25679,\n            \"max_shares_per_day\": 5136,\n            \"execution_days\": 5,\n            \"pct_of_adv_per_day\": \"0.63%\",\n            \"portfolio_allocation\": \"2.5%\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"limit\",\n            \"entry_zone\": {\n                \"limit_price\": 39.00,\n                \"price_range_low\": 38.00,\n                \"price_range_high\": 42.00\n            },\n            \"timing\": \"Build over 5 trading days using limit orders with 1% tolerance. Execute mid-session (11:00-13:30 Cairo time), avoiding first and last 30 minutes. If circuit breaker triggers (-10%), wait for next session to resume accumulation.\",\n            \"conditions\": [\n                \"Price within EGP 38-42 range\",\n                \"Bid-ask spread < 2%\",\n                \"No circuit breaker in current session\",\n                \"Daily volume > EGP 2 million\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": 46.00, \"pct_of_position\": 50},\n                \"target_2\": {\"price\": 50.00, \"pct_of_position\": 30},\n                \"target_3\": {\"price\": null, \"pct_of_position\": 20}\n            },\n            \"stop_loss\": {\n                \"price\": 35.00,\n                \"type\": \"mental_stop\",\n                \"note\": \"Use limit order to exit if price closes below EGP 35 with volume. No market orders allowed.\"\n            },\n            \"time_stop\": \"Exit remaining position if H1 2024 net income growth < 30% YoY (expected Aug-Sep 2024)\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"10.3% (EGP 4.00 per share from entry at EGP 39 to stop at EGP 35)\",\n            \"max_daily_execution\": \"5,136 shares (0.63% of ADV)\",\n            \"price_limit_risk\": \"If -10% circuit breaker triggers, do NOT buy into the halt. Wait for next session to assess if breakdown is valid. If price gaps below EGP 35 on resumption, cancel remaining buy orders.\",\n            \"liquidity_exit_plan\": \"If daily ADV drops below EGP 2 million for 5 consecutive days, reduce position by 50% using limit orders over 3-5 days. If bid-ask spread widens above 3%, reduce daily execution by 50%.\"\n        },\n        \"invalidation_triggers\": [\n            \"Price closes below EGP 35 (SMA50 level) with above-average volume\",\n            \"H1 2024 net income growth < 30% YoY\",\n            \"NPL ratio spikes above 5%\",\n            \"ROE drops below 20%\",\n            \"CBE policy rate raised above 30%\",\n            \"EGP devaluation > 20% in single event\",\n            \"Daily ADV drops below EGP 2 million for 5 consecutive days\",\n            \"Bid-ask spread widens above 3% for 3 consecutive days\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **BUY**\"\n}\n```",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "ADIB.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "BUY",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 25679,
+          "max_shares_per_day": 5136,
+          "execution_days": 5,
+          "pct_of_adv_per_day": "0.63%",
+          "portfolio_allocation": "2.5%"
+        },
+        "entry_logic": {
+          "order_type": "limit",
+          "entry_zone": {
+            "limit_price": 39.0,
+            "price_range_low": 38.0,
+            "price_range_high": 42.0
+          },
+          "timing": "Build over 5 trading days using limit orders with 1% tolerance. Execute mid-session (11:00-13:30 Cairo time), avoiding first and last 30 minutes. If circuit breaker triggers (-10%), wait for next session to resume accumulation.",
+          "conditions": [
+            "Price within EGP 38-42 range",
+            "Bid-ask spread < 2%",
+            "No circuit breaker in current session",
+            "Daily volume > EGP 2 million"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": 46.0,
+              "pct_of_position": 50
+            },
+            "target_2": {
+              "price": 50.0,
+              "pct_of_position": 30
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": 20
+            }
+          },
+          "stop_loss": {
+            "price": 35.0,
+            "type": "mental_stop",
+            "note": "Use limit order to exit if price closes below EGP 35 with volume. No market orders allowed."
+          },
+          "time_stop": "Exit remaining position if H1 2024 net income growth < 30% YoY (expected Aug-Sep 2024)"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "10.3% (EGP 4.00 per share from entry at EGP 39 to stop at EGP 35)",
+          "max_daily_execution": "5,136 shares (0.63% of ADV)",
+          "price_limit_risk": "If -10% circuit breaker triggers, do NOT buy into the halt. Wait for next session to assess if breakdown is valid. If price gaps below EGP 35 on resumption, cancel remaining buy orders.",
+          "liquidity_exit_plan": "If daily ADV drops below EGP 2 million for 5 consecutive days, reduce position by 50% using limit orders over 3-5 days. If bid-ask spread widens above 3%, reduce daily execution by 50%."
+        },
+        "invalidation_triggers": [
+          "Price closes below EGP 35 (SMA50 level) with above-average volume",
+          "H1 2024 net income growth < 30% YoY",
+          "NPL ratio spikes above 5%",
+          "ROE drops below 20%",
+          "CBE policy rate raised above 30%",
+          "EGP devaluation > 20% in single event",
+          "Daily ADV drops below EGP 2 million for 5 consecutive days",
+          "Bid-ask spread widens above 3% for 3 consecutive days"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **BUY**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "BUY",
+  "prompt_hash": "52e045c65f981d3b4e221d82104689bd9c27fa27f723997a6a2947257dbefd4e",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 11829.077375005,
+  "timestamp_utc": "2026-06-19T11:39:49.275397+00:00",
+  "context_items": []
+}

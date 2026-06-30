@@ -1,0 +1,41 @@
+{
+  "run_id": "dc245b38f29c4091b93b723ea95de466",
+  "ticker": "ETEL",
+  "trade_date": "2024-02-11",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "427a5bfb3d3387fd8ce5e72c62cf5077c41f67bd2d3487388ceca6a121f6bfbe",
+  "raw_output": "```json\n{\n    \"narrative\": \"No retail investor discussions were detected for ETEL.CA across the monitored social platforms during the analysis window. There are no Arabic or English posts to analyze, indicating a complete absence of social media chatter for this ticker. As a result, no themes, tone, or dialect signals can be identified.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No retail investor discussions were detected for ETEL.CA across the monitored social platforms during the analysis window. There are no Arabic or English posts to analyze, indicating a complete absence of social media chatter for this ticker. As a result, no themes, tone, or dialect signals can be identified.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 79, 'prompt_tokens': 615, 'total_tokens': 694, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 103}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '285df6b4-f03d-4946-9ef9-8584f3414be0', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edc9d-7166-7a91-9fe8-c5bbfc1edbb8-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 615, 'output_tokens': 79, 'total_tokens': 694, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for ETEL.CA]\nNo retail investor discussions were detected for ETEL.CA across the monitored social platforms during the analysis window. There are no Arabic or English posts to analyze, indicating a complete absence of social media chatter for this ticker. As a result, no themes, tone, or dialect signals can be identified.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"ETEL.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No retail investor discussions were detected for ETEL.CA across the monitored social platforms during the analysis window. There are no Arabic or English posts to analyze, indicating a complete absence of social media chatter for this ticker. As a result, no themes, tone, or dialect signals can be identified.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "64dfe6fb1f374b50370dfe01ebc7dae59684bd72f82d1882d10b93bc62438de8",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 1819.5059170247987,
+  "timestamp_utc": "2026-06-18T21:22:48.067416+00:00",
+  "context_items": []
+}

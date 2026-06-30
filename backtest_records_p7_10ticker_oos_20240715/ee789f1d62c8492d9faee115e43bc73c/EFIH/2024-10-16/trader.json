@@ -1,0 +1,119 @@
+{
+  "run_id": "ee789f1d62c8492d9faee115e43bc73c",
+  "ticker": "EFIH",
+  "trade_date": "2024-10-16",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "c9d9eb487a63009c32abe5fb70aa06cb19b827d45f818914f5bfc6aa8456d074",
+  "raw_output": "# EXECUTION PLAN — EFIH.CA\n\n## Analysis & Decision Framework\n\n### Signal Assessment\n\n| Signal Category | Reading | Weight |\n|----------------|---------|--------|\n| **Technical** | Bearish (-18.7% 60d, -25.5% relative underperformance, moderate_down momentum) | HIGH |\n| **Fundamental** | Bearish (Piotroski 4/9, margin compression, rising leverage, 60x P/E vs 27% risk-free) | HIGH |\n| **Sentiment** | Neutral (no news coverage, weak conviction) | LOW |\n| **Macro Context** | Bullish EGX30 (+5.4% monthly), but 27% rates punish high-multiple stocks | MODERATE |\n\n### Key Conflict Resolution\n\nThe bull thesis cites 40%+ revenue growth and a PEG of ~1.5x. However:\n\n1. **Piotroski 4/9** confirms deteriorating fundamental quality despite top-line growth\n2. **Operating margin compression** (-2.9% YoY) while opex grows 75.6% — growth is expensive\n3. **Debt-to-equity up 29%** — leverage increasing to fund growth\n4. **Current ratio down 23.4%** — liquidity weakening\n5. **Earnings yield 1.65% vs 27% risk-free** — extreme opportunity cost\n6. **Zero dividend yield** — no income offset\n\nThe bear case identifies **stock-specific deterioration**, not generic macro complaints. The multi-signal alignment rule requires 2+ positive signals for BUY — we have 0 bullish signals with conviction.\n\n### Decision: HOLD\n\n**Rationale:** \n- Cannot BUY: Stock-specific evidence is actively bearish (deteriorating fundamentals, negative momentum, extreme valuation)\n- Cannot SELL: No position held\n- HOLD is the correct action: data sufficient to form a bearish view, but action is to avoid entry\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"EFIH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry recommended\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Do not initiate position at current levels\",\n            \"conditions\": [\n                \"Re-entry requires ALL three: (a) price breaks above EGP 22.00 with volume confirming trend reversal\",\n                \"(b) Q3 2024 earnings show operating margin stabilization or improvement\",\n                \"(c) Piotroski Score improves to 6+\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position to exit\",\n                \"note\": \"If position existed, hard mental stop at EGP 17.00 (breakdown below support)\"\n            },\n            \"time_stop\": \"Review after Q3 2024 earnings release (4-8 weeks) and CBE rate decision\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A — no execution planned\",\n            \"price_limit_risk\": \"If monitoring for re-entry: ±10% daily limit means entry above EGP 22.00 may require multiple days if stock gaps up. Use limit orders only.\",\n            \"liquidity_exit_plan\": \"N/A — no position. If re-entry criteria met, use VWAP accumulation over 10-15 days with limit orders, max 10% of ADV per day.\"\n        },\n        \"invalidation_triggers\": [\n            \"Breakdown below EGP 17.00 with volume (structural trend change — invalidates any future bullish thesis)\",\n            \"Q3 2024 revenue growth < 25% YoY (growth narrative breaks)\",\n            \"Net margin compression below 25% (competitive pressure intensifying)\",\n            \"CBE raises rates above 30% (further multiple compression for high-P/E stocks)\",\n            \"ADV drops below EGP 2M for 10+ days (liquidity failure)\",\n            \"Government reverses digital payments mandate (moat destruction)\",\n            \"EGP devaluation > 30% without business adjustment (real returns destroyed)\"\n        ],\n        \"alternative_deployment\": {\n            \"rationale\": \"100% cash position in bullish EGX30 market (+5.4% monthly). Consider deploying 3-5% into higher-conviction EGX names with positive momentum, reasonable valuations, and dividend yields that partially offset the 27% carry cost.\",\n            \"suggested_criteria\": \"Positive 60-day momentum, P/E < 15x, dividend yield > 10%, Piotroski Score 7+\"\n        }\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Monitoring Checklist for Re-Entry\n\n| Condition | Current Status | Target | Trigger Action |\n|-----------|---------------|--------|----------------|\n| Price action | ~EGP 19.80 (in downtrend) | Break above EGP 22.00 with volume | Begin accumulation plan |\n| Q3 revenue growth | 47.5% YoY (latest annual) | >40% YoY | Confirm growth narrative intact |\n| Operating margin | 31.3% (deteriorating -2.9% YoY) | Stabilize or improve | Fundamental quality improving |\n| Piotroski Score | 4/9 | Improve to 6+ | Fundamental quality improving |\n| CBE policy rate | 27.25% | Cut by 200+ bps | Multiple expansion catalyst |\n\n**Next review date:** After Q3 2024 earnings release (estimated 4-8 weeks from now) or if price breaks above EGP 22.00 with volume, whichever comes first.",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN — EFIH.CA\\n\\n## Analysis & Decision Framework\\n\\n### Signal Assessment\\n\\n| Signal Category | Reading | Weight |\\n|----------------|---------|--------|\\n| **Technical** | Bearish (-18.7% 60d, -25.5% relative underperformance, moderate_down momentum) | HIGH |\\n| **Fundamental** | Bearish (Piotroski 4/9, margin compression, rising leverage, 60x P/E vs 27% risk-free) | HIGH |\\n| **Sentiment** | Neutral (no news coverage, weak conviction) | LOW |\\n| **Macro Context** | Bullish EGX30 (+5.4% monthly), but 27% rates punish high-multiple stocks | MODERATE |\\n\\n### Key Conflict Resolution\\n\\nThe bull thesis cites 40%+ revenue growth and a PEG of ~1.5x. However:\\n\\n1. **Piotroski 4/9** confirms deteriorating fundamental quality despite top-line growth\\n2. **Operating margin compression** (-2.9% YoY) while opex grows 75.6% — growth is expensive\\n3. **Debt-to-equity up 29%** — leverage increasing to fund growth\\n4. **Current ratio down 23.4%** — liquidity weakening\\n5. **Earnings yield 1.65% vs 27% risk-free** — extreme opportunity cost\\n6. **Zero dividend yield** — no income offset\\n\\nThe bear case identifies **stock-specific deterioration**, not generic macro complaints. The multi-signal alignment rule requires 2+ positive signals for BUY — we have 0 bullish signals with conviction.\\n\\n### Decision: HOLD\\n\\n**Rationale:** \\n- Cannot BUY: Stock-specific evidence is actively bearish (deteriorating fundamentals, negative momentum, extreme valuation)\\n- Cannot SELL: No position held\\n- HOLD is the correct action: data sufficient to form a bearish view, but action is to avoid entry\\n\\n---\\n\\n## Structured Execution Plan\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"EFIH.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A — no entry recommended\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": null,\\n                \"price_range_high\": null\\n            },\\n            \"timing\": \"Do not initiate position at current levels\",\\n            \"conditions\": [\\n                \"Re-entry requires ALL three: (a) price breaks above EGP 22.00 with volume confirming trend reversal\",\\n                \"(b) Q3 2024 earnings show operating margin stabilization or improvement\",\\n                \"(c) Piotroski Score improves to 6+\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A — no position to exit\",\\n                \"note\": \"If position existed, hard mental stop at EGP 17.00 (breakdown below support)\"\\n            },\\n            \"time_stop\": \"Review after Q3 2024 earnings release (4-8 weeks) and CBE rate decision\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"N/A — no position\",\\n            \"max_daily_execution\": \"N/A — no execution planned\",\\n            \"price_limit_risk\": \"If monitoring for re-entry: ±10% daily limit means entry above EGP 22.00 may require multiple days if stock gaps up. Use limit orders only.\",\\n            \"liquidity_exit_plan\": \"N/A — no position. If re-entry criteria met, use VWAP accumulation over 10-15 days with limit orders, max 10% of ADV per day.\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"Breakdown below EGP 17.00 with volume (structural trend change — invalidates any future bullish thesis)\",\\n            \"Q3 2024 revenue growth < 25% YoY (growth narrative breaks)\",\\n            \"Net margin compression below 25% (competitive pressure intensifying)\",\\n            \"CBE raises rates above 30% (further multiple compression for high-P/E stocks)\",\\n            \"ADV drops below EGP 2M for 10+ days (liquidity failure)\",\\n            \"Government reverses digital payments mandate (moat destruction)\",\\n            \"EGP devaluation > 30% without business adjustment (real returns destroyed)\"\\n        ],\\n        \"alternative_deployment\": {\\n            \"rationale\": \"100% cash position in bullish EGX30 market (+5.4% monthly). Consider deploying 3-5% into higher-conviction EGX names with positive momentum, reasonable valuations, and dividend yields that partially offset the 27% carry cost.\",\\n            \"suggested_criteria\": \"Positive 60-day momentum, P/E < 15x, dividend yield > 10%, Piotroski Score 7+\"\\n        }\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```\\n\\n---\\n\\n## Monitoring Checklist for Re-Entry\\n\\n| Condition | Current Status | Target | Trigger Action |\\n|-----------|---------------|--------|----------------|\\n| Price action | ~EGP 19.80 (in downtrend) | Break above EGP 22.00 with volume | Begin accumulation plan |\\n| Q3 revenue growth | 47.5% YoY (latest annual) | >40% YoY | Confirm growth narrative intact |\\n| Operating margin | 31.3% (deteriorating -2.9% YoY) | Stabilize or improve | Fundamental quality improving |\\n| Piotroski Score | 4/9 | Improve to 6+ | Fundamental quality improving |\\n| CBE policy rate | 27.25% | Cut by 200+ bps | Multiple expansion catalyst |\\n\\n**Next review date:** After Q3 2024 earnings release (estimated 4-8 weeks from now) or if price breaks above EGP 22.00 with volume, whichever comes first.', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1441, 'prompt_tokens': 9408, 'total_tokens': 10849, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9408}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'e5fa8f2c-78e8-4c10-b2ce-5335b2a7e98e', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee03d-1be1-7051-b7ae-3cb754c228cc-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9408, 'output_tokens': 1441, 'total_tokens': 10849, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN — EFIH.CA\n\n## Analysis & Decision Framework\n\n### Signal Assessment\n\n| Signal Category | Reading | Weight |\n|----------------|---------|--------|\n| **Technical** | Bearish (-18.7% 60d, -25.5% relative underperformance, moderate_down momentum) | HIGH |\n| **Fundamental** | Bearish (Piotroski 4/9, margin compression, rising leverage, 60x P/E vs 27% risk-free) | HIGH |\n| **Sentiment** | Neutral (no news coverage, weak conviction) | LOW |\n| **Macro Context** | Bullish EGX30 (+5.4% monthly), but 27% rates punish high-multiple stocks | MODERATE |\n\n### Key Conflict Resolution\n\nThe bull thesis cites 40%+ revenue growth and a PEG of ~1.5x. However:\n\n1. **Piotroski 4/9** confirms deteriorating fundamental quality despite top-line growth\n2. **Operating margin compression** (-2.9% YoY) while opex grows 75.6% — growth is expensive\n3. **Debt-to-equity up 29%** — leverage increasing to fund growth\n4. **Current ratio down 23.4%** — liquidity weakening\n5. **Earnings yield 1.65% vs 27% risk-free** — extreme opportunity cost\n6. **Zero dividend yield** — no income offset\n\nThe bear case identifies **stock-specific deterioration**, not generic macro complaints. The multi-signal alignment rule requires 2+ positive signals for BUY — we have 0 bullish signals with conviction.\n\n### Decision: HOLD\n\n**Rationale:** \n- Cannot BUY: Stock-specific evidence is actively bearish (deteriorating fundamentals, negative momentum, extreme valuation)\n- Cannot SELL: No position held\n- HOLD is the correct action: data sufficient to form a bearish view, but action is to avoid entry\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"EFIH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry recommended\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Do not initiate position at current levels\",\n            \"conditions\": [\n                \"Re-entry requires ALL three: (a) price breaks above EGP 22.00 with volume confirming trend reversal\",\n                \"(b) Q3 2024 earnings show operating margin stabilization or improvement\",\n                \"(c) Piotroski Score improves to 6+\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position to exit\",\n                \"note\": \"If position existed, hard mental stop at EGP 17.00 (breakdown below support)\"\n            },\n            \"time_stop\": \"Review after Q3 2024 earnings release (4-8 weeks) and CBE rate decision\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A — no execution planned\",\n            \"price_limit_risk\": \"If monitoring for re-entry: ±10% daily limit means entry above EGP 22.00 may require multiple days if stock gaps up. Use limit orders only.\",\n            \"liquidity_exit_plan\": \"N/A — no position. If re-entry criteria met, use VWAP accumulation over 10-15 days with limit orders, max 10% of ADV per day.\"\n        },\n        \"invalidation_triggers\": [\n            \"Breakdown below EGP 17.00 with volume (structural trend change — invalidates any future bullish thesis)\",\n            \"Q3 2024 revenue growth < 25% YoY (growth narrative breaks)\",\n            \"Net margin compression below 25% (competitive pressure intensifying)\",\n            \"CBE raises rates above 30% (further multiple compression for high-P/E stocks)\",\n            \"ADV drops below EGP 2M for 10+ days (liquidity failure)\",\n            \"Government reverses digital payments mandate (moat destruction)\",\n            \"EGP devaluation > 30% without business adjustment (real returns destroyed)\"\n        ],\n        \"alternative_deployment\": {\n            \"rationale\": \"100% cash position in bullish EGX30 market (+5.4% monthly). Consider deploying 3-5% into higher-conviction EGX names with positive momentum, reasonable valuations, and dividend yields that partially offset the 27% carry cost.\",\n            \"suggested_criteria\": \"Positive 60-day momentum, P/E < 15x, dividend yield > 10%, Piotroski Score 7+\"\n        }\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Monitoring Checklist for Re-Entry\n\n| Condition | Current Status | Target | Trigger Action |\n|-----------|---------------|--------|----------------|\n| Price action | ~EGP 19.80 (in downtrend) | Break above EGP 22.00 with volume | Begin accumulation plan |\n| Q3 revenue growth | 47.5% YoY (latest annual) | >40% YoY | Confirm growth narrative intact |\n| Operating margin | 31.3% (deteriorating -2.9% YoY) | Stabilize or improve | Fundamental quality improving |\n| Piotroski Score | 4/9 | Improve to 6+ | Fundamental quality improving |\n| CBE policy rate | 27.25% | Cut by 200+ bps | Multiple expansion catalyst |\n\n**Next review date:** After Q3 2024 earnings release (estimated 4-8 weeks from now) or if price breaks above EGP 22.00 with volume, whichever comes first.",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "EFIH.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — remain 100% cash"
+        },
+        "entry_logic": {
+          "order_type": "N/A — no entry recommended",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": null,
+            "price_range_high": null
+          },
+          "timing": "Do not initiate position at current levels",
+          "conditions": [
+            "Re-entry requires ALL three: (a) price breaks above EGP 22.00 with volume confirming trend reversal",
+            "(b) Q3 2024 earnings show operating margin stabilization or improvement",
+            "(c) Piotroski Score improves to 6+"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": null
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A — no position to exit",
+            "note": "If position existed, hard mental stop at EGP 17.00 (breakdown below support)"
+          },
+          "time_stop": "Review after Q3 2024 earnings release (4-8 weeks) and CBE rate decision"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "N/A — no position",
+          "max_daily_execution": "N/A — no execution planned",
+          "price_limit_risk": "If monitoring for re-entry: ±10% daily limit means entry above EGP 22.00 may require multiple days if stock gaps up. Use limit orders only.",
+          "liquidity_exit_plan": "N/A — no position. If re-entry criteria met, use VWAP accumulation over 10-15 days with limit orders, max 10% of ADV per day."
+        },
+        "invalidation_triggers": [
+          "Breakdown below EGP 17.00 with volume (structural trend change — invalidates any future bullish thesis)",
+          "Q3 2024 revenue growth < 25% YoY (growth narrative breaks)",
+          "Net margin compression below 25% (competitive pressure intensifying)",
+          "CBE raises rates above 30% (further multiple compression for high-P/E stocks)",
+          "ADV drops below EGP 2M for 10+ days (liquidity failure)",
+          "Government reverses digital payments mandate (moat destruction)",
+          "EGP devaluation > 30% without business adjustment (real returns destroyed)"
+        ],
+        "alternative_deployment": {
+          "rationale": "100% cash position in bullish EGX30 market (+5.4% monthly). Consider deploying 3-5% into higher-conviction EGX names with positive momentum, reasonable valuations, and dividend yields that partially offset the 27% carry cost.",
+          "suggested_criteria": "Positive 60-day momentum, P/E < 15x, dividend yield > 10%, Piotroski Score 7+"
+        }
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "cadeab4ff4f1052b8b9fb4ea76538b6ebe0f560c3534f28a656e1bacb4758ba8",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 12883.926750044338,
+  "timestamp_utc": "2026-06-19T14:16:14.645465+00:00",
+  "context_items": []
+}

@@ -23,7 +23,7 @@ import os
 import sys
 import logging
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pandas as pd
 import yfinance as yf
@@ -108,6 +108,9 @@ def fetch_ticker_data(ticker: str) -> dict:
         log.warning(f"[{ticker}] Error fetching info: {e}")
         info = {}
 
+    # Provenance metadata — stamped on every row
+    scraped_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
     # ---- Process Income Statement ----
     inc_records = []
     if not inc_df.empty:
@@ -123,9 +126,12 @@ def fetch_ticker_data(ticker: str) -> dict:
                 "eps_basic":          row.get("Basic EPS"),
                 "interest_income":    row.get("Interest Income"),
                 "interest_expense":   row.get("Interest Expense"),
+                "data_source":        "yfinance",
+                "scraped_at":         scraped_at,
+                "publish_date":       None,  # yfinance does not provide actual filing dates
             }
-            # Replace NaN with None for clean CSV output
-            rec = {k: (v if pd.notna(v) else None) for k, v in rec.items()}
+            # Replace NaN with None for clean CSV output (skip provenance cols)
+            rec = {k: (v if k in ("data_source", "scraped_at", "publish_date") or pd.notna(v) else None) for k, v in rec.items()}
             inc_records.append(rec)
 
     # ---- Process Balance Sheet ----
@@ -159,11 +165,14 @@ def fetch_ticker_data(ticker: str) -> dict:
                 # customer_deposits: not in yfinance — fill manually from
                 # Mubasher / EGX annual reports for bank-sector tickers.
                 "customer_deposits":    None,
+                "data_source":          "yfinance",
+                "scraped_at":           scraped_at,
+                "publish_date":         None,  # yfinance does not provide actual filing dates
             }
-            rec = {k: (v if pd.notna(v) else None) for k, v in rec.items()}
+            rec = {k: (v if k in ("data_source", "scraped_at", "publish_date") or pd.notna(v) else None) for k, v in rec.items()}
             bal_records.append(rec)
 
-    return {"income": inc_records, "balance": bal_records, "info": info}
+    return {"income": inc_records, "balance": bal_records, "info": info, "scraped_at": scraped_at}
 
 
 # ---------------------------------------------------------------------------
@@ -178,6 +187,7 @@ def save_csvs(ticker: str, data: dict) -> dict:
     inc_records = data["income"]
     bal_records = data["balance"]
     info        = data["info"]
+    scraped_at  = data.get("scraped_at", datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
 
     # ---- Income CSV ----
     inc_path = os.path.join(OUT_INCOME, f"{ticker}_income_annual.csv")
@@ -185,7 +195,7 @@ def save_csvs(ticker: str, data: dict) -> dict:
         pd.DataFrame(inc_records).to_csv(inc_path, index=False)
         log.info(f"[{ticker}] Saved income  → {inc_path} ({len(inc_records)} rows)")
     else:
-        pd.DataFrame(columns=["period_end_date", "revenue", "net_income"]).to_csv(inc_path, index=False)
+        pd.DataFrame(columns=["period_end_date", "revenue", "net_income", "data_source", "scraped_at", "publish_date"]).to_csv(inc_path, index=False)
         log.warning(f"[{ticker}] No income data — wrote empty CSV")
 
     # ---- Balance CSV ----
@@ -194,7 +204,7 @@ def save_csvs(ticker: str, data: dict) -> dict:
         pd.DataFrame(bal_records).to_csv(bal_path, index=False)
         log.info(f"[{ticker}] Saved balance → {bal_path} ({len(bal_records)} rows)")
     else:
-        pd.DataFrame(columns=["period_end_date", "total_assets", "total_liabilities", "total_equity"]).to_csv(bal_path, index=False)
+        pd.DataFrame(columns=["period_end_date", "total_assets", "total_liabilities", "total_equity", "data_source", "scraped_at", "publish_date"]).to_csv(bal_path, index=False)
         log.warning(f"[{ticker}] No balance data — wrote empty CSV")
 
     # ---- Ratios CSV — join income + balance, then derive metrics ----
@@ -240,6 +250,9 @@ def save_csvs(ticker: str, data: dict) -> dict:
             "roa":             roa,
             "debt_to_equity":  debt_to_equity,
             "current_ratio":   current_ratio,
+            "data_source":     "yfinance",
+            "scraped_at":      scraped_at,
+            "publish_date":    None,  # yfinance does not provide actual filing dates
         }
 
         # Attach snapshot metrics only to the most recent (first) row
@@ -265,7 +278,7 @@ def save_csvs(ticker: str, data: dict) -> dict:
         pd.DataFrame(ratio_rows).to_csv(rat_path, index=False)
         log.info(f"[{ticker}] Saved ratios  → {rat_path} ({len(ratio_rows)} rows)")
     else:
-        pd.DataFrame(columns=["period_end_date", "pe_ratio", "eps", "debt_to_equity"]).to_csv(rat_path, index=False)
+        pd.DataFrame(columns=["period_end_date", "pe_ratio", "eps", "debt_to_equity", "data_source", "scraped_at", "publish_date"]).to_csv(rat_path, index=False)
         log.warning(f"[{ticker}] No ratio data — wrote empty CSV")
 
     return {

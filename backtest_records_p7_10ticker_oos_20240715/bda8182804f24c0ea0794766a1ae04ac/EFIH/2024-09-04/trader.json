@@ -1,0 +1,115 @@
+{
+  "run_id": "bda8182804f24c0ea0794766a1ae04ac",
+  "ticker": "EFIH",
+  "trade_date": "2024-09-04",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "80461b38430b876d00c34298d1c90da2eed0a83ae7b2d7bc845f7aa66f98989b",
+  "raw_output": "# EXECUTION PLAN — EFIH.CA\n\n## Analysis & Decision Rationale\n\n### Signal Assessment\n\n| Signal | Reading | Weight |\n|--------|---------|--------|\n| **Fundamental** | BEARISH — 68.8x P/E, Piotroski 4/9, margins deteriorating, debt rising | High |\n| **Technical** | NEUTRAL — Price near SMA50, moderate upward momentum, but volume 0.33x normal | Medium |\n| **Sentiment** | NEUTRAL-BEARISH — No news coverage (institutional disinterest), FinBERT scores negative | Low |\n| **Macro** | BULLISH — EGX30 +11.5% monthly, IMF programme active, FX stable | Medium |\n| **Liquidity** | CRITICAL — 0.33x volume ratio = liquidity trap | High |\n\n### Decision: HOLD\n\n**Why not BUY:**\n- **Valuation guardrail triggered:** 68.8x trailing P/E with operating margins contracting (-2.9% YoY) and debt rising (+29% YoY) creates asymmetric downside risk\n- **Liquidity trap:** 0.33x volume ratio means any meaningful position cannot be entered or exited without significant price impact\n- **Negative earnings yield spread:** -25.8% vs 27.25% risk-free rate — equity offers no premium over T-bills\n- **Piotroski 4/9:** Financial strength is mediocre for a \"growth\" company\n- **No news coverage:** Institutional disinterest, not accumulation opportunity\n\n**Why not SELL:**\n- No position exists — portfolio is 100% cash\n- Short selling is prohibited on EGX\n\n**Key risk of HOLD:** FOMO if EFIH continues rallying on EGX30 momentum. However, the asymmetric downside risk from illiquidity + extreme valuation makes this a necessary pass.\n\n### Monitoring Conditions for Re-evaluation\n\n| Condition | Target | Current | Status |\n|-----------|--------|---------|--------|\n| Forward P/E | < 35x | ~68.8x | ❌ |\n| Volume ratio | > 1.0x for 5 days | 0.33x | ❌ |\n| Operating margin | Stabilize/expand | -2.9% YoY | ❌ |\n| Debt-to-equity | < 0.50x | 0.36x | ✅ |\n\n**Trigger for re-engagement:** 3 of 4 conditions met → 2% position limit\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"EFIH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry at current levels\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Re-evaluate after Q3 2024 earnings (Oct/Nov 2024) or when monitoring conditions improve\",\n            \"conditions\": [\n                \"Forward P/E falls below 35x on next earnings\",\n                \"Volume ratio recovers above 1.0x for 5 consecutive days\",\n                \"Operating margin stabilizes or expands\",\n                \"Debt-to-equity declines below 0.50x\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position\",\n                \"note\": \"If position were held, mental stop at -15% from entry with limit order exit\"\n            },\n            \"time_stop\": \"Re-evaluate at Q3 2024 earnings (Oct/Nov 2024) or if any invalidation condition triggers\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"0% — no capital at risk\",\n            \"max_daily_execution\": \"0 shares — no execution\",\n            \"price_limit_risk\": \"N/A — no position to be trapped in ±10% limit move\",\n            \"liquidity_exit_plan\": \"N/A — no position to exit; if re-entering later, use 10-15% of daily volume per day with limit orders\"\n        },\n        \"invalidation_triggers\": [\n            \"Forward P/E falls below 35x on next earnings report\",\n            \"Volume ratio exceeds 1.0x for 5 consecutive days with price above SMA50\",\n            \"Operating margin expands YoY on next quarterly report\",\n            \"Debt-to-equity declines below 0.25x\",\n            \"CBE cuts policy rate by 500+ bps (to 22.25% or below)\",\n            \"Stock price corrects 30%+ without fundamental deterioration (creates margin of safety)\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Summary\n\n| Element | Detail |\n|---------|--------|\n| **Decision** | HOLD — 100% cash |\n| **Conviction** | High (0.85) |\n| **Primary Risk** | FOMO if EFIH rallies on EGX30 momentum |\n| **Primary Reason** | 68.8x P/E + 0.33x volume ratio = asymmetric downside risk |\n| **Next Catalyst** | Q3 2024 earnings (Oct/Nov) — re-evaluate valuation and liquidity |\n| **Capital Deployment** | Deploy into higher-conviction EGX names with 15-25x P/E, Piotroski 7+, volume ratio >1.0x |\n\n**FINAL TRANSACTION PROPOSAL: **HOLD****",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN — EFIH.CA\\n\\n## Analysis & Decision Rationale\\n\\n### Signal Assessment\\n\\n| Signal | Reading | Weight |\\n|--------|---------|--------|\\n| **Fundamental** | BEARISH — 68.8x P/E, Piotroski 4/9, margins deteriorating, debt rising | High |\\n| **Technical** | NEUTRAL — Price near SMA50, moderate upward momentum, but volume 0.33x normal | Medium |\\n| **Sentiment** | NEUTRAL-BEARISH — No news coverage (institutional disinterest), FinBERT scores negative | Low |\\n| **Macro** | BULLISH — EGX30 +11.5% monthly, IMF programme active, FX stable | Medium |\\n| **Liquidity** | CRITICAL — 0.33x volume ratio = liquidity trap | High |\\n\\n### Decision: HOLD\\n\\n**Why not BUY:**\\n- **Valuation guardrail triggered:** 68.8x trailing P/E with operating margins contracting (-2.9% YoY) and debt rising (+29% YoY) creates asymmetric downside risk\\n- **Liquidity trap:** 0.33x volume ratio means any meaningful position cannot be entered or exited without significant price impact\\n- **Negative earnings yield spread:** -25.8% vs 27.25% risk-free rate — equity offers no premium over T-bills\\n- **Piotroski 4/9:** Financial strength is mediocre for a \"growth\" company\\n- **No news coverage:** Institutional disinterest, not accumulation opportunity\\n\\n**Why not SELL:**\\n- No position exists — portfolio is 100% cash\\n- Short selling is prohibited on EGX\\n\\n**Key risk of HOLD:** FOMO if EFIH continues rallying on EGX30 momentum. However, the asymmetric downside risk from illiquidity + extreme valuation makes this a necessary pass.\\n\\n### Monitoring Conditions for Re-evaluation\\n\\n| Condition | Target | Current | Status |\\n|-----------|--------|---------|--------|\\n| Forward P/E | < 35x | ~68.8x | ❌ |\\n| Volume ratio | > 1.0x for 5 days | 0.33x | ❌ |\\n| Operating margin | Stabilize/expand | -2.9% YoY | ❌ |\\n| Debt-to-equity | < 0.50x | 0.36x | ✅ |\\n\\n**Trigger for re-engagement:** 3 of 4 conditions met → 2% position limit\\n\\n---\\n\\n## Structured Execution Plan\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"EFIH.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A — no entry at current levels\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": null,\\n                \"price_range_high\": null\\n            },\\n            \"timing\": \"Re-evaluate after Q3 2024 earnings (Oct/Nov 2024) or when monitoring conditions improve\",\\n            \"conditions\": [\\n                \"Forward P/E falls below 35x on next earnings\",\\n                \"Volume ratio recovers above 1.0x for 5 consecutive days\",\\n                \"Operating margin stabilizes or expands\",\\n                \"Debt-to-equity declines below 0.50x\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A — no position\",\\n                \"note\": \"If position were held, mental stop at -15% from entry with limit order exit\"\\n            },\\n            \"time_stop\": \"Re-evaluate at Q3 2024 earnings (Oct/Nov 2024) or if any invalidation condition triggers\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"0% — no capital at risk\",\\n            \"max_daily_execution\": \"0 shares — no execution\",\\n            \"price_limit_risk\": \"N/A — no position to be trapped in ±10% limit move\",\\n            \"liquidity_exit_plan\": \"N/A — no position to exit; if re-entering later, use 10-15% of daily volume per day with limit orders\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"Forward P/E falls below 35x on next earnings report\",\\n            \"Volume ratio exceeds 1.0x for 5 consecutive days with price above SMA50\",\\n            \"Operating margin expands YoY on next quarterly report\",\\n            \"Debt-to-equity declines below 0.25x\",\\n            \"CBE cuts policy rate by 500+ bps (to 22.25% or below)\",\\n            \"Stock price corrects 30%+ without fundamental deterioration (creates margin of safety)\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```\\n\\n---\\n\\n## Summary\\n\\n| Element | Detail |\\n|---------|--------|\\n| **Decision** | HOLD — 100% cash |\\n| **Conviction** | High (0.85) |\\n| **Primary Risk** | FOMO if EFIH rallies on EGX30 momentum |\\n| **Primary Reason** | 68.8x P/E + 0.33x volume ratio = asymmetric downside risk |\\n| **Next Catalyst** | Q3 2024 earnings (Oct/Nov) — re-evaluate valuation and liquidity |\\n| **Capital Deployment** | Deploy into higher-conviction EGX names with 15-25x P/E, Piotroski 7+, volume ratio >1.0x |\\n\\n**FINAL TRANSACTION PROPOSAL: **HOLD****', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1374, 'prompt_tokens': 9594, 'total_tokens': 10968, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9594}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '2f8a93ab-e557-4494-a546-1ec010c5804f', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee034-1ce9-72a3-a11d-7653f31190fd-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9594, 'output_tokens': 1374, 'total_tokens': 10968, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN — EFIH.CA\n\n## Analysis & Decision Rationale\n\n### Signal Assessment\n\n| Signal | Reading | Weight |\n|--------|---------|--------|\n| **Fundamental** | BEARISH — 68.8x P/E, Piotroski 4/9, margins deteriorating, debt rising | High |\n| **Technical** | NEUTRAL — Price near SMA50, moderate upward momentum, but volume 0.33x normal | Medium |\n| **Sentiment** | NEUTRAL-BEARISH — No news coverage (institutional disinterest), FinBERT scores negative | Low |\n| **Macro** | BULLISH — EGX30 +11.5% monthly, IMF programme active, FX stable | Medium |\n| **Liquidity** | CRITICAL — 0.33x volume ratio = liquidity trap | High |\n\n### Decision: HOLD\n\n**Why not BUY:**\n- **Valuation guardrail triggered:** 68.8x trailing P/E with operating margins contracting (-2.9% YoY) and debt rising (+29% YoY) creates asymmetric downside risk\n- **Liquidity trap:** 0.33x volume ratio means any meaningful position cannot be entered or exited without significant price impact\n- **Negative earnings yield spread:** -25.8% vs 27.25% risk-free rate — equity offers no premium over T-bills\n- **Piotroski 4/9:** Financial strength is mediocre for a \"growth\" company\n- **No news coverage:** Institutional disinterest, not accumulation opportunity\n\n**Why not SELL:**\n- No position exists — portfolio is 100% cash\n- Short selling is prohibited on EGX\n\n**Key risk of HOLD:** FOMO if EFIH continues rallying on EGX30 momentum. However, the asymmetric downside risk from illiquidity + extreme valuation makes this a necessary pass.\n\n### Monitoring Conditions for Re-evaluation\n\n| Condition | Target | Current | Status |\n|-----------|--------|---------|--------|\n| Forward P/E | < 35x | ~68.8x | ❌ |\n| Volume ratio | > 1.0x for 5 days | 0.33x | ❌ |\n| Operating margin | Stabilize/expand | -2.9% YoY | ❌ |\n| Debt-to-equity | < 0.50x | 0.36x | ✅ |\n\n**Trigger for re-engagement:** 3 of 4 conditions met → 2% position limit\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"EFIH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry at current levels\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Re-evaluate after Q3 2024 earnings (Oct/Nov 2024) or when monitoring conditions improve\",\n            \"conditions\": [\n                \"Forward P/E falls below 35x on next earnings\",\n                \"Volume ratio recovers above 1.0x for 5 consecutive days\",\n                \"Operating margin stabilizes or expands\",\n                \"Debt-to-equity declines below 0.50x\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position\",\n                \"note\": \"If position were held, mental stop at -15% from entry with limit order exit\"\n            },\n            \"time_stop\": \"Re-evaluate at Q3 2024 earnings (Oct/Nov 2024) or if any invalidation condition triggers\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"0% — no capital at risk\",\n            \"max_daily_execution\": \"0 shares — no execution\",\n            \"price_limit_risk\": \"N/A — no position to be trapped in ±10% limit move\",\n            \"liquidity_exit_plan\": \"N/A — no position to exit; if re-entering later, use 10-15% of daily volume per day with limit orders\"\n        },\n        \"invalidation_triggers\": [\n            \"Forward P/E falls below 35x on next earnings report\",\n            \"Volume ratio exceeds 1.0x for 5 consecutive days with price above SMA50\",\n            \"Operating margin expands YoY on next quarterly report\",\n            \"Debt-to-equity declines below 0.25x\",\n            \"CBE cuts policy rate by 500+ bps (to 22.25% or below)\",\n            \"Stock price corrects 30%+ without fundamental deterioration (creates margin of safety)\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Summary\n\n| Element | Detail |\n|---------|--------|\n| **Decision** | HOLD — 100% cash |\n| **Conviction** | High (0.85) |\n| **Primary Risk** | FOMO if EFIH rallies on EGX30 momentum |\n| **Primary Reason** | 68.8x P/E + 0.33x volume ratio = asymmetric downside risk |\n| **Next Catalyst** | Q3 2024 earnings (Oct/Nov) — re-evaluate valuation and liquidity |\n| **Capital Deployment** | Deploy into higher-conviction EGX names with 15-25x P/E, Piotroski 7+, volume ratio >1.0x |\n\n**FINAL TRANSACTION PROPOSAL: **HOLD****",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "EFIH.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — remain 100% cash"
+        },
+        "entry_logic": {
+          "order_type": "N/A — no entry at current levels",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": null,
+            "price_range_high": null
+          },
+          "timing": "Re-evaluate after Q3 2024 earnings (Oct/Nov 2024) or when monitoring conditions improve",
+          "conditions": [
+            "Forward P/E falls below 35x on next earnings",
+            "Volume ratio recovers above 1.0x for 5 consecutive days",
+            "Operating margin stabilizes or expands",
+            "Debt-to-equity declines below 0.50x"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": null
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A — no position",
+            "note": "If position were held, mental stop at -15% from entry with limit order exit"
+          },
+          "time_stop": "Re-evaluate at Q3 2024 earnings (Oct/Nov 2024) or if any invalidation condition triggers"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "0% — no capital at risk",
+          "max_daily_execution": "0 shares — no execution",
+          "price_limit_risk": "N/A — no position to be trapped in ±10% limit move",
+          "liquidity_exit_plan": "N/A — no position to exit; if re-entering later, use 10-15% of daily volume per day with limit orders"
+        },
+        "invalidation_triggers": [
+          "Forward P/E falls below 35x on next earnings report",
+          "Volume ratio exceeds 1.0x for 5 consecutive days with price above SMA50",
+          "Operating margin expands YoY on next quarterly report",
+          "Debt-to-equity declines below 0.25x",
+          "CBE cuts policy rate by 500+ bps (to 22.25% or below)",
+          "Stock price corrects 30%+ without fundamental deterioration (creates margin of safety)"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "08eec07d59c8792e35609bd2e1dec007b384e849db42d58c4f7d0f2e021cb737",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 13945.871916017495,
+  "timestamp_utc": "2026-06-19T14:06:26.146959+00:00",
+  "context_items": []
+}

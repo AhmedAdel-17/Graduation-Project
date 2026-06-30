@@ -32,8 +32,9 @@ from tradingagents.agents.utils.fundamental_data_tools import (
     get_egx_fundamentals, get_egx_income, get_egx_balance, get_egx_ratios
 )
 from tradingagents.dataflows.config import get_config
+from tradingagents.dataflows.symbol_utils import normalize_egx_ticker
 
-from .fundamentals.schemas import FundamentalAnalysisReport
+from .fundamentals.schemas import FundamentalAnalysisReport, FundamentalsQualityStatus
 from .fundamentals.financial_calculator import FinancialCalculator
 from .fundamentals.statement_standardizer import StatementStandardizer
 from .fundamentals.sector_config import SectorConfig
@@ -163,6 +164,41 @@ def create_deterministic_fundamentals_analyst():
         income_periods = multi["income"]   # list of dicts, most-recent first
         balance_periods = multi["balance"]
         ratios_periods = multi["ratios"]
+
+        # ── No-data early return ──────────────────────────────────────────────
+        if not income_periods and not balance_periods and not ratios_periods:
+            quality = FundamentalsQualityStatus(
+                level="unavailable",
+                reasons=[f"No financial statement data found for {ticker}"],
+                data_available=False,
+                enrichment_attempted=False,
+                enrichment_succeeded=False,
+            )
+            return {
+                "fundamentals_report": (
+                    f"EGX Fundamental Analysis — {ticker} | NO DATA\n"
+                    f"No financial statements available for this ticker."
+                ),
+                "fundamental_analysis": {
+                    "financial_health": "insufficient_data",
+                    "valuation_gap": "not_assessed",
+                    "fair_value_range": "N/A",
+                    "key_risks": ["No financial data available — fundamental analysis impossible"],
+                    "confidence_score": 0,
+                    "data_completeness": 0,
+                    "data_confidence": 0,
+                    "signal_coherence": 0,
+                    "effective_confidence": 0,
+                    "distress_flags": [],
+                    "ratios": {},
+                    "sector": SectorConfig(ticker).sector,
+                    "pipeline_mode": "deterministic",
+                    "stages_completed": [],
+                    "quality_status": quality.model_dump(),
+                    "reasoning": f"No financial data found for {ticker}",
+                },
+                "fundamentals_messages": [],
+            }
 
         # Current period (most recent)
         cur_income = income_periods[0] if income_periods else {}
@@ -313,6 +349,7 @@ def create_deterministic_fundamentals_analyst():
             pe_ratio=pe_val,
             roe=roe_val,
             earnings_yield_spread=ey_spread,
+            risk_free_rate=risk_free_rate,
         )
 
         # ── 6. Compute signal_coherence ────────────────────────────────────────
@@ -357,8 +394,18 @@ def create_deterministic_fundamentals_analyst():
                 key_risks.insert(0, f"Fundamental risk: {flag.replace('_', ' ').lower()}")
 
         # ── 10. Assemble FundamentalAnalysisReport ────────────────────────────
+        det_quality = FundamentalsQualityStatus(
+            level="deterministic_only",
+            reasons=["CoT enrichment not enabled (use_hybrid_fundamental_analyst=False)"],
+            data_available=True,
+            enrichment_attempted=False,
+            enrichment_succeeded=False,
+        )
+        # effective_confidence = data_confidence when enrichment was not attempted
+        effective_confidence = data_confidence
+
         report_obj = FundamentalAnalysisReport(
-            ticker=ticker.upper().replace(".CA", ""),
+            ticker=normalize_egx_ticker(ticker),
             analysis_date=trade_date,
             fiscal_period=fiscal_period,
             sector=sector,
@@ -380,6 +427,8 @@ def create_deterministic_fundamentals_analyst():
             key_risks=key_risks,
             pipeline_mode="deterministic",
             stages_completed=[],
+            quality_status=det_quality,
+            effective_confidence=effective_confidence,
         )
 
         # ── 11. Build backward-compatible text report ─────────────────────────
@@ -434,8 +483,13 @@ def create_deterministic_fundamentals_analyst():
             "risk_free_rate_value": risk_free_rate,
             "risk_free_rate_source": rfr_source,
             "risk_free_rate_effective_date": rfr_effective_date or "",
+            # Quality/degradation tracking
+            "quality_status": det_quality.model_dump(),
+            "effective_confidence": effective_confidence,
             # Full Pydantic report serialized for downstream agents that expect it
             "report": report_obj.model_dump(),
+            # Loader diagnostics: per-statement CSV load traceability
+            "data_loader_diagnostics": multi.get("diagnostics", {}),
         }
 
         return {
@@ -491,6 +545,10 @@ def create_hybrid_fundamentals_analyst(quick_thinking_llm, deep_thinking_llm):
         sector_cfg = SectorConfig(ticker)
         config = get_config()
 
+        # P3: Extract momentum pack from market analyst's technical_analysis
+        tech_analysis = state.get("technical_analysis") or {}
+        momentum_pack = tech_analysis.get("momentum")
+
         try:
             enriched_report = run_cot_pipeline(
                 quick_llm=quick_thinking_llm,
@@ -500,10 +558,15 @@ def create_hybrid_fundamentals_analyst(quick_thinking_llm, deep_thinking_llm):
                 freq="annual",
                 use_memory=config.get("use_fundamental_memory", False),
                 source_run_id=f"{ticker}-{state['trade_date']}-fundamentals",
+                momentum_pack=momentum_pack,
             )
-        except Exception:
+        except Exception as exc:
             # CoT pipeline crashed entirely — return deterministic result
-            return det_result
+            # but mark it as degraded since enrichment was attempted and failed
+            return _mark_det_result_degraded(
+                det_result,
+                reason=f"CoT pipeline crashed: {type(exc).__name__}: {exc}",
+            )
 
         # Step 3: Rebuild state outputs from enriched report
         trade_date = state["trade_date"]
@@ -609,7 +672,12 @@ def create_hybrid_fundamentals_analyst(quick_thinking_llm, deep_thinking_llm):
             "risk_free_rate_value": getattr(enriched_report, "risk_free_rate_value", None),
             "risk_free_rate_source": getattr(enriched_report, "risk_free_rate_source", ""),
             "risk_free_rate_effective_date": getattr(enriched_report, "risk_free_rate_effective_date", ""),
+            # Quality/degradation tracking (from enriched report)
+            "quality_status": enriched_report.quality_status.model_dump(),
+            "effective_confidence": enriched_report.effective_confidence,
             "report": enriched_report.model_dump(),
+            # Loader diagnostics from the deterministic pass (carried through)
+            "data_loader_diagnostics": det_result.get("fundamental_analysis", {}).get("data_loader_diagnostics", {}),
         }
 
         return {
@@ -619,6 +687,45 @@ def create_hybrid_fundamentals_analyst(quick_thinking_llm, deep_thinking_llm):
         }
 
     return hybrid_fundamentals_analyst_node
+
+
+def _mark_det_result_degraded(
+    det_result: Dict[str, Any],
+    reason: str,
+) -> Dict[str, Any]:
+    """
+    Re-stamp a deterministic result to indicate that CoT enrichment was
+    attempted but failed. Adjusts quality_status and effective_confidence
+    without corrupting data_confidence (which reflects data availability).
+    """
+    result = dict(det_result)
+    sa = dict(result.get("fundamental_analysis", {}))
+
+    data_confidence = sa.get("data_confidence", 0)
+    degraded_quality = FundamentalsQualityStatus(
+        level="deterministic_only",
+        reasons=[reason],
+        data_available=True,
+        enrichment_attempted=True,
+        enrichment_succeeded=False,
+    )
+    # Penalize effective_confidence: cap at 60% of data_confidence
+    # Interpretive layer was expected but is missing
+    effective_conf = min(data_confidence, int(data_confidence * 0.6))
+
+    sa["quality_status"] = degraded_quality.model_dump()
+    sa["effective_confidence"] = effective_conf
+
+    # Update the embedded Pydantic report dict if present
+    report_dict = sa.get("report")
+    if isinstance(report_dict, dict):
+        report_dict = dict(report_dict)
+        report_dict["quality_status"] = degraded_quality.model_dump()
+        report_dict["effective_confidence"] = effective_conf
+        sa["report"] = report_dict
+
+    result["fundamental_analysis"] = sa
+    return result
 
 
 def _fmt(val: Optional[float], pct: bool = False) -> str:

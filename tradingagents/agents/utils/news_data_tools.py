@@ -95,6 +95,19 @@ from tradingagents.dataflows.local import (
     get_egx_news_combined,
 )
 import json
+from datetime import datetime, timezone
+
+
+BACKTEST_NEWS_TOLERANCE_DAYS = 1
+
+
+def _is_historical_backtest_date(curr_date: str) -> bool:
+    """Return True when live news would leak future data for ``curr_date``."""
+    try:
+        parsed = datetime.strptime(str(curr_date), "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return False
+    return (datetime.now(timezone.utc).date() - parsed).days > BACKTEST_NEWS_TOLERANCE_DAYS
 
 
 _ARTICLE_DROP_KEYS = {"url", "sentiment", "raw_text", "full_text", "content"}
@@ -186,9 +199,13 @@ def get_egx_company_news(
     ticker_clean = ticker.upper().replace(".CA", "")
 
     # ── 1. Try live aggregator first (12 sources) ──────────────────────────
-    live = _fetch_live_news(ticker_clean, look_back_days)
-    if live and live.get("total_articles", 0) > 0:
-        return json.dumps(live, indent=2, ensure_ascii=False, default=str)
+    # Live RSS/Google/NewsAPI sources are wall-clock based. In historical
+    # backtests they would leak current articles into past decisions, so use
+    # only date-filtered local/historical sources for old trade dates.
+    if not _is_historical_backtest_date(curr_date):
+        live = _fetch_live_news(ticker_clean, look_back_days)
+        if live and live.get("total_articles", 0) > 0:
+            return json.dumps(live, indent=2, ensure_ascii=False, default=str)
 
     # ── 2. Fall back to local CSV / text files ─────────────────────────────
     result = get_egx_news_combined(ticker, curr_date, look_back_days)
@@ -214,11 +231,12 @@ def get_egx_market_news(
         curr_date = _trade_date
 
     # ── 1. Live aggregator with broad EGX query ───────────────────────────
-    live = _fetch_live_news("EGX", look_back_days)
-    if live and live.get("total_articles", 0) > 0:
-        return json.dumps(live, indent=2, ensure_ascii=False, default=str)
+    # Skip wall-clock news providers for historical backtests.
+    if not _is_historical_backtest_date(curr_date):
+        live = _fetch_live_news("EGX", look_back_days)
+        if live and live.get("total_articles", 0) > 0:
+            return json.dumps(live, indent=2, ensure_ascii=False, default=str)
 
     # ── 2. Fall back to local CSV ─────────────────────────────────────────
     result = get_egx_news_from_csv("ALL", curr_date, look_back_days)
     return json.dumps(result, indent=2, ensure_ascii=False, default=str)
-

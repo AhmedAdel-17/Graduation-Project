@@ -1,0 +1,39 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: tradingagents
+    pipeline_stages:
+      # Parse JSON log lines
+      - json:
+          expressions:
+            level: level
+            logger: logger
+            ticker: ticker
+      # Promote allowed fields to Loki labels
+      - labels:
+          level:
+          logger:
+          ticker:
+      # Drop the auto-added filename label
+      - labeldrop:
+          - filename
+      # Set timestamp from log record
+      - timestamp:
+          source: timestamp
+          format: "2006-01-02T15:04:05"
+          fallback_formats:
+            - "2006-01-02T15:04:05.000000"
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: tradingagents
+          __path__: /var/log/tradingagents/*.log

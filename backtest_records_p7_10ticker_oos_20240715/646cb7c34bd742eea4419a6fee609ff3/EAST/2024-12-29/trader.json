@@ -1,0 +1,116 @@
+{
+  "run_id": "646cb7c34bd742eea4419a6fee609ff3",
+  "ticker": "EAST",
+  "trade_date": "2024-12-29",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "939e21623a49c1ac9bb453aa3cb00ba7206f15f06c3828d8802ba34e83cc323c",
+  "raw_output": "# EXECUTION PLAN: EAST.CA\n\n## Decision Analysis\n\nAfter thorough review of all inputs, I concur with the CIO's **HOLD** decision. The bear case is decisively stronger due to:\n\n1. **Piotroski Score 2/9** – This is not a mechanical artifact; it signals genuine financial distress with deteriorating margins, surging leverage, and negative real revenue growth\n2. **Liquidity trap** – Volume ratio 0.048 means 95% below historical average; exiting a position would be extremely costly\n3. **Debt/Equity +63% YoY** with interest expense up 278% at 27.25% rates – this is a solvency concern\n4. **Rate cut catalyst is a mirage** – CBE cannot cut with CPI at 25.8% and real rates barely positive at 1.45%\n5. **75% rally on near-zero volume** – classic distribution top pattern, not accumulation\n\nThe bull case relies on valuation (7.7x P/E, 57% ROE) which is compelling, but the stock-specific risks override this. We remain 100% cash.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"EAST.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0%\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"No entry at current levels. Re-evaluate only if invalidation conditions are met.\",\n            \"conditions\": [\n                \"H1 FY2025 earnings show nominal revenue growth > 25% (positive real growth)\",\n                \"Gross margin stabilizes or improves sequentially\",\n                \"Debt/Equity declines below 0.80x\",\n                \"Piotroski Score improves to 5+\",\n                \"CBE delivers 500+ bps rate cut to 22% or below\",\n                \"Volume ratio recovers above 0.50\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A\",\n                \"note\": \"No position to exit. If we were to enter, stop-loss would be at EGP 22.00 (support_level_1) with mental stop.\"\n            },\n            \"time_stop\": \"Re-evaluate after H1 FY2025 earnings release or if CBE signals rate cut cycle\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"0% (no position)\",\n            \"max_daily_execution\": \"0 shares\",\n            \"price_limit_risk\": \"N/A - no position. If entering, ±10% daily limit would trap sellers in a downturn.\",\n            \"liquidity_exit_plan\": \"N/A - no position. If entering, exit over 2-4 weeks using limit orders not exceeding 10% of ADV daily.\"\n        },\n        \"invalidation_triggers\": [\n            \"H1 FY2025 earnings show nominal revenue growth > 25% AND gross margin improves sequentially\",\n            \"Debt/Equity declines below 0.80x AND Piotroski Score improves to 5+\",\n            \"CBE cuts policy rate by 500+ bps to 22% or below\",\n            \"Volume ratio recovers above 0.50 for 10 consecutive trading days\",\n            \"Breakout above EGP 30.00 with volume > 2x average (genuine accumulation)\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Key Monitoring Triggers\n\nWhile we remain in cash, I will monitor these specific conditions for a potential future entry:\n\n| Trigger | Current Status | Target | Action if Met |\n|---------|---------------|--------|---------------|\n| H1 FY2025 revenue growth | +14.7% nominal | >25% nominal | Re-evaluate entry |\n| Gross margin trend | -5.9% YoY | Sequential improvement | Re-evaluate entry |\n| Debt/Equity | 1.03x | <0.80x | Re-evaluate entry |\n| Piotroski Score | 2/9 | >5/9 | Re-evaluate entry |\n| CBE policy rate | 27.25% | <22% | Re-evaluate entry |\n| Volume ratio | 0.048 | >0.50 | Re-evaluate entry |\n\n**Next review date:** After H1 FY2025 earnings release (expected ~February 2025) or if CBE signals a rate cut cycle.\n\n**Cash is the superior risk-adjusted option** given the asymmetric downside risk of -25% to -35% versus limited upside potential of +15% to +35% only if multiple unlikely catalysts align simultaneously.",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN: EAST.CA\\n\\n## Decision Analysis\\n\\nAfter thorough review of all inputs, I concur with the CIO\\'s **HOLD** decision. The bear case is decisively stronger due to:\\n\\n1. **Piotroski Score 2/9** – This is not a mechanical artifact; it signals genuine financial distress with deteriorating margins, surging leverage, and negative real revenue growth\\n2. **Liquidity trap** – Volume ratio 0.048 means 95% below historical average; exiting a position would be extremely costly\\n3. **Debt/Equity +63% YoY** with interest expense up 278% at 27.25% rates – this is a solvency concern\\n4. **Rate cut catalyst is a mirage** – CBE cannot cut with CPI at 25.8% and real rates barely positive at 1.45%\\n5. **75% rally on near-zero volume** – classic distribution top pattern, not accumulation\\n\\nThe bull case relies on valuation (7.7x P/E, 57% ROE) which is compelling, but the stock-specific risks override this. We remain 100% cash.\\n\\n---\\n\\n## Structured Execution Plan\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"EAST.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0%\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": null,\\n                \"price_range_high\": null\\n            },\\n            \"timing\": \"No entry at current levels. Re-evaluate only if invalidation conditions are met.\",\\n            \"conditions\": [\\n                \"H1 FY2025 earnings show nominal revenue growth > 25% (positive real growth)\",\\n                \"Gross margin stabilizes or improves sequentially\",\\n                \"Debt/Equity declines below 0.80x\",\\n                \"Piotroski Score improves to 5+\",\\n                \"CBE delivers 500+ bps rate cut to 22% or below\",\\n                \"Volume ratio recovers above 0.50\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A\",\\n                \"note\": \"No position to exit. If we were to enter, stop-loss would be at EGP 22.00 (support_level_1) with mental stop.\"\\n            },\\n            \"time_stop\": \"Re-evaluate after H1 FY2025 earnings release or if CBE signals rate cut cycle\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"0% (no position)\",\\n            \"max_daily_execution\": \"0 shares\",\\n            \"price_limit_risk\": \"N/A - no position. If entering, ±10% daily limit would trap sellers in a downturn.\",\\n            \"liquidity_exit_plan\": \"N/A - no position. If entering, exit over 2-4 weeks using limit orders not exceeding 10% of ADV daily.\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"H1 FY2025 earnings show nominal revenue growth > 25% AND gross margin improves sequentially\",\\n            \"Debt/Equity declines below 0.80x AND Piotroski Score improves to 5+\",\\n            \"CBE cuts policy rate by 500+ bps to 22% or below\",\\n            \"Volume ratio recovers above 0.50 for 10 consecutive trading days\",\\n            \"Breakout above EGP 30.00 with volume > 2x average (genuine accumulation)\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```\\n\\n---\\n\\n## Key Monitoring Triggers\\n\\nWhile we remain in cash, I will monitor these specific conditions for a potential future entry:\\n\\n| Trigger | Current Status | Target | Action if Met |\\n|---------|---------------|--------|---------------|\\n| H1 FY2025 revenue growth | +14.7% nominal | >25% nominal | Re-evaluate entry |\\n| Gross margin trend | -5.9% YoY | Sequential improvement | Re-evaluate entry |\\n| Debt/Equity | 1.03x | <0.80x | Re-evaluate entry |\\n| Piotroski Score | 2/9 | >5/9 | Re-evaluate entry |\\n| CBE policy rate | 27.25% | <22% | Re-evaluate entry |\\n| Volume ratio | 0.048 | >0.50 | Re-evaluate entry |\\n\\n**Next review date:** After H1 FY2025 earnings release (expected ~February 2025) or if CBE signals a rate cut cycle.\\n\\n**Cash is the superior risk-adjusted option** given the asymmetric downside risk of -25% to -35% versus limited upside potential of +15% to +35% only if multiple unlikely catalysts align simultaneously.', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1199, 'prompt_tokens': 9429, 'total_tokens': 10628, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9429}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'eeb23d15-d295-49bc-b93d-690a6dceda23', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edffa-71b5-7760-952c-bec58d93251a-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9429, 'output_tokens': 1199, 'total_tokens': 10628, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN: EAST.CA\n\n## Decision Analysis\n\nAfter thorough review of all inputs, I concur with the CIO's **HOLD** decision. The bear case is decisively stronger due to:\n\n1. **Piotroski Score 2/9** – This is not a mechanical artifact; it signals genuine financial distress with deteriorating margins, surging leverage, and negative real revenue growth\n2. **Liquidity trap** – Volume ratio 0.048 means 95% below historical average; exiting a position would be extremely costly\n3. **Debt/Equity +63% YoY** with interest expense up 278% at 27.25% rates – this is a solvency concern\n4. **Rate cut catalyst is a mirage** – CBE cannot cut with CPI at 25.8% and real rates barely positive at 1.45%\n5. **75% rally on near-zero volume** – classic distribution top pattern, not accumulation\n\nThe bull case relies on valuation (7.7x P/E, 57% ROE) which is compelling, but the stock-specific risks override this. We remain 100% cash.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"EAST.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0%\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"No entry at current levels. Re-evaluate only if invalidation conditions are met.\",\n            \"conditions\": [\n                \"H1 FY2025 earnings show nominal revenue growth > 25% (positive real growth)\",\n                \"Gross margin stabilizes or improves sequentially\",\n                \"Debt/Equity declines below 0.80x\",\n                \"Piotroski Score improves to 5+\",\n                \"CBE delivers 500+ bps rate cut to 22% or below\",\n                \"Volume ratio recovers above 0.50\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A\",\n                \"note\": \"No position to exit. If we were to enter, stop-loss would be at EGP 22.00 (support_level_1) with mental stop.\"\n            },\n            \"time_stop\": \"Re-evaluate after H1 FY2025 earnings release or if CBE signals rate cut cycle\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"0% (no position)\",\n            \"max_daily_execution\": \"0 shares\",\n            \"price_limit_risk\": \"N/A - no position. If entering, ±10% daily limit would trap sellers in a downturn.\",\n            \"liquidity_exit_plan\": \"N/A - no position. If entering, exit over 2-4 weeks using limit orders not exceeding 10% of ADV daily.\"\n        },\n        \"invalidation_triggers\": [\n            \"H1 FY2025 earnings show nominal revenue growth > 25% AND gross margin improves sequentially\",\n            \"Debt/Equity declines below 0.80x AND Piotroski Score improves to 5+\",\n            \"CBE cuts policy rate by 500+ bps to 22% or below\",\n            \"Volume ratio recovers above 0.50 for 10 consecutive trading days\",\n            \"Breakout above EGP 30.00 with volume > 2x average (genuine accumulation)\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n---\n\n## Key Monitoring Triggers\n\nWhile we remain in cash, I will monitor these specific conditions for a potential future entry:\n\n| Trigger | Current Status | Target | Action if Met |\n|---------|---------------|--------|---------------|\n| H1 FY2025 revenue growth | +14.7% nominal | >25% nominal | Re-evaluate entry |\n| Gross margin trend | -5.9% YoY | Sequential improvement | Re-evaluate entry |\n| Debt/Equity | 1.03x | <0.80x | Re-evaluate entry |\n| Piotroski Score | 2/9 | >5/9 | Re-evaluate entry |\n| CBE policy rate | 27.25% | <22% | Re-evaluate entry |\n| Volume ratio | 0.048 | >0.50 | Re-evaluate entry |\n\n**Next review date:** After H1 FY2025 earnings release (expected ~February 2025) or if CBE signals a rate cut cycle.\n\n**Cash is the superior risk-adjusted option** given the asymmetric downside risk of -25% to -35% versus limited upside potential of +15% to +35% only if multiple unlikely catalysts align simultaneously.",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "EAST.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0%"
+        },
+        "entry_logic": {
+          "order_type": "N/A",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": null,
+            "price_range_high": null
+          },
+          "timing": "No entry at current levels. Re-evaluate only if invalidation conditions are met.",
+          "conditions": [
+            "H1 FY2025 earnings show nominal revenue growth > 25% (positive real growth)",
+            "Gross margin stabilizes or improves sequentially",
+            "Debt/Equity declines below 0.80x",
+            "Piotroski Score improves to 5+",
+            "CBE delivers 500+ bps rate cut to 22% or below",
+            "Volume ratio recovers above 0.50"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": null
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A",
+            "note": "No position to exit. If we were to enter, stop-loss would be at EGP 22.00 (support_level_1) with mental stop."
+          },
+          "time_stop": "Re-evaluate after H1 FY2025 earnings release or if CBE signals rate cut cycle"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "0% (no position)",
+          "max_daily_execution": "0 shares",
+          "price_limit_risk": "N/A - no position. If entering, ±10% daily limit would trap sellers in a downturn.",
+          "liquidity_exit_plan": "N/A - no position. If entering, exit over 2-4 weeks using limit orders not exceeding 10% of ADV daily."
+        },
+        "invalidation_triggers": [
+          "H1 FY2025 earnings show nominal revenue growth > 25% AND gross margin improves sequentially",
+          "Debt/Equity declines below 0.80x AND Piotroski Score improves to 5+",
+          "CBE cuts policy rate by 500+ bps to 22% or below",
+          "Volume ratio recovers above 0.50 for 10 consecutive trading days",
+          "Breakout above EGP 30.00 with volume > 2x average (genuine accumulation)"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "029c003ab307fef576e7d26d09d113ffcf63cd2bd778207771dda328af6f43c4",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 10553.470832994208,
+  "timestamp_utc": "2026-06-19T13:03:23.374784+00:00",
+  "context_items": []
+}

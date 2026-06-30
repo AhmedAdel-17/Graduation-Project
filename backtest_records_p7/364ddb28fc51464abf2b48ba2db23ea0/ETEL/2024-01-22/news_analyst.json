@@ -1,0 +1,182 @@
+{
+  "run_id": "364ddb28fc51464abf2b48ba2db23ea0",
+  "ticker": "ETEL",
+  "trade_date": "2024-01-22",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "15fdf71213e28f6e8d13fe0ef2fd8c2853b883278701c3521006df9cad62646d",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market-wide EGX news available for context\",\n        \"Silence reduces confidence significantly\",\n        \"Cannot confirm any corporate developments or market events\"\n    ],\n    \"explanation\": \"No news articles were found for ETEL.CA during the January 15-22, 2024 period, and no market-level EGX news was available. The absence of news is a bearish signal in terms of information flow, as it suggests low visibility and potential lack of catalysts. However, without any negative headlines, the sentiment remains neutral with very low confidence due to data unavailability.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-01-15 to 2024-01-22\"\n    },\n    \"risks_from_news\": [\n        \"No news coverage increases uncertainty and information asymmetry\",\n        \"Lack of market news may indicate broader EGX inactivity or data gaps\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to absence of news\"\n    ]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for the period\",\\n        \"No market-wide EGX news available for context\",\\n        \"Silence reduces confidence significantly\",\\n        \"Cannot confirm any corporate developments or market events\"\\n    ],\\n    \"explanation\": \"No news articles were found for ETEL.CA during the January 15-22, 2024 period, and no market-level EGX news was available. The absence of news is a bearish signal in terms of information flow, as it suggests low visibility and potential lack of catalysts. However, without any negative headlines, the sentiment remains neutral with very low confidence due to data unavailability.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-01-15 to 2024-01-22\"\\n    },\\n    \"risks_from_news\": [\\n        \"No news coverage increases uncertainty and information asymmetry\",\\n        \"Lack of market news may indicate broader EGX inactivity or data gaps\"\\n    ],\\n    \"catalysts_from_news\": [\\n        \"No positive catalysts identified due to absence of news\"\\n    ]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 301, 'prompt_tokens': 664, 'total_tokens': 965, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 640}, 'prompt_cache_hit_tokens': 640, 'prompt_cache_miss_tokens': 24}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'b6d56c93-89dd-4606-aa32-f858005ab056', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edc9a-f371-7871-bc88-192f9f19f09a-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 664, 'output_tokens': 301, 'total_tokens': 965, 'input_token_details': {'cache_read': 640}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market-wide EGX news available for context\",\n        \"Silence reduces confidence significantly\",\n        \"Cannot confirm any corporate developments or market events\"\n    ],\n    \"explanation\": \"No news articles were found for ETEL.CA during the January 15-22, 2024 period, and no market-level EGX news was available. The absence of news is a bearish signal in terms of information flow, as it suggests low visibility and potential lack of catalysts. However, without any negative headlines, the sentiment remains neutral with very low confidence due to data unavailability.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-01-15 to 2024-01-22\"\n    },\n    \"risks_from_news\": [\n        \"No news coverage increases uncertainty and information asymmetry\",\n        \"Lack of market news may indicate broader EGX inactivity or data gaps\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to absence of news\"\n    ]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for the period",
+        "No market-wide EGX news available for context",
+        "Silence reduces confidence significantly",
+        "Cannot confirm any corporate developments or market events",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for ETEL.CA during the January 15-22, 2024 period, and no market-level EGX news was available. The absence of news is a bearish signal in terms of information flow, as it suggests low visibility and potential lack of catalysts. However, without any negative headlines, the sentiment remains neutral with very low confidence due to data unavailability.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-01-15 to 2024-01-22"
+      },
+      "risks_from_news": [
+        "No news coverage increases uncertainty and information asymmetry",
+        "Lack of market news may indicate broader EGX inactivity or data gaps"
+      ],
+      "catalysts_from_news": [
+        "No positive catalysts identified due to absence of news"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.3664,
+        "label": "bearish",
+        "confidence": 0.6252,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for the period",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8298,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market-wide EGX news available for context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.928,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence reduces confidence significantly",
+            "source": "quoted_in_report",
+            "score": -0.8427,
+            "label": "bearish",
+            "confidence": 0.8427,
+            "model": "finbert"
+          },
+          {
+            "headline": "Cannot confirm any corporate developments or market events",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9256,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for ETEL.CA during the January 15-22, 2024 period, and no market-level E",
+            "source": "quoted_in_report",
+            "score": -0.945,
+            "label": "bearish",
+            "confidence": 0.945,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-01-15 to 2024-01-22",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9377,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news coverage increases uncertainty and information asymmetry",
+            "source": "quoted_in_report",
+            "score": -0.721,
+            "label": "bearish",
+            "confidence": 0.721,
+            "model": "finbert"
+          },
+          {
+            "headline": "Lack of market news may indicate broader EGX inactivity or data gaps",
+            "source": "quoted_in_report",
+            "score": -0.9247,
+            "label": "bearish",
+            "confidence": 0.9247,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No positive catalysts identified due to absence of news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8737,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.2382,
+        "label": "bearish",
+        "confidence": 0.5151
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "bb4cfa5a2a9634dd4b090b31139b74be399a3fbd97bd2ee9d7ed2b39ed00015a",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 3602.6171250268817,
+  "timestamp_utc": "2026-06-18T21:20:07.022985+00:00",
+  "context_items": []
+}

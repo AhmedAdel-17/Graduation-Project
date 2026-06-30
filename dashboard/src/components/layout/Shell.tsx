@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
+  Activity,
   BarChart3,
   Clock4,
   LineChart,
   Menu,
   Moon,
   PanelLeft,
+  Scale,
   Sun,
   Wallet,
   X,
@@ -50,7 +52,9 @@ interface NavItem {
 const USER_NAV: NavItem[] = [
   { to: "/predict", label: "Stock Prediction", icon: LineChart },
   { to: "/portfolio", label: "Portfolio Assistant", icon: Wallet },
+  { to: "/decisions", label: "Decisions", icon: Scale },
   { to: "/history", label: "My Analyses", icon: Clock4 },
+  { to: "/monitoring", label: "Monitoring", icon: Activity },
 ];
 
 const ADMIN_GROUP: NavItem[] = [

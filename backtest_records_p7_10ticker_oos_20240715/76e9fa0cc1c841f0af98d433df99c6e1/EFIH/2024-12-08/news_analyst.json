@@ -1,0 +1,191 @@
+{
+  "run_id": "76e9fa0cc1c841f0af98d433df99c6e1",
+  "ticker": "EFIH",
+  "trade_date": "2024-12-08",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "e7aa0a8c05bb103f9db31a297081277874fa74fcfeb5d907c3e83277adb43591",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market-wide EGX news available for context\",\n        \"Data retrieval errors indicate potential coverage gaps\",\n        \"Silence reduces confidence and implies no material developments\",\n        \"Cannot confirm any positive or negative catalysts from available data\"\n    ],\n    \"explanation\": \"No news articles were found for EFIH.CA during the December 1-8, 2024 period, and market-level EGX news was also unavailable due to data retrieval errors. The absence of news reduces confidence and suggests no significant corporate events, earnings releases, or regulatory filings occurred. Without any information to analyze, the sentiment is neutral with weak strength, reflecting a data void rather than a clear market signal.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-12-01 to 2024-12-08\"\n    },\n    \"risks_from_news\": [\n        \"Lack of news coverage may indicate low liquidity or investor attention risk\",\n        \"Data gaps could mask negative developments not captured in the system\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to absence of news\"\n    ]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for the period\",\\n        \"No market-wide EGX news available for context\",\\n        \"Data retrieval errors indicate potential coverage gaps\",\\n        \"Silence reduces confidence and implies no material developments\",\\n        \"Cannot confirm any positive or negative catalysts from available data\"\\n    ],\\n    \"explanation\": \"No news articles were found for EFIH.CA during the December 1-8, 2024 period, and market-level EGX news was also unavailable due to data retrieval errors. The absence of news reduces confidence and suggests no significant corporate events, earnings releases, or regulatory filings occurred. Without any information to analyze, the sentiment is neutral with weak strength, reflecting a data void rather than a clear market signal.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-12-01 to 2024-12-08\"\\n    },\\n    \"risks_from_news\": [\\n        \"Lack of news coverage may indicate low liquidity or investor attention risk\",\\n        \"Data gaps could mask negative developments not captured in the system\"\\n    ],\\n    \"catalysts_from_news\": [\\n        \"No positive catalysts identified due to absence of news\"\\n    ]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 323, 'prompt_tokens': 664, 'total_tokens': 987, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 664}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '54476aba-314c-4d66-8f21-1cd016bf4fe7', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee047-57b0-7811-999e-02d64eeeb4d5-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 664, 'output_tokens': 323, 'total_tokens': 987, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market-wide EGX news available for context\",\n        \"Data retrieval errors indicate potential coverage gaps\",\n        \"Silence reduces confidence and implies no material developments\",\n        \"Cannot confirm any positive or negative catalysts from available data\"\n    ],\n    \"explanation\": \"No news articles were found for EFIH.CA during the December 1-8, 2024 period, and market-level EGX news was also unavailable due to data retrieval errors. The absence of news reduces confidence and suggests no significant corporate events, earnings releases, or regulatory filings occurred. Without any information to analyze, the sentiment is neutral with weak strength, reflecting a data void rather than a clear market signal.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-12-01 to 2024-12-08\"\n    },\n    \"risks_from_news\": [\n        \"Lack of news coverage may indicate low liquidity or investor attention risk\",\n        \"Data gaps could mask negative developments not captured in the system\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to absence of news\"\n    ]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for the period",
+        "No market-wide EGX news available for context",
+        "Data retrieval errors indicate potential coverage gaps",
+        "Silence reduces confidence and implies no material developments",
+        "Cannot confirm any positive or negative catalysts from available data",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for EFIH.CA during the December 1-8, 2024 period, and market-level EGX news was also unavailable due to data retrieval errors. The absence of news reduces confidence and suggests no significant corporate events, earnings releases, or regulatory filings occurred. Without any information to analyze, the sentiment is neutral with weak strength, reflecting a data void rather than a clear market signal.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-12-01 to 2024-12-08"
+      },
+      "risks_from_news": [
+        "Lack of news coverage may indicate low liquidity or investor attention risk",
+        "Data gaps could mask negative developments not captured in the system"
+      ],
+      "catalysts_from_news": [
+        "No positive catalysts identified due to absence of news"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.3498,
+        "label": "bearish",
+        "confidence": 0.6225,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for the period",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8298,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market-wide EGX news available for context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.928,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data retrieval errors indicate potential coverage gaps",
+            "source": "quoted_in_report",
+            "score": -0.938,
+            "label": "bearish",
+            "confidence": 0.938,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence reduces confidence and implies no material developments",
+            "source": "quoted_in_report",
+            "score": -0.6408,
+            "label": "bearish",
+            "confidence": 0.6408,
+            "model": "finbert"
+          },
+          {
+            "headline": "Cannot confirm any positive or negative catalysts from available data",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8653,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for EFIH.CA during the December 1-8, 2024 period, and market-level EGX n",
+            "source": "quoted_in_report",
+            "score": -0.9638,
+            "label": "bearish",
+            "confidence": 0.9638,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-12-01 to 2024-12-08",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9414,
+            "model": "finbert"
+          },
+          {
+            "headline": "Lack of news coverage may indicate low liquidity or investor attention risk",
+            "source": "quoted_in_report",
+            "score": -0.9104,
+            "label": "bearish",
+            "confidence": 0.9104,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data gaps could mask negative developments not captured in the system",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.6241,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No positive catalysts identified due to absence of news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8737,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.2274,
+        "label": "bearish",
+        "confidence": 0.5135
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "7d04e6b6abc8743e8c7011f19c53e3641d16af5827706ab8a3a1a1e3415cd946",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 4042.4082919489592,
+  "timestamp_utc": "2026-06-19T14:27:17.027026+00:00",
+  "context_items": []
+}

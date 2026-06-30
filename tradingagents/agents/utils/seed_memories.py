@@ -378,9 +378,44 @@ EGX_SEED_MEMORIES: List[Dict[str, Any]] = [
 ]
 
 
+def _compute_valid_after_date(entry: Dict[str, Any]) -> str:
+    """Compute valid_after_date for a seed entry.
+
+    Seeds contain outcome/hindsight information (they know what happened after
+    trade_date over the horizon). Therefore valid_after_date = trade_date + horizon_days.
+    This prevents them from being retrieved for decisions BEFORE the outcome was known.
+    """
+    from datetime import datetime, timedelta
+
+    trade_date = entry.get("trade_date")
+    if not trade_date:
+        return "1900-01-01"  # always valid if no date
+
+    # Extract horizon from the outcome JSON
+    horizon_days = 20  # default
+    outcome_str = entry.get("outcome")
+    if outcome_str:
+        try:
+            outcome = json.loads(outcome_str)
+            horizon_days = outcome.get("horizon_days", 20) or 20
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    dt = datetime.strptime(trade_date, "%Y-%m-%d")
+    return (dt + timedelta(days=horizon_days)).strftime("%Y-%m-%d")
+
+
 def get_seeds_for_agent(agent_name: str) -> List[Dict[str, Any]]:
-    """Return only the seeds destined for a given agent collection."""
-    return [m for m in EGX_SEED_MEMORIES if m.get("agent_name") == agent_name]
+    """Return only the seeds destined for a given agent collection.
+
+    Each returned entry includes ``valid_after_date`` computed as
+    ``trade_date + horizon_days`` (seeds contain outcome knowledge).
+    """
+    seeds = [m for m in EGX_SEED_MEMORIES if m.get("agent_name") == agent_name]
+    for s in seeds:
+        if "valid_after_date" not in s:
+            s["valid_after_date"] = _compute_valid_after_date(s)
+    return seeds
 
 
 def all_agent_names() -> List[str]:

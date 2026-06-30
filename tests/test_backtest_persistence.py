@@ -23,6 +23,17 @@ import pytest
 
 from tradingagents.db import backtest_writer as bw
 
+try:
+    import psycopg2  # noqa: F401
+    _HAS_PSYCOPG2 = True
+except ImportError:
+    _HAS_PSYCOPG2 = False
+
+_skip_no_psycopg2 = pytest.mark.skipif(
+    not _HAS_PSYCOPG2,
+    reason="psycopg2 not installed (optional dependency)",
+)
+
 
 # ─── parsers ───────────────────────────────────────────────────────────────────
 
@@ -284,6 +295,7 @@ def test_write_backtest_trades_noop_when_postgres_unavailable(monkeypatch):
     cursor_mock.assert_not_called()
 
 
+@_skip_no_psycopg2
 def test_write_backtest_trades_uses_execute_values(monkeypatch):
     monkeypatch.setattr(bw, "is_postgres_available", lambda: True)
 
@@ -323,6 +335,7 @@ def test_write_backtest_trades_empty_returns_zero(monkeypatch):
     cursor_mock.assert_not_called()
 
 
+@_skip_no_psycopg2
 def test_write_backtest_trades_swallows_cursor_exception(monkeypatch):
     monkeypatch.setattr(bw, "is_postgres_available", lambda: True)
 

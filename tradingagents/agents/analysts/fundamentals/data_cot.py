@@ -18,7 +18,7 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from .schemas import FundamentalAnalysisReport
-from .sector_config import SectorConfig, METRIC_CONTEXT_NOTES
+from .sector_config import SectorConfig, METRIC_CONTEXT_NOTES, NAV_INFLATION_NOTE
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +26,18 @@ logger = logging.getLogger(__name__)
 # Below this, there is too little data for LLM interpretation to add value.
 _MIN_CONFIDENCE_FOR_COT = 20
 
+# Threshold for classifying the rate regime (P2: regime-aware EY interpretation).
+# CBE policy rate above this value → "high" inflation regime.
+# Below or equal → "normal".  Configurable via config but defaulting to 15%.
+_HIGH_RATE_REGIME_THRESHOLD = 0.15
+
 
 def build_evidence_pack(
     report: FundamentalAnalysisReport,
     sector_cfg: SectorConfig,
     freq: str = "annual",
     prior_memory_context: Optional[str] = None,
+    momentum_pack: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Assemble a structured evidence pack from a deterministic FundamentalAnalysisReport.
@@ -89,8 +95,21 @@ def build_evidence_pack(
         "risk_free_rate_effective_date": getattr(report, "risk_free_rate_effective_date", ""),
         "supplemental_context": getattr(report, "supplemental_context", {}) or {},
     }
+
+    # P2: Derive inflation_regime from date-aware CBE rate (same source as EY spread).
+    rfr_value = getattr(report, "risk_free_rate_value", None)
+    if rfr_value is not None and rfr_value > _HIGH_RATE_REGIME_THRESHOLD:
+        pack["inflation_regime"] = "high"
+    else:
+        pack["inflation_regime"] = "normal"
+    pack["risk_free_rate_value"] = rfr_value
+
     if prior_memory_context:
         pack["prior_memory_context"] = prior_memory_context
+
+    # P3: Momentum and relative strength data
+    if momentum_pack:
+        pack["momentum_pack"] = momentum_pack
 
     # Format the narrative for LLM consumption
     pack["narrative"] = format_evidence_narrative(pack)
@@ -184,8 +203,12 @@ def format_evidence_narrative(pack: Dict[str, Any]) -> str:
     # ── Header ────────────────────────────────────────────────────────────────
     lines.append(f"EVIDENCE PACK — {ticker} | {fiscal}")
     lines.append(f"Sector: {sector.upper()} | Analysis Date: {pack.get('analysis_date', '')}")
+    inflation_regime = pack.get("inflation_regime", "normal")
+    rfr_val = pack.get("risk_free_rate_value")
+    rfr_display = f"{rfr_val:.1%}" if rfr_val is not None else "N/A"
     lines.append(f"Data Confidence: {dc}/100 | Signal Coherence: {sc}/100")
     lines.append(f"Deterministic Health Heuristic: {health_heuristic}")
+    lines.append(f"Rate Regime: {inflation_regime.upper()} (CBE policy rate: {rfr_display})")
     if is_quarterly:
         lines.append(
             "ANALYSIS MODE: QUARTERLY — prediction horizon is next quarter vs current quarter (QoQ). "
@@ -423,6 +446,54 @@ def format_evidence_narrative(pack: Dict[str, Any]) -> str:
     if cs_balance_lines:
         lines.append("BALANCE SHEET STRUCTURE (% of Total Assets)")
         lines.extend(cs_balance_lines)
+        lines.append("")
+
+    # ── P3: Momentum & Relative Strength ─────────────────────────────────
+    momentum = pack.get("momentum_pack")
+    if momentum:
+        lines.append("PRICE MOMENTUM & RELATIVE STRENGTH")
+        r20 = momentum.get("return_20d")
+        r60 = momentum.get("return_60d")
+        r120 = momentum.get("return_120d")
+        lines.append(
+            f"  20-day return: {_fmt(r20, pct=True)} | "
+            f"60-day: {_fmt(r60, pct=True)} | "
+            f"120-day: {_fmt(r120, pct=True)}"
+        )
+        vs20 = momentum.get("price_vs_sma20")
+        vs50 = momentum.get("price_vs_sma50")
+        vs200 = momentum.get("price_vs_sma200")
+        lines.append(
+            f"  Price vs SMA20: {_fmt(vs20, pct=True)} | "
+            f"vs SMA50: {_fmt(vs50, pct=True)} | "
+            f"vs SMA200: {_fmt(vs200, pct=True)}"
+        )
+        slope = momentum.get("trend_slope_60d")
+        lines.append(f"  Trend slope (60d, annualized): {_fmt(slope, pct=True)}")
+        vol_ratio = momentum.get("volume_ratio_20d")
+        vol_conf = momentum.get("volume_confirmed", False)
+        vol_label = "confirmed" if vol_conf else "not confirmed"
+        lines.append(
+            f"  Volume ratio (vs 20d avg): {_fmt(vol_ratio)}x ({vol_label})"
+        )
+        mom_label = momentum.get("momentum_label", "N/A")
+        lines.append(f"  Momentum: {mom_label.upper()}")
+
+        rs60 = momentum.get("rs_60d")
+        rs_label = momentum.get("rs_label", "insufficient_data")
+        if rs60 is not None:
+            lines.append(
+                f"  Relative strength vs EGX30 (60d): {rs60:+.1%}pp ({rs_label.upper()})"
+            )
+        else:
+            lines.append(f"  Relative strength vs EGX30: {rs_label.upper()}")
+        lines.append("")
+
+    # ── P3: NAV Inflation Note (real_estate/holdings in high-rate regime) ─
+    if (inflation_regime == "high"
+            and sector in ("real_estate", "holdings")
+            and momentum is not None):
+        lines.append(NAV_INFLATION_NOTE)
         lines.append("")
 
     # ── Legend ────────────────────────────────────────────────────────────

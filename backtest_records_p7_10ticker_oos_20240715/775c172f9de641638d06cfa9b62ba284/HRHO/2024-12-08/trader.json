@@ -1,0 +1,118 @@
+{
+  "run_id": "775c172f9de641638d06cfa9b62ba284",
+  "ticker": "HRHO",
+  "trade_date": "2024-12-08",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "188b30761dec938089a17340aa2e3df9529437ca4db4285a396b2c58c46e7e21",
+  "raw_output": "# EXECUTION PLAN: HRHO.CA\n\n## Analysis & Decision Rationale\n\nAfter synthesizing all available data — macro environment, fundamental ratios, technical signals, sentiment, and the Investment Committee's decision memo — I concur with the **HOLD** recommendation.\n\n### Why HOLD (not BUY)\n\nThe bear case is structurally decisive:\n\n1. **Interest expense crisis**: 41.1% of revenue consumed by interest costs with CBE at 27.25% and no cuts expected. This is not a cyclical headwind — it's a business model impairment.\n\n2. **Negative earnings yield spread**: Earnings yield of 7.3% vs risk-free rate of 27.25% = -20 percentage point spread. The stock would need to fall to ~EGP 8.0 (P/E ~5.3x) to offer a competitive yield.\n\n3. **Liquidity risk**: Current ratio 0.83x with debt/equity 3.45x in a high-rate regime. This is a genuine solvency concern, not a valuation debate.\n\n4. **Technical deterioration**: -8.6% return over 20 days, price below SMA20 (-3.7%) and SMA50 (-6.1%), volume at 42% of normal — no institutional sponsorship.\n\n5. **Sentiment vacuum**: Zero news coverage, neutral-to-bearish transformer sentiment. No catalysts to drive re-rating.\n\n### Why not SELL\n\nWe hold zero shares. SELL is not actionable.\n\n### The Bull Case Weakness\n\nThe bull thesis relies on \"mean reversion\" and \"catalyst hopes\" but offers no mechanism for how this company escapes its debt trap. Revenue growth of 58% is being destroyed by interest costs growing 55.6% — negative operating leverage. The 2.5:1 risk/reward assumes a benign outcome that ignores the fundamental trajectory.\n\n### Invalidation Triggers to Monitor\n\n- CBE rate cut below 20%\n- Debt/equity falls below 2.0x\n- Net margin stabilizes above 15% for 2 consecutive quarters\n- P/E falls below 6x\n- Dividend reinstated with yield >5%\n- Volume recovers above 80% of 20-day average for 20+ days\n\nReassess after FY2024 earnings (Feb-Mar 2025).\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"HRHO.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain in cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Do not initiate position under current conditions\",\n            \"conditions\": [\n                \"CBE rate cut below 20%\",\n                \"Debt-to-equity falls below 2.0x\",\n                \"Net margin stabilizes above 15% for 2 consecutive quarters\",\n                \"P/E falls below 6x\",\n                \"Dividend reinstated with yield above 5%\",\n                \"Volume recovers above 80% of 20-day average for 20+ consecutive trading days\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A\",\n                \"note\": \"No position to exit\"\n            },\n            \"time_stop\": \"Reassess after FY2024 earnings (Feb-Mar 2025)\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A\",\n            \"price_limit_risk\": \"If monitoring for future entry: avoid buying near ±10% limit. If stock gaps up 10% on no news, wait for pullback. If stock gaps down 10%, wait for stabilization before reassessing entry.\",\n            \"liquidity_exit_plan\": \"If future position becomes necessary: scale out over 10-15 days using limit orders at market+2%, 10% per day, iceberg orders, avoid first/last 30 minutes. Expect 3-5% slippage on full exit.\"\n        },\n        \"invalidation_triggers\": [\n            \"CBE rate cut below 20% — would reduce interest expense burden\",\n            \"Debt-to-equity falls below 2.0x — meaningful deleveraging\",\n            \"Net margin stabilizes above 15% for 2 consecutive quarters\",\n            \"P/E falls below 6x — genuine value opportunity\",\n            \"Dividend reinstated with yield above 5%\",\n            \"Volume recovers above 80% of 20-day average for 20+ days\",\n            \"Company announces debt restructuring or equity raise to reduce leverage\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n## Summary\n\n| Component | Decision |\n|-----------|----------|\n| **Action** | HOLD (stay in cash) |\n| **Conviction** | High (85%) |\n| **Key Risk** | Missing 18-40% upside if bull case materializes |\n| **Key Reason** | Interest expense 41% of revenue, current ratio 0.83x, debt/equity 3.45x, -20pp earnings yield spread |\n| **Next Review** | FY2024 earnings (Feb-Mar 2025) |\n| **Deploy Cash** | EGX30 bullish trend offers better risk/reward in lower-leverage, positive-margin names |\n\n**FINAL TRANSACTION PROPOSAL: **HOLD****",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN: HRHO.CA\\n\\n## Analysis & Decision Rationale\\n\\nAfter synthesizing all available data — macro environment, fundamental ratios, technical signals, sentiment, and the Investment Committee\\'s decision memo — I concur with the **HOLD** recommendation.\\n\\n### Why HOLD (not BUY)\\n\\nThe bear case is structurally decisive:\\n\\n1. **Interest expense crisis**: 41.1% of revenue consumed by interest costs with CBE at 27.25% and no cuts expected. This is not a cyclical headwind — it\\'s a business model impairment.\\n\\n2. **Negative earnings yield spread**: Earnings yield of 7.3% vs risk-free rate of 27.25% = -20 percentage point spread. The stock would need to fall to ~EGP 8.0 (P/E ~5.3x) to offer a competitive yield.\\n\\n3. **Liquidity risk**: Current ratio 0.83x with debt/equity 3.45x in a high-rate regime. This is a genuine solvency concern, not a valuation debate.\\n\\n4. **Technical deterioration**: -8.6% return over 20 days, price below SMA20 (-3.7%) and SMA50 (-6.1%), volume at 42% of normal — no institutional sponsorship.\\n\\n5. **Sentiment vacuum**: Zero news coverage, neutral-to-bearish transformer sentiment. No catalysts to drive re-rating.\\n\\n### Why not SELL\\n\\nWe hold zero shares. SELL is not actionable.\\n\\n### The Bull Case Weakness\\n\\nThe bull thesis relies on \"mean reversion\" and \"catalyst hopes\" but offers no mechanism for how this company escapes its debt trap. Revenue growth of 58% is being destroyed by interest costs growing 55.6% — negative operating leverage. The 2.5:1 risk/reward assumes a benign outcome that ignores the fundamental trajectory.\\n\\n### Invalidation Triggers to Monitor\\n\\n- CBE rate cut below 20%\\n- Debt/equity falls below 2.0x\\n- Net margin stabilizes above 15% for 2 consecutive quarters\\n- P/E falls below 6x\\n- Dividend reinstated with yield >5%\\n- Volume recovers above 80% of 20-day average for 20+ days\\n\\nReassess after FY2024 earnings (Feb-Mar 2025).\\n\\n---\\n\\n## Structured Execution Plan\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"HRHO.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — remain in cash\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A — no entry\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": null,\\n                \"price_range_high\": null\\n            },\\n            \"timing\": \"Do not initiate position under current conditions\",\\n            \"conditions\": [\\n                \"CBE rate cut below 20%\",\\n                \"Debt-to-equity falls below 2.0x\",\\n                \"Net margin stabilizes above 15% for 2 consecutive quarters\",\\n                \"P/E falls below 6x\",\\n                \"Dividend reinstated with yield above 5%\",\\n                \"Volume recovers above 80% of 20-day average for 20+ consecutive trading days\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A\",\\n                \"note\": \"No position to exit\"\\n            },\\n            \"time_stop\": \"Reassess after FY2024 earnings (Feb-Mar 2025)\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"N/A — no position\",\\n            \"max_daily_execution\": \"N/A\",\\n            \"price_limit_risk\": \"If monitoring for future entry: avoid buying near ±10% limit. If stock gaps up 10% on no news, wait for pullback. If stock gaps down 10%, wait for stabilization before reassessing entry.\",\\n            \"liquidity_exit_plan\": \"If future position becomes necessary: scale out over 10-15 days using limit orders at market+2%, 10% per day, iceberg orders, avoid first/last 30 minutes. Expect 3-5% slippage on full exit.\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"CBE rate cut below 20% — would reduce interest expense burden\",\\n            \"Debt-to-equity falls below 2.0x — meaningful deleveraging\",\\n            \"Net margin stabilizes above 15% for 2 consecutive quarters\",\\n            \"P/E falls below 6x — genuine value opportunity\",\\n            \"Dividend reinstated with yield above 5%\",\\n            \"Volume recovers above 80% of 20-day average for 20+ days\",\\n            \"Company announces debt restructuring or equity raise to reduce leverage\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```\\n\\n## Summary\\n\\n| Component | Decision |\\n|-----------|----------|\\n| **Action** | HOLD (stay in cash) |\\n| **Conviction** | High (85%) |\\n| **Key Risk** | Missing 18-40% upside if bull case materializes |\\n| **Key Reason** | Interest expense 41% of revenue, current ratio 0.83x, debt/equity 3.45x, -20pp earnings yield spread |\\n| **Next Review** | FY2024 earnings (Feb-Mar 2025) |\\n| **Deploy Cash** | EGX30 bullish trend offers better risk/reward in lower-leverage, positive-margin names |\\n\\n**FINAL TRANSACTION PROPOSAL: **HOLD****', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1360, 'prompt_tokens': 9671, 'total_tokens': 11031, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9671}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '1013d451-1429-40d0-8064-cc3a0308f2cb', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019ee070-acd3-7640-844d-f2ca5d096f53-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9671, 'output_tokens': 1360, 'total_tokens': 11031, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN: HRHO.CA\n\n## Analysis & Decision Rationale\n\nAfter synthesizing all available data — macro environment, fundamental ratios, technical signals, sentiment, and the Investment Committee's decision memo — I concur with the **HOLD** recommendation.\n\n### Why HOLD (not BUY)\n\nThe bear case is structurally decisive:\n\n1. **Interest expense crisis**: 41.1% of revenue consumed by interest costs with CBE at 27.25% and no cuts expected. This is not a cyclical headwind — it's a business model impairment.\n\n2. **Negative earnings yield spread**: Earnings yield of 7.3% vs risk-free rate of 27.25% = -20 percentage point spread. The stock would need to fall to ~EGP 8.0 (P/E ~5.3x) to offer a competitive yield.\n\n3. **Liquidity risk**: Current ratio 0.83x with debt/equity 3.45x in a high-rate regime. This is a genuine solvency concern, not a valuation debate.\n\n4. **Technical deterioration**: -8.6% return over 20 days, price below SMA20 (-3.7%) and SMA50 (-6.1%), volume at 42% of normal — no institutional sponsorship.\n\n5. **Sentiment vacuum**: Zero news coverage, neutral-to-bearish transformer sentiment. No catalysts to drive re-rating.\n\n### Why not SELL\n\nWe hold zero shares. SELL is not actionable.\n\n### The Bull Case Weakness\n\nThe bull thesis relies on \"mean reversion\" and \"catalyst hopes\" but offers no mechanism for how this company escapes its debt trap. Revenue growth of 58% is being destroyed by interest costs growing 55.6% — negative operating leverage. The 2.5:1 risk/reward assumes a benign outcome that ignores the fundamental trajectory.\n\n### Invalidation Triggers to Monitor\n\n- CBE rate cut below 20%\n- Debt/equity falls below 2.0x\n- Net margin stabilizes above 15% for 2 consecutive quarters\n- P/E falls below 6x\n- Dividend reinstated with yield >5%\n- Volume recovers above 80% of 20-day average for 20+ days\n\nReassess after FY2024 earnings (Feb-Mar 2025).\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"HRHO.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain in cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Do not initiate position under current conditions\",\n            \"conditions\": [\n                \"CBE rate cut below 20%\",\n                \"Debt-to-equity falls below 2.0x\",\n                \"Net margin stabilizes above 15% for 2 consecutive quarters\",\n                \"P/E falls below 6x\",\n                \"Dividend reinstated with yield above 5%\",\n                \"Volume recovers above 80% of 20-day average for 20+ consecutive trading days\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A\",\n                \"note\": \"No position to exit\"\n            },\n            \"time_stop\": \"Reassess after FY2024 earnings (Feb-Mar 2025)\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A\",\n            \"price_limit_risk\": \"If monitoring for future entry: avoid buying near ±10% limit. If stock gaps up 10% on no news, wait for pullback. If stock gaps down 10%, wait for stabilization before reassessing entry.\",\n            \"liquidity_exit_plan\": \"If future position becomes necessary: scale out over 10-15 days using limit orders at market+2%, 10% per day, iceberg orders, avoid first/last 30 minutes. Expect 3-5% slippage on full exit.\"\n        },\n        \"invalidation_triggers\": [\n            \"CBE rate cut below 20% — would reduce interest expense burden\",\n            \"Debt-to-equity falls below 2.0x — meaningful deleveraging\",\n            \"Net margin stabilizes above 15% for 2 consecutive quarters\",\n            \"P/E falls below 6x — genuine value opportunity\",\n            \"Dividend reinstated with yield above 5%\",\n            \"Volume recovers above 80% of 20-day average for 20+ days\",\n            \"Company announces debt restructuring or equity raise to reduce leverage\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n## Summary\n\n| Component | Decision |\n|-----------|----------|\n| **Action** | HOLD (stay in cash) |\n| **Conviction** | High (85%) |\n| **Key Risk** | Missing 18-40% upside if bull case materializes |\n| **Key Reason** | Interest expense 41% of revenue, current ratio 0.83x, debt/equity 3.45x, -20pp earnings yield spread |\n| **Next Review** | FY2024 earnings (Feb-Mar 2025) |\n| **Deploy Cash** | EGX30 bullish trend offers better risk/reward in lower-leverage, positive-margin names |\n\n**FINAL TRANSACTION PROPOSAL: **HOLD****",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "HRHO.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — remain in cash"
+        },
+        "entry_logic": {
+          "order_type": "N/A — no entry",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": null,
+            "price_range_high": null
+          },
+          "timing": "Do not initiate position under current conditions",
+          "conditions": [
+            "CBE rate cut below 20%",
+            "Debt-to-equity falls below 2.0x",
+            "Net margin stabilizes above 15% for 2 consecutive quarters",
+            "P/E falls below 6x",
+            "Dividend reinstated with yield above 5%",
+            "Volume recovers above 80% of 20-day average for 20+ consecutive trading days"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": null
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A",
+            "note": "No position to exit"
+          },
+          "time_stop": "Reassess after FY2024 earnings (Feb-Mar 2025)"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "N/A — no position",
+          "max_daily_execution": "N/A",
+          "price_limit_risk": "If monitoring for future entry: avoid buying near ±10% limit. If stock gaps up 10% on no news, wait for pullback. If stock gaps down 10%, wait for stabilization before reassessing entry.",
+          "liquidity_exit_plan": "If future position becomes necessary: scale out over 10-15 days using limit orders at market+2%, 10% per day, iceberg orders, avoid first/last 30 minutes. Expect 3-5% slippage on full exit."
+        },
+        "invalidation_triggers": [
+          "CBE rate cut below 20% — would reduce interest expense burden",
+          "Debt-to-equity falls below 2.0x — meaningful deleveraging",
+          "Net margin stabilizes above 15% for 2 consecutive quarters",
+          "P/E falls below 6x — genuine value opportunity",
+          "Dividend reinstated with yield above 5%",
+          "Volume recovers above 80% of 20-day average for 20+ days",
+          "Company announces debt restructuring or equity raise to reduce leverage"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "dbd111dc5cc0b8d08bb7e8809bcd412b1dafa13f0d91dee7daa96b76c1eec73f",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 11984.233583090827,
+  "timestamp_utc": "2026-06-19T15:12:33.187236+00:00",
+  "context_items": []
+}

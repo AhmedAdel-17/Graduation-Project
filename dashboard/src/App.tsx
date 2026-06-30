@@ -4,6 +4,8 @@ import { Shell } from "./components/layout/Shell";
 import { HomeScreen } from "./features/home/HomeScreen";
 import { BacktestScreen } from "./features/backtest/BacktestScreen";
 import { HistoryScreen } from "./features/history/HistoryScreen";
+import { InvestorPage } from "./features/investor/InvestorPage";
+import { MonitoringPage } from "./features/monitoring/MonitoringPage";
 
 // Admin Monitoring Suite — isolated, lazy-loaded, owns its own shell.
 // Lives entirely under /admin/* so the live dashboard below is untouched.
@@ -56,6 +58,9 @@ function MainApp() {
           <Route path="/portfolio/__blocks" element={<BlocksDevPage />} />
           <Route path="/backtest" element={<BacktestScreen />} />
           <Route path="/history" element={<HistoryScreen />} />
+          <Route path="/decisions" element={<InvestorPage />} />
+          <Route path="/investor" element={<Navigate to="/decisions" replace />} />
+          <Route path="/monitoring" element={<MonitoringPage />} />
           <Route path="*" element={<Navigate to="/predict" replace />} />
         </Routes>
       </Suspense>

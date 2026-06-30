@@ -1,0 +1,41 @@
+{
+  "run_id": "11584ae2a2a543478aa44ceef0497c1f",
+  "ticker": "EAST",
+  "trade_date": "2024-11-27",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "a3d3ffacf453cd38878760f60fb1129643b82a9651282073ee1adefbae0cf00b",
+  "raw_output": "```json\n{\n    \"narrative\": \"No social media posts were found for EAST.CA on Reddit within the analysis window, resulting in a complete absence of retail investor discussion. There are no Arabic or English signals to assess, and no themes, tone, or intensity can be derived from the available data.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No social media posts were found for EAST.CA on Reddit within the analysis window, resulting in a complete absence of retail investor discussion. There are no Arabic or English signals to assess, and no themes, tone, or intensity can be derived from the available data.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 73, 'prompt_tokens': 611, 'total_tokens': 684, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 99}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'da6970bc-6c45-4497-bec1-e3a80a688842', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edff0-76d2-7b80-8735-1ba6c000f1f1-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 611, 'output_tokens': 73, 'total_tokens': 684, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for EAST.CA]\nNo social media posts were found for EAST.CA on Reddit within the analysis window, resulting in a complete absence of retail investor discussion. There are no Arabic or English signals to assess, and no themes, tone, or intensity can be derived from the available data.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"EAST.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No social media posts were found for EAST.CA on Reddit within the analysis window, resulting in a complete absence of retail investor discussion. There are no Arabic or English signals to assess, and no themes, tone, or intensity can be derived from the available data.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "cbefe8b6b686269ed58f755c7591c7a035605993ea562d4808b39b19b627978a",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 1997.5813330383971,
+  "timestamp_utc": "2026-06-19T12:52:20.768850+00:00",
+  "context_items": []
+}

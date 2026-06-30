@@ -1,0 +1,117 @@
+{
+  "run_id": "522cc7f6a40c42b399450184229a5fc6",
+  "ticker": "FWRY",
+  "trade_date": "2024-10-06",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "81c5134f77b7bfcfed3726cd046c1567e5cdf184113202bee87cfe8c24a1d958",
+  "raw_output": "# EXECUTION PLAN: FWRY.CA\n\n## Analysis Summary\n\nAfter thorough review of all signals, I concur with the research team's **HOLD** recommendation. The stock presents a textbook case of asymmetric downside risk:\n\n### Key Decision Factors\n\n1. **Valuation Extremes**: 47.2x P/E in a 27.25% rate environment creates a -25.1% earnings yield spread — this is unsustainable even for high-growth EM names\n2. **Deteriorating Quality**: Debt-to-equity rising (+7.5% YoY), Piotroski score of 4/9, and minimal current ratio (1.34x) signal financial fragility\n3. **Technical Exhaustion**: 27.4% rally on declining volume (volume ratio 0.87x) — classic low-quality momentum vulnerable to reversal\n4. **Information Vacuum**: Zero news coverage, no analyst coverage, no corporate updates — paying a premium for opacity\n5. **Macro Headwinds**: CBE at 27.25% with no imminent cuts, EGP depreciation risk 15-20%, negative real returns persist\n\n### Why Not BUY\n\nThe bull case requires 50%+ sustained growth to justify current prices — a fragile thesis. Even if next quarter delivers 60% net income growth, forward P/E would still be ~35x, leaving minimal upside with significant downside risk.\n\n### Why Not SELL\n\nWe hold no position (100% cash). SELL is not actionable.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"FWRY.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — maintain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"limit\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": 6.50,\n                \"price_range_high\": 7.50\n            },\n            \"timing\": \"No entry at current levels. Reassess if price declines to EGP 6.50-7.50 range (implied 30-35x forward P/E on 50% growth). Monitor next quarterly earnings release.\",\n            \"conditions\": [\n                \"Price declines to EGP 6.50-7.50 range (35-40% below current)\",\n                \"Next quarterly net income growth exceeds 60% YoY\",\n                \"Debt-to-equity stabilizes or declines below 1.4x\",\n                \"Volume ratio exceeds 1.0x for 10+ consecutive days\",\n                \"At least one analyst initiates coverage with BUY rating\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"mental_stop\",\n                \"note\": \"No position to exit. If entered at EGP 6.50-7.50, set hard stop at EGP 5.50 (-15% from entry) using limit order.\"\n            },\n            \"time_stop\": \"Reassess after next quarterly earnings (expected Q4 2024 or Q1 2025). If no entry triggered within 6 months, remove from active watchlist.\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"0 shares — no buying activity\",\n            \"price_limit_risk\": \"If stock hits +10% limit (upside circuit breaker), do not chase. If stock hits -10% limit (downside circuit breaker), reassess for potential entry at lower levels.\",\n            \"liquidity_exit_plan\": \"N/A — no position to exit. For future entry: use limit orders only, 4-6 tranches over 2-4 weeks, accept 3-5% total slippage.\"\n        },\n        \"invalidation_triggers\": [\n            \"CBE rate cut >500bps to 22.25% or below — improves earnings yield spread\",\n            \"Next quarterly net income growth >80% YoY — justifies premium valuation\",\n            \"Gross margin expansion above 65% — signals pricing power sustainability\",\n            \"Debt-to-equity reduction below 1.2x — improves financial health\",\n            \"Analyst coverage initiation with BUY rating — reduces information risk\",\n            \"Volume ratio >1.5x for 20 consecutive days — confirms institutional accumulation\",\n            \"Price decline to 25-30x P/E level (-45% to -55% from current) — creates value entry\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n## Watchlist Monitoring Parameters\n\n| Parameter | Trigger Level | Action |\n|-----------|--------------|--------|\n| Price Level | EGP 6.50-7.50 | Reassess entry |\n| Next Earnings | Net income growth >60% YoY | Upgrade to BUY if price also in entry zone |\n| Debt/Equity | Below 1.4x | Positive signal |\n| Volume Ratio | >1.0x for 10 days | Confirms renewed interest |\n| Analyst Coverage | Any initiation | Re-evaluate thesis |\n| CBE Rate | Cut to ≤22.25% | Improves macro backdrop |\n\n**Next Review Date**: Upon next quarterly earnings release or if any invalidation trigger is activated.",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN: FWRY.CA\\n\\n## Analysis Summary\\n\\nAfter thorough review of all signals, I concur with the research team\\'s **HOLD** recommendation. The stock presents a textbook case of asymmetric downside risk:\\n\\n### Key Decision Factors\\n\\n1. **Valuation Extremes**: 47.2x P/E in a 27.25% rate environment creates a -25.1% earnings yield spread — this is unsustainable even for high-growth EM names\\n2. **Deteriorating Quality**: Debt-to-equity rising (+7.5% YoY), Piotroski score of 4/9, and minimal current ratio (1.34x) signal financial fragility\\n3. **Technical Exhaustion**: 27.4% rally on declining volume (volume ratio 0.87x) — classic low-quality momentum vulnerable to reversal\\n4. **Information Vacuum**: Zero news coverage, no analyst coverage, no corporate updates — paying a premium for opacity\\n5. **Macro Headwinds**: CBE at 27.25% with no imminent cuts, EGP depreciation risk 15-20%, negative real returns persist\\n\\n### Why Not BUY\\n\\nThe bull case requires 50%+ sustained growth to justify current prices — a fragile thesis. Even if next quarter delivers 60% net income growth, forward P/E would still be ~35x, leaving minimal upside with significant downside risk.\\n\\n### Why Not SELL\\n\\nWe hold no position (100% cash). SELL is not actionable.\\n\\n---\\n\\n## Structured Execution Plan\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"FWRY.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — maintain 100% cash\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"limit\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": 6.50,\\n                \"price_range_high\": 7.50\\n            },\\n            \"timing\": \"No entry at current levels. Reassess if price declines to EGP 6.50-7.50 range (implied 30-35x forward P/E on 50% growth). Monitor next quarterly earnings release.\",\\n            \"conditions\": [\\n                \"Price declines to EGP 6.50-7.50 range (35-40% below current)\",\\n                \"Next quarterly net income growth exceeds 60% YoY\",\\n                \"Debt-to-equity stabilizes or declines below 1.4x\",\\n                \"Volume ratio exceeds 1.0x for 10+ consecutive days\",\\n                \"At least one analyst initiates coverage with BUY rating\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"mental_stop\",\\n                \"note\": \"No position to exit. If entered at EGP 6.50-7.50, set hard stop at EGP 5.50 (-15% from entry) using limit order.\"\\n            },\\n            \"time_stop\": \"Reassess after next quarterly earnings (expected Q4 2024 or Q1 2025). If no entry triggered within 6 months, remove from active watchlist.\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"N/A — no position\",\\n            \"max_daily_execution\": \"0 shares — no buying activity\",\\n            \"price_limit_risk\": \"If stock hits +10% limit (upside circuit breaker), do not chase. If stock hits -10% limit (downside circuit breaker), reassess for potential entry at lower levels.\",\\n            \"liquidity_exit_plan\": \"N/A — no position to exit. For future entry: use limit orders only, 4-6 tranches over 2-4 weeks, accept 3-5% total slippage.\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"CBE rate cut >500bps to 22.25% or below — improves earnings yield spread\",\\n            \"Next quarterly net income growth >80% YoY — justifies premium valuation\",\\n            \"Gross margin expansion above 65% — signals pricing power sustainability\",\\n            \"Debt-to-equity reduction below 1.2x — improves financial health\",\\n            \"Analyst coverage initiation with BUY rating — reduces information risk\",\\n            \"Volume ratio >1.5x for 20 consecutive days — confirms institutional accumulation\",\\n            \"Price decline to 25-30x P/E level (-45% to -55% from current) — creates value entry\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```\\n\\n## Watchlist Monitoring Parameters\\n\\n| Parameter | Trigger Level | Action |\\n|-----------|--------------|--------|\\n| Price Level | EGP 6.50-7.50 | Reassess entry |\\n| Next Earnings | Net income growth >60% YoY | Upgrade to BUY if price also in entry zone |\\n| Debt/Equity | Below 1.4x | Positive signal |\\n| Volume Ratio | >1.0x for 10 days | Confirms renewed interest |\\n| Analyst Coverage | Any initiation | Re-evaluate thesis |\\n| CBE Rate | Cut to ≤22.25% | Improves macro backdrop |\\n\\n**Next Review Date**: Upon next quarterly earnings release or if any invalidation trigger is activated.', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1293, 'prompt_tokens': 9218, 'total_tokens': 10511, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9218}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '45010191-2f6a-434d-99aa-b0d78310d6dc', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edf40-4a84-7043-8449-f8237c803dae-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9218, 'output_tokens': 1293, 'total_tokens': 10511, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN: FWRY.CA\n\n## Analysis Summary\n\nAfter thorough review of all signals, I concur with the research team's **HOLD** recommendation. The stock presents a textbook case of asymmetric downside risk:\n\n### Key Decision Factors\n\n1. **Valuation Extremes**: 47.2x P/E in a 27.25% rate environment creates a -25.1% earnings yield spread — this is unsustainable even for high-growth EM names\n2. **Deteriorating Quality**: Debt-to-equity rising (+7.5% YoY), Piotroski score of 4/9, and minimal current ratio (1.34x) signal financial fragility\n3. **Technical Exhaustion**: 27.4% rally on declining volume (volume ratio 0.87x) — classic low-quality momentum vulnerable to reversal\n4. **Information Vacuum**: Zero news coverage, no analyst coverage, no corporate updates — paying a premium for opacity\n5. **Macro Headwinds**: CBE at 27.25% with no imminent cuts, EGP depreciation risk 15-20%, negative real returns persist\n\n### Why Not BUY\n\nThe bull case requires 50%+ sustained growth to justify current prices — a fragile thesis. Even if next quarter delivers 60% net income growth, forward P/E would still be ~35x, leaving minimal upside with significant downside risk.\n\n### Why Not SELL\n\nWe hold no position (100% cash). SELL is not actionable.\n\n---\n\n## Structured Execution Plan\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"FWRY.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — maintain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"limit\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": 6.50,\n                \"price_range_high\": 7.50\n            },\n            \"timing\": \"No entry at current levels. Reassess if price declines to EGP 6.50-7.50 range (implied 30-35x forward P/E on 50% growth). Monitor next quarterly earnings release.\",\n            \"conditions\": [\n                \"Price declines to EGP 6.50-7.50 range (35-40% below current)\",\n                \"Next quarterly net income growth exceeds 60% YoY\",\n                \"Debt-to-equity stabilizes or declines below 1.4x\",\n                \"Volume ratio exceeds 1.0x for 10+ consecutive days\",\n                \"At least one analyst initiates coverage with BUY rating\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"mental_stop\",\n                \"note\": \"No position to exit. If entered at EGP 6.50-7.50, set hard stop at EGP 5.50 (-15% from entry) using limit order.\"\n            },\n            \"time_stop\": \"Reassess after next quarterly earnings (expected Q4 2024 or Q1 2025). If no entry triggered within 6 months, remove from active watchlist.\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"0 shares — no buying activity\",\n            \"price_limit_risk\": \"If stock hits +10% limit (upside circuit breaker), do not chase. If stock hits -10% limit (downside circuit breaker), reassess for potential entry at lower levels.\",\n            \"liquidity_exit_plan\": \"N/A — no position to exit. For future entry: use limit orders only, 4-6 tranches over 2-4 weeks, accept 3-5% total slippage.\"\n        },\n        \"invalidation_triggers\": [\n            \"CBE rate cut >500bps to 22.25% or below — improves earnings yield spread\",\n            \"Next quarterly net income growth >80% YoY — justifies premium valuation\",\n            \"Gross margin expansion above 65% — signals pricing power sustainability\",\n            \"Debt-to-equity reduction below 1.2x — improves financial health\",\n            \"Analyst coverage initiation with BUY rating — reduces information risk\",\n            \"Volume ratio >1.5x for 20 consecutive days — confirms institutional accumulation\",\n            \"Price decline to 25-30x P/E level (-45% to -55% from current) — creates value entry\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```\n\n## Watchlist Monitoring Parameters\n\n| Parameter | Trigger Level | Action |\n|-----------|--------------|--------|\n| Price Level | EGP 6.50-7.50 | Reassess entry |\n| Next Earnings | Net income growth >60% YoY | Upgrade to BUY if price also in entry zone |\n| Debt/Equity | Below 1.4x | Positive signal |\n| Volume Ratio | >1.0x for 10 days | Confirms renewed interest |\n| Analyst Coverage | Any initiation | Re-evaluate thesis |\n| CBE Rate | Cut to ≤22.25% | Improves macro backdrop |\n\n**Next Review Date**: Upon next quarterly earnings release or if any invalidation trigger is activated.",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "FWRY.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — maintain 100% cash"
+        },
+        "entry_logic": {
+          "order_type": "limit",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": 6.5,
+            "price_range_high": 7.5
+          },
+          "timing": "No entry at current levels. Reassess if price declines to EGP 6.50-7.50 range (implied 30-35x forward P/E on 50% growth). Monitor next quarterly earnings release.",
+          "conditions": [
+            "Price declines to EGP 6.50-7.50 range (35-40% below current)",
+            "Next quarterly net income growth exceeds 60% YoY",
+            "Debt-to-equity stabilizes or declines below 1.4x",
+            "Volume ratio exceeds 1.0x for 10+ consecutive days",
+            "At least one analyst initiates coverage with BUY rating"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": null
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "mental_stop",
+            "note": "No position to exit. If entered at EGP 6.50-7.50, set hard stop at EGP 5.50 (-15% from entry) using limit order."
+          },
+          "time_stop": "Reassess after next quarterly earnings (expected Q4 2024 or Q1 2025). If no entry triggered within 6 months, remove from active watchlist."
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "N/A — no position",
+          "max_daily_execution": "0 shares — no buying activity",
+          "price_limit_risk": "If stock hits +10% limit (upside circuit breaker), do not chase. If stock hits -10% limit (downside circuit breaker), reassess for potential entry at lower levels.",
+          "liquidity_exit_plan": "N/A — no position to exit. For future entry: use limit orders only, 4-6 tranches over 2-4 weeks, accept 3-5% total slippage."
+        },
+        "invalidation_triggers": [
+          "CBE rate cut >500bps to 22.25% or below — improves earnings yield spread",
+          "Next quarterly net income growth >80% YoY — justifies premium valuation",
+          "Gross margin expansion above 65% — signals pricing power sustainability",
+          "Debt-to-equity reduction below 1.2x — improves financial health",
+          "Analyst coverage initiation with BUY rating — reduces information risk",
+          "Volume ratio >1.5x for 20 consecutive days — confirms institutional accumulation",
+          "Price decline to 25-30x P/E level (-45% to -55% from current) — creates value entry"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "4631ae883c6edf763cd75e83e2234a8f7962defc04bdece317806320b267745d",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 13644.049541908316,
+  "timestamp_utc": "2026-06-19T09:40:06.736521+00:00",
+  "context_items": []
+}

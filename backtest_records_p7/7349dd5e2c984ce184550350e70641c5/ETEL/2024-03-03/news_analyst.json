@@ -1,0 +1,182 @@
+{
+  "run_id": "7349dd5e2c984ce184550350e70641c5",
+  "ticker": "ETEL",
+  "trade_date": "2024-03-03",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "258f6b99ddd6eb8fa13b81f9002f539c6be479201360c438cb2c809a811f3e0a",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market news available for broader EGX context\",\n        \"Silence reduces confidence and implies no recent catalysts or developments\",\n        \"Data retrieval errors indicate potential coverage gaps rather than true silence\"\n    ],\n    \"explanation\": \"No news articles were found for ETEL.CA during the February 25 to March 3, 2024 period, and no market-level news was available either. The absence of news reduces confidence and suggests a lack of recent corporate events, earnings releases, or regulatory filings, making it impossible to assign a directional sentiment. The silence itself is a weak neutral signal, as it may indicate either a quiet period or data unavailability.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-02-25 to 2024-03-03\"\n    },\n    \"risks_from_news\": [\n        \"No news identified — risk of unexpected negative developments not captured in data\",\n        \"Potential data coverage gaps may hide material events\"\n    ],\n    \"catalysts_from_news\": [\n        \"No catalysts identified — absence of positive news reduces upside expectations\"\n    ]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for the period\",\\n        \"No market news available for broader EGX context\",\\n        \"Silence reduces confidence and implies no recent catalysts or developments\",\\n        \"Data retrieval errors indicate potential coverage gaps rather than true silence\"\\n    ],\\n    \"explanation\": \"No news articles were found for ETEL.CA during the February 25 to March 3, 2024 period, and no market-level news was available either. The absence of news reduces confidence and suggests a lack of recent corporate events, earnings releases, or regulatory filings, making it impossible to assign a directional sentiment. The silence itself is a weak neutral signal, as it may indicate either a quiet period or data unavailability.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-02-25 to 2024-03-03\"\\n    },\\n    \"risks_from_news\": [\\n        \"No news identified — risk of unexpected negative developments not captured in data\",\\n        \"Potential data coverage gaps may hide material events\"\\n    ],\\n    \"catalysts_from_news\": [\\n        \"No catalysts identified — absence of positive news reduces upside expectations\"\\n    ]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 318, 'prompt_tokens': 664, 'total_tokens': 982, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 640}, 'prompt_cache_hit_tokens': 640, 'prompt_cache_miss_tokens': 24}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '6e44bf58-eb39-42a4-8b96-87b0cc7a174f', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edc9f-668c-75c1-b57e-a76278495e23-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 664, 'output_tokens': 318, 'total_tokens': 982, 'input_token_details': {'cache_read': 640}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market news available for broader EGX context\",\n        \"Silence reduces confidence and implies no recent catalysts or developments\",\n        \"Data retrieval errors indicate potential coverage gaps rather than true silence\"\n    ],\n    \"explanation\": \"No news articles were found for ETEL.CA during the February 25 to March 3, 2024 period, and no market-level news was available either. The absence of news reduces confidence and suggests a lack of recent corporate events, earnings releases, or regulatory filings, making it impossible to assign a directional sentiment. The silence itself is a weak neutral signal, as it may indicate either a quiet period or data unavailability.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-02-25 to 2024-03-03\"\n    },\n    \"risks_from_news\": [\n        \"No news identified — risk of unexpected negative developments not captured in data\",\n        \"Potential data coverage gaps may hide material events\"\n    ],\n    \"catalysts_from_news\": [\n        \"No catalysts identified — absence of positive news reduces upside expectations\"\n    ]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for the period",
+        "No market news available for broader EGX context",
+        "Silence reduces confidence and implies no recent catalysts or developments",
+        "Data retrieval errors indicate potential coverage gaps rather than true silence",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for ETEL.CA during the February 25 to March 3, 2024 period, and no market-level news was available either. The absence of news reduces confidence and suggests a lack of recent corporate events, earnings releases, or regulatory filings, making it impossible to assign a directional sentiment. The silence itself is a weak neutral signal, as it may indicate either a quiet period or data unavailability.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-02-25 to 2024-03-03"
+      },
+      "risks_from_news": [
+        "No news identified — risk of unexpected negative developments not captured in data",
+        "Potential data coverage gaps may hide material events"
+      ],
+      "catalysts_from_news": [
+        "No catalysts identified — absence of positive news reduces upside expectations"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.4722,
+        "label": "bearish",
+        "confidence": 0.6309,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for the period",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8298,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market news available for broader EGX context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9404,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence reduces confidence and implies no recent catalysts or developments",
+            "source": "quoted_in_report",
+            "score": -0.8551,
+            "label": "bearish",
+            "confidence": 0.8551,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data retrieval errors indicate potential coverage gaps rather than true silence",
+            "source": "quoted_in_report",
+            "score": -0.9374,
+            "label": "bearish",
+            "confidence": 0.9374,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for ETEL.CA during the February 25 to March 3, 2024 period, and no marke",
+            "source": "quoted_in_report",
+            "score": -0.9544,
+            "label": "bearish",
+            "confidence": 0.9544,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-02-25 to 2024-03-03",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9393,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news identified — risk of unexpected negative developments not captured in data",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9031,
+            "model": "finbert"
+          },
+          {
+            "headline": "Potential data coverage gaps may hide material events",
+            "source": "quoted_in_report",
+            "score": -0.8667,
+            "label": "bearish",
+            "confidence": 0.8667,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No catalysts identified — absence of positive news reduces upside expectations",
+            "source": "quoted_in_report",
+            "score": -0.7751,
+            "label": "bearish",
+            "confidence": 0.7751,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.3069,
+        "label": "bearish",
+        "confidence": 0.5185
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "d1331b96e1924113931d1e5a8c09632e34df9e9272606c2b0f4610132259a803",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 4140.560542000458,
+  "timestamp_utc": "2026-06-18T21:24:59.154266+00:00",
+  "context_items": []
+}

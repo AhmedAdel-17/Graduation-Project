@@ -1,0 +1,170 @@
+{
+  "run_id": "2d410f3f5a1e426cb3d8b77fc01e571b",
+  "ticker": "FWRY",
+  "trade_date": "2024-12-08",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "b922c695f2fc102f7d87cc6e80674c553846d77d87afef5cf82960a04aae67db",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for FWRY.CA during the analysis period\",\n        \"No market-level news available for the EGX to provide broader context\",\n        \"Silence in news coverage reduces confidence and suggests low market attention or no material events\",\n        \"Data retrieval errors indicate potential gaps in news aggregation rather than confirmed absence of events\"\n    ],\n    \"explanation\": \"No news articles were found for FWRY.CA between December 1 and December 8, 2024, and no market-level EGX news was available. The lack of coverage significantly reduces confidence in any directional sentiment, as silence is interpreted as a signal of low activity or investor disinterest. Without any headlines or catalysts, the sentiment is neutral with weak strength.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [],\n        \"date_range\": \"2024-12-01 to 2024-12-08\"\n    },\n    \"risks_from_news\": [\n        \"No news identified; potential risk of low liquidity or market neglect due to absence of coverage\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to complete lack of news\"\n    ]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for FWRY.CA during the analysis period\",\\n        \"No market-level news available for the EGX to provide broader context\",\\n        \"Silence in news coverage reduces confidence and suggests low market attention or no material events\",\\n        \"Data retrieval errors indicate potential gaps in news aggregation rather than confirmed absence of events\"\\n    ],\\n    \"explanation\": \"No news articles were found for FWRY.CA between December 1 and December 8, 2024, and no market-level EGX news was available. The lack of coverage significantly reduces confidence in any directional sentiment, as silence is interpreted as a signal of low activity or investor disinterest. Without any headlines or catalysts, the sentiment is neutral with weak strength.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [],\\n        \"date_range\": \"2024-12-01 to 2024-12-08\"\\n    },\\n    \"risks_from_news\": [\\n        \"No news identified; potential risk of low liquidity or market neglect due to absence of coverage\"\\n    ],\\n    \"catalysts_from_news\": [\\n        \"No positive catalysts identified due to complete lack of news\"\\n    ]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 312, 'prompt_tokens': 668, 'total_tokens': 980, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 668}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '92d37575-7db3-4167-af9d-5959aa4f61b7', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edf4b-9f5d-7c91-bfc7-a9d33c6a176a-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 668, 'output_tokens': 312, 'total_tokens': 980, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for FWRY.CA during the analysis period\",\n        \"No market-level news available for the EGX to provide broader context\",\n        \"Silence in news coverage reduces confidence and suggests low market attention or no material events\",\n        \"Data retrieval errors indicate potential gaps in news aggregation rather than confirmed absence of events\"\n    ],\n    \"explanation\": \"No news articles were found for FWRY.CA between December 1 and December 8, 2024, and no market-level EGX news was available. The lack of coverage significantly reduces confidence in any directional sentiment, as silence is interpreted as a signal of low activity or investor disinterest. Without any headlines or catalysts, the sentiment is neutral with weak strength.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [],\n        \"date_range\": \"2024-12-01 to 2024-12-08\"\n    },\n    \"risks_from_news\": [\n        \"No news identified; potential risk of low liquidity or market neglect due to absence of coverage\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to complete lack of news\"\n    ]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for FWRY.CA during the analysis period",
+        "No market-level news available for the EGX to provide broader context",
+        "Silence in news coverage reduces confidence and suggests low market attention or no material events",
+        "Data retrieval errors indicate potential gaps in news aggregation rather than confirmed absence of events",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for FWRY.CA between December 1 and December 8, 2024, and no market-level EGX news was available. The lack of coverage significantly reduces confidence in any directional sentiment, as silence is interpreted as a signal of low activity or investor disinterest. Without any headlines or catalysts, the sentiment is neutral with weak strength.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [],
+        "date_range": "2024-12-01 to 2024-12-08"
+      },
+      "risks_from_news": [
+        "No news identified; potential risk of low liquidity or market neglect due to absence of coverage"
+      ],
+      "catalysts_from_news": [
+        "No positive catalysts identified due to complete lack of news"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.4472,
+        "label": "bearish",
+        "confidence": 0.6177,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for FWRY.CA during the analysis period",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8972,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market-level news available for the EGX to provide broader context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9487,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence in news coverage reduces confidence and suggests low market attention or no material events",
+            "source": "quoted_in_report",
+            "score": -0.956,
+            "label": "bearish",
+            "confidence": 0.956,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data retrieval errors indicate potential gaps in news aggregation rather than confirmed absence of e",
+            "source": "quoted_in_report",
+            "score": -0.7919,
+            "label": "bearish",
+            "confidence": 0.7919,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for FWRY.CA between December 1 and December 8, 2024, and no market-level",
+            "source": "quoted_in_report",
+            "score": -0.9614,
+            "label": "bearish",
+            "confidence": 0.9614,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-12-01 to 2024-12-08",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9414,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news identified; potential risk of low liquidity or market neglect due to absence of coverage",
+            "source": "quoted_in_report",
+            "score": -0.9218,
+            "label": "bearish",
+            "confidence": 0.9218,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No positive catalysts identified due to complete lack of news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.7939,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.2907,
+        "label": "bearish",
+        "confidence": 0.5106
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "6bdb8f11df2cd3ee864eb6c41230f71da02cc09febe37ed7ca6bfe74c276ffeb",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 4258.839459042065,
+  "timestamp_utc": "2026-06-19T09:52:20.420554+00:00",
+  "context_items": []
+}

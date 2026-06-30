@@ -1,0 +1,173 @@
+{
+  "run_id": "ea8ad482d30d442486a7786fd76fa064",
+  "ticker": "TMGH",
+  "trade_date": "2024-08-14",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "9aa9efeb3d8514bed80d5f967b27174703526dd7fbfb793dba78afbb6fb83a51",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for TMGH.CA in the 7-day window\",\n        \"No market-level news available for EGX context\",\n        \"Silence reduces confidence significantly — lack of coverage may indicate low liquidity or investor disinterest\",\n        \"No data sources found (text or CSV) — potential data retrieval issue\"\n    ],\n    \"explanation\": \"No news articles were found for TMGH.CA between August 7 and August 14, 2024, and no market-wide EGX news was available. This silence is a negative signal for confidence, as it suggests either a data gap or a lack of material events driving investor attention. Without any headlines, risks, or catalysts, the sentiment is neutral but with very low conviction.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-08-07 to 2024-08-14\"\n    },\n    \"risks_from_news\": [\"No news identified — potential data gap or low market activity\"],\n    \"catalysts_from_news\": [\"No catalysts identified\"]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for TMGH.CA in the 7-day window\",\\n        \"No market-level news available for EGX context\",\\n        \"Silence reduces confidence significantly — lack of coverage may indicate low liquidity or investor disinterest\",\\n        \"No data sources found (text or CSV) — potential data retrieval issue\"\\n    ],\\n    \"explanation\": \"No news articles were found for TMGH.CA between August 7 and August 14, 2024, and no market-wide EGX news was available. This silence is a negative signal for confidence, as it suggests either a data gap or a lack of material events driving investor attention. Without any headlines, risks, or catalysts, the sentiment is neutral but with very low conviction.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-08-07 to 2024-08-14\"\\n    },\\n    \"risks_from_news\": [\"No news identified — potential data gap or low market activity\"],\\n    \"catalysts_from_news\": [\"No catalysts identified\"]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 297, 'prompt_tokens': 664, 'total_tokens': 961, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 664}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'b04d227f-7e44-4ccb-81cc-925df942894b', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edf81-62d2-7843-b2cf-d6d91db13d10-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 664, 'output_tokens': 297, 'total_tokens': 961, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for TMGH.CA in the 7-day window\",\n        \"No market-level news available for EGX context\",\n        \"Silence reduces confidence significantly — lack of coverage may indicate low liquidity or investor disinterest\",\n        \"No data sources found (text or CSV) — potential data retrieval issue\"\n    ],\n    \"explanation\": \"No news articles were found for TMGH.CA between August 7 and August 14, 2024, and no market-wide EGX news was available. This silence is a negative signal for confidence, as it suggests either a data gap or a lack of material events driving investor attention. Without any headlines, risks, or catalysts, the sentiment is neutral but with very low conviction.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-08-07 to 2024-08-14\"\n    },\n    \"risks_from_news\": [\"No news identified — potential data gap or low market activity\"],\n    \"catalysts_from_news\": [\"No catalysts identified\"]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for TMGH.CA in the 7-day window",
+        "No market-level news available for EGX context",
+        "Silence reduces confidence significantly — lack of coverage may indicate low liquidity or investor disinterest",
+        "No data sources found (text or CSV) — potential data retrieval issue",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for TMGH.CA between August 7 and August 14, 2024, and no market-wide EGX news was available. This silence is a negative signal for confidence, as it suggests either a data gap or a lack of material events driving investor attention. Without any headlines, risks, or catalysts, the sentiment is neutral but with very low conviction.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-08-07 to 2024-08-14"
+      },
+      "risks_from_news": [
+        "No news identified — potential data gap or low market activity"
+      ],
+      "catalysts_from_news": [
+        "No catalysts identified"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.3356,
+        "label": "bearish",
+        "confidence": 0.631,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for TMGH.CA in the 7-day window",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8688,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market-level news available for EGX context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9195,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence reduces confidence significantly — lack of coverage may indicate low liquidity or investor d",
+            "source": "quoted_in_report",
+            "score": -0.9578,
+            "label": "bearish",
+            "confidence": 0.9578,
+            "model": "finbert"
+          },
+          {
+            "headline": "No data sources found (text or CSV) — potential data retrieval issue",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9476,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for TMGH.CA between August 7 and August 14, 2024, and no market-wide EGX",
+            "source": "quoted_in_report",
+            "score": -0.934,
+            "label": "bearish",
+            "confidence": 0.934,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-08-07 to 2024-08-14",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9317,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news identified — potential data gap or low market activity",
+            "source": "quoted_in_report",
+            "score": -0.8671,
+            "label": "bearish",
+            "confidence": 0.8671,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No catalysts identified",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9458,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.2181,
+        "label": "bearish",
+        "confidence": 0.5186
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "410c645edf42c90ad0ea674be7ee27d1330d3b3ad5d257520dc018faba28d8cb",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 3766.4683329639956,
+  "timestamp_utc": "2026-06-19T10:51:03.108907+00:00",
+  "context_items": []
+}

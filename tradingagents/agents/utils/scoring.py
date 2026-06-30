@@ -452,7 +452,10 @@ def calculate_unified_score(
             sentiment_blend = blend_from_dict(raw_blend)
 
     if sentiment_blend is not None:
-        blended_conf = min(1.0, max(0.10, unblended_conf * sentiment_blend.confidence_multiplier))
+        # B3 (P8): lower confidence floor when enabled
+        from tradingagents.dataflows.config import get_config as _get_cfg
+        _b3_floor = 0.01 if _get_cfg().get("b3_confidence_floor_enabled") else 0.10
+        blended_conf = min(1.0, max(_b3_floor, unblended_conf * sentiment_blend.confidence_multiplier))
         pos_size_mult = sentiment_blend.position_size_multiplier
         blend_audit   = sentiment_blend.audit
     else:

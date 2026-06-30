@@ -35,6 +35,7 @@ logger = logging.getLogger("tradingagents.api_server")
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 # Add project root to path so we can import tradingagents
@@ -93,6 +94,49 @@ def _dbg_log(*, hypothesis_id: str, location: str, message: str, data: Dict[str,
     except Exception:
         pass
 # endregion agent log (debug-mode instrumentation)
+
+def _safe_path_component(value: str) -> str:
+    """Validate and sanitize a user-supplied path component (ticker, session_id).
+
+    Rejects any input that could escape the intended base directory:
+    - Path separators (/ and \\)
+    - Parent-directory traversal (..)
+    - Absolute paths
+    - Null bytes
+
+    Returns the stripped value on success.
+    Raises HTTPException(400) on rejection.
+    """
+    if not value or not value.strip():
+        raise HTTPException(400, "Path component must not be empty")
+    v = value.strip()
+    # Reject traversal, separators, null bytes
+    if ".." in v or "/" in v or "\\" in v or "\x00" in v:
+        raise HTTPException(400, "Invalid path component")
+    # Reject absolute paths (e.g. starts with drive letter on Windows)
+    if Path(v).is_absolute():
+        raise HTTPException(400, "Invalid path component")
+    return v
+
+
+def _resolve_safe(base_dir: Path, *components: str) -> Path:
+    """Join components onto base_dir and verify the result stays inside it.
+
+    Applies _safe_path_component to each component first, then does a
+    resolve() + is_relative_to() check as a second defense layer.
+
+    Returns the resolved Path on success.
+    Raises HTTPException(400) if the resolved path escapes base_dir.
+    """
+    safe_parts = [_safe_path_component(c) for c in components]
+    candidate = base_dir
+    for part in safe_parts:
+        candidate = candidate / part
+    resolved = candidate.resolve()
+    if not resolved.is_relative_to(base_dir.resolve()):
+        raise HTTPException(400, "Invalid path component")
+    return resolved
+
 
 def _normalize_ticker(ticker: str) -> str:
     t = (ticker or "").strip().upper()
@@ -316,6 +360,19 @@ def _runtime_diagnostics() -> Dict[str, Any]:
     ):
         degraded_reasons.append("chroma_collections_unseeded")
 
+    # Detect whether vector embeddings are active (same logic as memory.py).
+    # When the embeddings provider is unknown/unsupported, memory falls back to
+    # BM25 keyword search — functional but lower quality.
+    embeddings_url = (
+        config.get("embeddings_backend_url")
+        or config.get("backend_url", "")
+    )
+    embeddings_active = (
+        "localhost:11434" in embeddings_url
+        or "127.0.0.1:11434" in embeddings_url
+        or "openai.com" in embeddings_url
+    )
+
     return {
         "memory": {
             "backend": memory_backend,
@@ -327,6 +384,8 @@ def _runtime_diagnostics() -> Dict[str, Any]:
             "chroma_total_documents": chroma_info.get("total_documents"),
             "seeded": seeded,
             "min_similarity": float(config.get("memory_min_similarity", 0.30)),
+            "embeddings_active": embeddings_active,
+            "retrieval_mode": "vector" if embeddings_active else "bm25_keyword",
         },
         "postgres": {
             "configured": bool(postgres_url),
@@ -635,6 +694,9 @@ class InvestorProfileRequest(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
+    from tradingagents.observability import setup_logging
+    setup_logging(log_file="./logs/tradingagents.log")
+    logger.info("API server starting (observability initialized)")
     print("="*60)
     print("  TradingAgents Dashboard API Server")
     print(f"  Project root: {PROJECT_ROOT}")
@@ -647,6 +709,8 @@ async def lifespan(app: FastAPI):
 # =============================================================================
 # FastAPI App
 # =============================================================================
+
+_SERVER_START_TIME = time.time()
 
 app = FastAPI(
     title="TradingAgents Dashboard API",
@@ -662,6 +726,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Prometheus HTTP metrics middleware
+from tradingagents.observability.middleware import PrometheusMiddleware
+app.add_middleware(PrometheusMiddleware)
 
 # Portfolio Assistant subsystem (P4). Mounted only when pa_enabled (env
 # PA_ENABLED, default 1); the default service injects the real GraphRunLauncher
@@ -684,6 +752,112 @@ async def health():
         "egx_tools": EGX_TOOLS_AVAILABLE,
         "diagnostics": diagnostics,
     }
+
+
+# =============================================================================
+# Observability Endpoints
+# =============================================================================
+
+@app.get("/metrics")
+async def prometheus_metrics():
+    """Prometheus exposition format endpoint."""
+    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+    from starlette.responses import Response
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.get("/ready")
+async def readiness():
+    """Readiness probe — reports whether critical dependencies are reachable.
+
+    Checks: ChromaDB readable, LLM API key present. Returns 503 if any
+    critical dependency is unavailable. Non-critical services (Redis,
+    Postgres, Grafana) do NOT affect readiness.
+    """
+    checks: Dict[str, bool] = {}
+    reasons: List[str] = []
+
+    # 1. LLM API key present
+    llm_key = os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENAI_API_KEY")
+    checks["llm_api_key"] = bool(llm_key)
+    if not llm_key:
+        reasons.append("No LLM API key (DEEPSEEK_API_KEY / OPENAI_API_KEY)")
+
+    # 2. ChromaDB readable
+    try:
+        config = get_config()
+        chroma_dir = config.get("chroma_persist_dir")
+        if chroma_dir and os.path.isdir(str(chroma_dir)):
+            checks["chroma"] = True
+        elif chroma_dir:
+            checks["chroma"] = False
+            reasons.append(f"ChromaDB path not found: {chroma_dir}")
+        else:
+            checks["chroma"] = True  # in-memory mode, always available
+    except Exception as exc:
+        checks["chroma"] = False
+        reasons.append(f"ChromaDB check failed: {exc}")
+
+    # 3. EGX tools loaded
+    checks["egx_tools"] = EGX_TOOLS_AVAILABLE
+    if not EGX_TOOLS_AVAILABLE:
+        reasons.append("EGX data tools not importable")
+
+    ready = all(checks.values())
+    response = {
+        "ready": ready,
+        "checks": checks,
+        "reasons": reasons,
+        "timestamp": datetime.now().isoformat(),
+    }
+    if not ready:
+        return JSONResponse(status_code=503, content=response)
+    return response
+
+
+@app.get("/live")
+async def liveness():
+    """Liveness probe — lightweight process health check.
+
+    Verifies the event loop is responsive and the process can serve
+    requests. Does NOT check external dependencies (that's /ready).
+    Returns 200 if alive, which tells orchestrators not to restart us.
+    """
+    return {
+        "status": "alive",
+        "pid": os.getpid(),
+        "uptime_seconds": round(time.time() - _SERVER_START_TIME, 1),
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+# =============================================================================
+# Pipeline Event Replay
+# =============================================================================
+
+@app.get("/api/events")
+async def get_pipeline_events(
+    ticker: Optional[str] = Query(None, description="Filter by ticker (e.g. COMI.CA)"),
+    limit: int = Query(50, ge=1, le=200, description="Max events to return"),
+):
+    """
+    Retrieve recent pipeline events from the in-memory ring buffer.
+
+    Events are buffered locally (up to 100 per channel) regardless of
+    Redis availability.  Useful for catching up after connecting
+    mid-pipeline or viewing the last run's event trace.
+    """
+    try:
+        from redis_pubsub import get_buffered_events, get_all_recent_events
+        if ticker:
+            events = get_buffered_events(ticker)
+            # Return in chronological order, capped at limit
+            return {"status": "ok", "ticker": ticker, "events": events[-limit:]}
+        else:
+            events = get_all_recent_events(limit=limit)
+            return {"status": "ok", "events": events}
+    except Exception as exc:
+        return {"status": "ok", "events": [], "error": str(exc)}
 
 
 # =============================================================================
@@ -721,6 +895,41 @@ async def get_market_indices_endpoint(
         return {"status": "ok", **get_market_indices(as_of_date=as_of)}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Indices fetch failed: {exc}")
+
+
+@app.get("/api/market/headlines")
+async def get_market_headlines(
+    limit: int = Query(12, ge=1, le=50, description="Max headlines to return"),
+    lang: Optional[str] = Query(None, description="Filter by language: ar, en, or None for both"),
+):
+    """
+    Recent EGX market headlines from Mubasher RSS.
+
+    Used by the scrolling ticker strip on the dashboard.  No auth, no quota,
+    no LLM — just parsed RSS titles.
+    """
+    try:
+        from tradingagents.dataflows.social_v2.sources.mubasher_news import (
+            scrape as mubasher_scrape,
+        )
+        posts = mubasher_scrape(max_per_feed=limit)
+        if lang:
+            posts = [p for p in posts if p.source and p.source.endswith(f":{lang}")]
+        headlines = []
+        for p in posts[:limit]:
+            title = (p.text or "").split("\n", 1)[0].strip()
+            if not title:
+                continue
+            headlines.append({
+                "title": title,
+                "url": p.url,
+                "source": p.source,
+                "timestamp": p.timestamp,
+            })
+        return {"status": "ok", "headlines": headlines}
+    except Exception as exc:
+        logger.warning("Headlines fetch failed: %s", exc)
+        return {"status": "ok", "headlines": []}
 
 
 # =============================================================================
@@ -1351,8 +1560,10 @@ async def get_past_prediction(session_id: str):
 @app.get("/api/results/{ticker}/{session_id}")
 async def get_result_detail(ticker: str, session_id: str):
     """Get detailed results for a specific analysis session."""
-    jsonl_path = PROJECT_ROOT / "audit_logs" / ticker / "audit_log.jsonl"
-    md_path = PROJECT_ROOT / "audit_logs" / ticker / "audit_summary.md"
+    audit_base = PROJECT_ROOT / "audit_logs"
+    safe_ticker_dir = _resolve_safe(audit_base, ticker)
+    jsonl_path = safe_ticker_dir / "audit_log.jsonl"
+    md_path = safe_ticker_dir / "audit_summary.md"
 
     if not jsonl_path.exists():
         raise HTTPException(404, f"No results found for {ticker}")
@@ -2399,10 +2610,11 @@ async def get_backtest_detail(session_id: str):
     """
     audit_dir = PROJECT_ROOT / "backtest_results"
 
-    target_file = audit_dir / f"report_{session_id}.json"
+    safe_id = _safe_path_component(session_id)
+    target_file = _resolve_safe(audit_dir, f"report_{safe_id}.json")
     is_llm = True
     if not target_file.exists():
-        target_file = audit_dir / f"{session_id}.json"
+        target_file = _resolve_safe(audit_dir, f"{safe_id}.json")
         is_llm = False
     if not target_file.exists():
         raise HTTPException(404, "Backtest not found")
@@ -3153,8 +3365,128 @@ async def test_random_egx(req: TestEgxRequest = TestEgxRequest()):
         return {"error": f"Analysis failed for {selected_ticker}: {str(e)}"}
 
 
+def _effective_cap(policy_cap: float, liquidity_max: float | None) -> float:
+    """The actually-effective cap is the most restrictive of policy and liquidity."""
+    if liquidity_max is not None:
+        return min(policy_cap, liquidity_max)
+    return policy_cap
+
+
+def _parse_pct(text: str, take_max: bool = False) -> float | None:
+    """Extract percentage from strings like '3% target, max 5%' or '10%'.
+    Returns as a decimal (0.03, 0.05, 0.10). With take_max, returns the
+    second value if present."""
+    import re as _re
+    if not text:
+        return None
+    matches = _re.findall(r"(\d+(?:\.\d+)?)%", str(text))
+    if not matches:
+        return None
+    vals = [float(m) / 100 for m in matches]
+    return vals[-1] if (take_max and len(vals) > 1) else vals[0]
+
+
+def _extract_signal_from_judge(judge_text: str | None) -> str | None:
+    """Pull BUY/SELL/HOLD from the research manager's judge decision text.
+
+    The research manager embeds its decision in a ```json block like:
+      {"decision": "BUY", "confidence": 0.75, "rationale": "..."}
+    We parse that first. Falls back to bare keyword search if no JSON found.
+    """
+    if not judge_text:
+        return None
+    import re as _re
+    # Primary: extract from the structured JSON block the research manager emits
+    json_match = _re.search(r'```json\s*(\{[^`]+\})\s*```', judge_text, _re.DOTALL)
+    if json_match:
+        try:
+            import json as _json
+            decision_obj = _json.loads(json_match.group(1))
+            sig = decision_obj.get("decision", "").upper()
+            if sig in ("BUY", "SELL", "HOLD", "STRONG_BUY", "STRONG_SELL"):
+                return sig
+        except (ValueError, AttributeError):
+            pass
+    # Fallback: bare keyword (last match — the final verdict tends to be at the end)
+    matches = _re.findall(r"\b(STRONG_BUY|STRONG_SELL|BUY|SELL|HOLD)\b", judge_text)
+    return matches[-1] if matches else None
+
+
+def _build_decision_explanation(
+    signal: str,
+    judge_decision: str | None,
+    final_state: dict,
+) -> dict:
+    """Build a user-friendly explanation of the recommendation decision chain.
+
+    Returns a dict with:
+      - headline: one-sentence summary for the dashboard banner
+      - steps: list of {agent, signal, detail} for the decision trail
+      - risk_blocked: bool — True if risk rules overrode the trader
+    """
+    risk_veto = bool(final_state.get("risk_veto"))
+    risk_assessment = final_state.get("risk_assessment") or {}
+    exec_plan = final_state.get("execution_plan") or {}
+    if isinstance(exec_plan, dict):
+        ep = exec_plan.get("execution_plan", exec_plan)
+    else:
+        ep = {}
+    trader_decision = ep.get("decision") if ep else None
+    research_signal = _extract_signal_from_judge(judge_decision)
+
+    steps = []
+    if research_signal:
+        steps.append({
+            "agent": "Research Manager",
+            "signal": research_signal,
+            "detail": "Evaluated bull/bear debate and market evidence",
+        })
+    if trader_decision:
+        steps.append({
+            "agent": "Trader",
+            "signal": trader_decision,
+            "detail": "Built execution plan with position sizing",
+        })
+    if risk_veto:
+        veto_reasons = risk_assessment.get("failed_checks", [])
+        steps.append({
+            "agent": "Risk Scorer",
+            "signal": "VETO",
+            "detail": f"Blocked: {', '.join(veto_reasons)}" if veto_reasons
+                      else risk_assessment.get("veto_explanation", "Deterministic risk check failed"),
+        })
+    else:
+        steps.append({
+            "agent": "Risk Manager",
+            "signal": signal,
+            "detail": "Approved after risk debate",
+        })
+
+    # Build headline
+    if risk_veto and trader_decision and trader_decision != "HOLD":
+        headline = (
+            f"Our analysis found a {trader_decision} setup, but StockHive "
+            f"recommended HOLD because risk rules blocked the position."
+        )
+    elif signal == "HOLD":
+        headline = "StockHive recommended HOLD based on the current analysis."
+    elif signal in ("BUY", "STRONG_BUY"):
+        headline = f"StockHive recommended {signal} after passing all risk checks."
+    elif signal in ("SELL", "STRONG_SELL"):
+        headline = f"StockHive recommended {signal} after passing all risk checks."
+    else:
+        headline = f"StockHive recommendation: {signal}."
+
+    return {
+        "headline": headline,
+        "steps": steps,
+        "risk_blocked": risk_veto,
+    }
+
+
 class FullAnalyzeRequest(BaseModel):
     ticker: str
+    profile_id: Optional[str] = None
     selected_analysts: Optional[List[str]] = None
     max_debate_rounds: int = 1
     max_risk_rounds: int = 1
@@ -3186,9 +3518,11 @@ async def analyze_full(req: FullAnalyzeRequest):
         from tradingagents.graph.signal_processing import SignalProcessor
         from langchain_openai import ChatOpenAI
 
+    import uuid as _uuid
     ticker = req.ticker if req.ticker.endswith(".CA") else f"{req.ticker}.CA"
     selected_analysts = req.selected_analysts or ["market", "social", "news", "fundamentals"]
     trade_date = datetime.now().strftime("%Y-%m-%d")
+    session_id = str(_uuid.uuid4())[:8]
 
     # Live broadcast — make this run visible in the admin dashboard in real time.
     from uuid import uuid4
@@ -3212,12 +3546,28 @@ async def analyze_full(req: FullAnalyzeRequest):
     if base.get("error"):
         return base
 
-    # Step 2: run the full TradingAgentsGraph synchronously in a thread.
+    # Step 2: load investor profile + build context (if profile_id provided)
+    investor_context = None
+    if req.profile_id:
+        profile_row = get_profile(req.profile_id)
+        if not profile_row:
+            return {"error": f"Profile not found: {req.profile_id}"}
+        from tradingagents.agents.utils.investor_context import build_investor_context
+        investor_context = build_investor_context(profile_row)
+
+    # Step 3: run the full TradingAgentsGraph synchronously in a thread.
+    # Uses graph.run() (not raw stream) so pipeline_duration, signal_total,
+    # and active_analysis_sessions metrics are recorded.
     def _run_graph():
         from copy import deepcopy
+        from tradingagents.observability import set_trace_context
+        set_trace_context(session_id=session_id, ticker=ticker, trade_date=trade_date)
         run_config = deepcopy(get_config())
         run_config["max_debate_rounds"] = req.max_debate_rounds
         run_config["max_risk_discuss_rounds"] = req.max_risk_rounds
+        # API-driven recommendations are never backtests — enforce the
+        # 10% single-stock concentration cap.
+        run_config["backtest_mode"] = False
         graph = TradingAgentsGraph(
             config=run_config,
             selected_analysts=selected_analysts,
@@ -3411,15 +3761,118 @@ async def analyze_full(req: FullAnalyzeRequest):
         "styled_recommendations": final_state.get("styled_recommendations"),
     }
 
-    return {
+    # Build user-friendly decision explanation for dashboard display
+    decision_explanation = _build_decision_explanation(
+        signal=signal,
+        judge_decision=judge_decision,
+        final_state=final_state,
+    )
+
+    result = {
         **base,
         "session_id": run_id,
         "recommendation": recommendation,
+        "decision_explanation": decision_explanation,
         "llm_error": None,
         "status": "ok",
         "pipeline": "full",
         "_final_state_keys": list(final_state.keys()),
     }
+
+    # Auto-record shadow run into dashboard store
+    try:
+        conf_scores = final_state.get("confidence_scores") or {}
+        macro_ctx = final_state.get("macro_context")
+        breadth = final_state.get("market_breadth")
+        mem_status = None
+        # Detect memory fallback from state if available
+        if final_state.get("_memory_fallback_used"):
+            mem_status = {"backend": "chroma", "fallback": "bm25",
+                          "reason": "embedding dimension mismatch"}
+
+        # investor_context_snapshot is a pure profile snapshot (no runtime data)
+        ic_snapshot = investor_context
+
+        # pipeline_audit captures runtime decision trace — separate from profile
+        pipeline_audit = None
+        exec_plan = (final_state.get("execution_plan") or {})
+        if isinstance(exec_plan, dict):
+            ep = exec_plan.get("execution_plan", exec_plan)
+        else:
+            ep = {}
+        pos_sizing = ep.get("position_sizing", {}) if ep else {}
+        pipeline_audit = {
+            "investor_context_injected": bool(investor_context),
+            "portfolio_value_used": final_state.get("portfolio_value"),
+            "position_cap": {
+                "profile_cap_pct": (investor_context or {}).get("max_position_pct"),
+                "system_cap_pct": 0.10,  # MAX_PORTFOLIO_SINGLE_STOCK when backtest_mode=False
+                "liquidity_target_pct": _parse_pct(pos_sizing.get("portfolio_allocation", "")),
+                "liquidity_max_pct": _parse_pct(pos_sizing.get("portfolio_allocation", ""), take_max=True),
+                # policy_cap_pct: the rule-based cap before liquidity (min of profile, system)
+                "policy_cap_pct": min(
+                    (investor_context or {}).get("max_position_pct", 0.10),
+                    0.10,
+                ) if investor_context else 0.10,
+                "policy_cap_source": (
+                    "system_cap (10%)" if not investor_context
+                    else "system_cap (10%)" if (investor_context.get("max_position_pct", 0.10) >= 0.10)
+                    else f"profile_cap ({investor_context.get('max_position_pct'):.0%})"
+                ),
+                # effective_cap_pct: what the trader actually used (policy further constrained by liquidity)
+                "effective_cap_pct": _effective_cap(
+                    policy_cap=min(
+                        (investor_context or {}).get("max_position_pct", 0.10),
+                        0.10,
+                    ) if investor_context else 0.10,
+                    liquidity_max=_parse_pct(pos_sizing.get("portfolio_allocation", ""), take_max=True),
+                ),
+            },
+            "trader_decision": ep.get("decision") if ep else None,
+            "risk_action": final_state.get("risk_action"),
+            "risk_veto": bool(final_state.get("risk_veto")),
+            "signal_chain": {
+                "research_manager": _extract_signal_from_judge(judge_decision),
+                "trader": ep.get("decision") if ep else None,
+                "risk_scorer": "VETO" if final_state.get("risk_veto") else "PASS",
+                "final": signal,
+            },
+        }
+
+        record_shadow_run({
+            "ticker": ticker,
+            "trade_date": trade_date,
+            "signal": signal,
+            "confidence_overall": conf_scores.get("overall"),
+            "confidence_technical": conf_scores.get("technical"),
+            "confidence_fundamental": conf_scores.get("fundamental"),
+            "confidence_sentiment": conf_scores.get("sentiment"),
+            "latest_price": current_price or None,
+            "price_date": trade_date,
+            "judge_decision_summary": (judge_decision or "")[:500],
+            "bull_thesis_summary": (bull_case or "")[:500],
+            "bear_thesis_summary": (bear_case or "")[:500],
+            "trader_plan_summary": (final_state.get("trader_investment_plan") or "")[:500],
+            "risk_rationale_summary": (
+                (final_state.get("risk_assessment") or {}).get("veto_explanation")
+                or final_decision_text
+                or ""
+            )[:500],
+            "macro_context": macro_ctx if isinstance(macro_ctx, dict) else None,
+            "market_breadth": breadth if isinstance(breadth, dict) else None,
+            "memory_status": mem_status,
+            "model_provider": get_config().get("llm_provider", ""),
+            "model_name": get_config().get("deep_think_llm", ""),
+            "status": "completed",
+            "backtest_mode": False,
+            "profile_id": req.profile_id,
+            "investor_context_snapshot": ic_snapshot,
+            "pipeline_audit": pipeline_audit,
+        })
+    except Exception as exc:
+        logger.warning("Failed to auto-record shadow run: %s", exc)
+
+    return result
 
 
 @app.get("/api/technical-panel/{ticker}")
@@ -3489,6 +3942,162 @@ async def classify_investor(request: InvestorProfileRequest):
     except Exception as exc:
         logger.error("investor-profile endpoint error: %s", exc, exc_info=True)
         raise HTTPException(500, f"Classification failed: {exc}")
+
+
+# ─── Dashboard Store: Profiles & Shadow Runs ─────────────────────────────
+
+from server.dashboard_store import (
+    create_profile, get_profile, list_profiles, update_profile, delete_profile,
+    record_shadow_run, get_shadow_run, list_shadow_runs, get_system_status,
+)
+from server.data_freshness import check_all_freshness
+
+
+class ProfileCreate(BaseModel):
+    name: str
+    risk_tolerance: str = "moderate"
+    investment_horizon: str = "medium_term"
+    capital_size: float = 1_000_000
+    max_position_pct: float = 0.10
+    sector_preferences: list = []
+    sector_exclusions: list = []
+    trading_style: str = "position"
+    benchmark_target: str = "EGX30"
+    investor_category: str = ""
+    notes: str = ""
+
+
+@app.get("/api/profiles")
+async def api_list_profiles():
+    return list_profiles()
+
+
+@app.post("/api/profiles")
+async def api_create_profile(body: ProfileCreate):
+    return create_profile(body.model_dump())
+
+
+@app.get("/api/profiles/{profile_id}")
+async def api_get_profile(profile_id: str):
+    p = get_profile(profile_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return p
+
+
+@app.put("/api/profiles/{profile_id}")
+async def api_update_profile(profile_id: str, body: ProfileCreate):
+    p = update_profile(profile_id, body.model_dump())
+    if not p:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return p
+
+
+@app.delete("/api/profiles/{profile_id}")
+async def api_delete_profile(profile_id: str):
+    if not delete_profile(profile_id):
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return {"deleted": True}
+
+
+class ShadowRunRecord(BaseModel):
+    id: str = ""
+    ticker: str
+    trade_date: str
+    signal: str = ""
+    confidence_overall: float | None = None
+    confidence_technical: float | None = None
+    confidence_fundamental: float | None = None
+    confidence_sentiment: float | None = None
+    latest_price: float | None = None
+    price_date: str = ""
+    judge_decision_summary: str = ""
+    bull_thesis_summary: str = ""
+    bear_thesis_summary: str = ""
+    trader_plan_summary: str = ""
+    risk_rationale_summary: str = ""
+    macro_context: dict | None = None
+    market_breadth: dict | None = None
+    memory_status: dict | None = None
+    warnings: list = []
+    errors: list = []
+    model_provider: str = ""
+    model_name: str = ""
+    duration_seconds: float | None = None
+    status: str = "completed"
+    backtest_mode: bool = False
+    profile_id: str = ""
+    report_path: str = ""
+    log_path: str = ""
+    records_dir: str = ""
+
+
+@app.get("/api/shadow-runs")
+async def api_list_shadow_runs(ticker: str = None, limit: int = 50):
+    return list_shadow_runs(ticker=ticker, limit=limit)
+
+
+@app.post("/api/shadow-runs")
+async def api_record_shadow_run(body: ShadowRunRecord):
+    return record_shadow_run(body.model_dump())
+
+
+@app.get("/api/shadow-runs/{run_id}")
+async def api_get_shadow_run(run_id: str):
+    r = get_shadow_run(run_id)
+    if not r:
+        raise HTTPException(status_code=404, detail="Shadow run not found")
+    return r
+
+
+@app.get("/api/system-status")
+async def api_system_status():
+    return get_system_status()
+
+
+@app.get("/api/metrics-summary")
+async def api_metrics_summary():
+    """Simplified metrics summary for the dashboard native monitoring panel."""
+    try:
+        from prometheus_client import REGISTRY
+        metrics: dict = {}
+        for metric in REGISTRY.collect():
+            if not metric.name.startswith("tradingagents_"):
+                continue
+            for sample in metric.samples:
+                name = sample.name
+                labels = sample.labels
+                value = sample.value
+                if name == "tradingagents_active_analysis_sessions":
+                    metrics["active_sessions"] = value
+                elif name == "tradingagents_llm_calls_total":
+                    metrics.setdefault("llm_calls", {})
+                    agent = labels.get("agent_name", "unknown")
+                    metrics["llm_calls"][agent] = metrics["llm_calls"].get(agent, 0) + value
+                elif name == "tradingagents_pipeline_duration_seconds_count":
+                    metrics["pipeline_runs"] = value
+                elif name == "tradingagents_pipeline_duration_seconds_sum":
+                    metrics["pipeline_duration_total"] = round(value, 1)
+                elif name == "tradingagents_signal_total":
+                    metrics.setdefault("signals", {})
+                    sig = labels.get("signal", "unknown")
+                    metrics["signals"][sig] = metrics["signals"].get(sig, 0) + value
+                elif name == "tradingagents_active_websocket_connections":
+                    metrics["active_websockets"] = value
+        if metrics.get("pipeline_runs") and metrics.get("pipeline_duration_total"):
+            metrics["avg_pipeline_seconds"] = round(
+                metrics["pipeline_duration_total"] / metrics["pipeline_runs"], 1
+            )
+        metrics["server_uptime_seconds"] = round(time.time() - _SERVER_START_TIME, 1)
+        return metrics
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/api/data-freshness")
+async def api_data_freshness():
+    """Per-source data freshness report with market-closed awareness."""
+    return check_all_freshness()
 
 
 if __name__ == "__main__":

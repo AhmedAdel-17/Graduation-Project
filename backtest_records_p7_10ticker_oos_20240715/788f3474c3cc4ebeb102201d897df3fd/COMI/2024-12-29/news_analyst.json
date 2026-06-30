@@ -1,0 +1,172 @@
+{
+  "run_id": "788f3474c3cc4ebeb102201d897df3fd",
+  "ticker": "COMI",
+  "trade_date": "2024-12-29",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "214baced3a67ee0fc5a459b3ff30f98e532dac6b36b2c9f00e6625829996493e",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the review period\",\n        \"No market-wide EGX news available for context\",\n        \"Data retrieval errors indicate potential coverage gaps rather than true silence\",\n        \"Lack of information reduces ability to assess sentiment direction\"\n    ],\n    \"explanation\": \"No news articles were found for COMI.CA during the December 22-29, 2024 period, and market-level EGX news was also unavailable due to data retrieval errors. This silence significantly reduces confidence in any sentiment assessment, as there is no actionable information to analyze. The absence of news could indicate a quiet period for the stock, but technical data issues prevent definitive interpretation.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-12-22 to 2024-12-29\"\n    },\n    \"risks_from_news\": [\n        \"Data unavailability itself is a risk — inability to monitor news flow may miss sudden developments\",\n        \"Silence could precede material undisclosed events\"\n    ],\n    \"catalysts_from_news\": []\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for the review period\",\\n        \"No market-wide EGX news available for context\",\\n        \"Data retrieval errors indicate potential coverage gaps rather than true silence\",\\n        \"Lack of information reduces ability to assess sentiment direction\"\\n    ],\\n    \"explanation\": \"No news articles were found for COMI.CA during the December 22-29, 2024 period, and market-level EGX news was also unavailable due to data retrieval errors. This silence significantly reduces confidence in any sentiment assessment, as there is no actionable information to analyze. The absence of news could indicate a quiet period for the stock, but technical data issues prevent definitive interpretation.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-12-22 to 2024-12-29\"\\n    },\\n    \"risks_from_news\": [\\n        \"Data unavailability itself is a risk — inability to monitor news flow may miss sudden developments\",\\n        \"Silence could precede material undisclosed events\"\\n    ],\\n    \"catalysts_from_news\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 297, 'prompt_tokens': 664, 'total_tokens': 961, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 664}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'b6b18075-8434-4e3b-b180-de1889a5c187', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edd43-49df-7ce0-a818-08a5f79936b0-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 664, 'output_tokens': 297, 'total_tokens': 961, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the review period\",\n        \"No market-wide EGX news available for context\",\n        \"Data retrieval errors indicate potential coverage gaps rather than true silence\",\n        \"Lack of information reduces ability to assess sentiment direction\"\n    ],\n    \"explanation\": \"No news articles were found for COMI.CA during the December 22-29, 2024 period, and market-level EGX news was also unavailable due to data retrieval errors. This silence significantly reduces confidence in any sentiment assessment, as there is no actionable information to analyze. The absence of news could indicate a quiet period for the stock, but technical data issues prevent definitive interpretation.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-12-22 to 2024-12-29\"\n    },\n    \"risks_from_news\": [\n        \"Data unavailability itself is a risk — inability to monitor news flow may miss sudden developments\",\n        \"Silence could precede material undisclosed events\"\n    ],\n    \"catalysts_from_news\": []\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for the review period",
+        "No market-wide EGX news available for context",
+        "Data retrieval errors indicate potential coverage gaps rather than true silence",
+        "Lack of information reduces ability to assess sentiment direction",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for COMI.CA during the December 22-29, 2024 period, and market-level EGX news was also unavailable due to data retrieval errors. This silence significantly reduces confidence in any sentiment assessment, as there is no actionable information to analyze. The absence of news could indicate a quiet period for the stock, but technical data issues prevent definitive interpretation.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-12-22 to 2024-12-29"
+      },
+      "risks_from_news": [
+        "Data unavailability itself is a risk — inability to monitor news flow may miss sudden developments",
+        "Silence could precede material undisclosed events"
+      ],
+      "catalysts_from_news": [],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.4166,
+        "label": "bearish",
+        "confidence": 0.5995,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for the review period",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8911,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market-wide EGX news available for context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.928,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data retrieval errors indicate potential coverage gaps rather than true silence",
+            "source": "quoted_in_report",
+            "score": -0.9374,
+            "label": "bearish",
+            "confidence": 0.9374,
+            "model": "finbert"
+          },
+          {
+            "headline": "Lack of information reduces ability to assess sentiment direction",
+            "source": "quoted_in_report",
+            "score": -0.7797,
+            "label": "bearish",
+            "confidence": 0.7797,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for COMI.CA during the December 22-29, 2024 period, and market-level EGX",
+            "source": "quoted_in_report",
+            "score": -0.9633,
+            "label": "bearish",
+            "confidence": 0.9633,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-12-22 to 2024-12-29",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9405,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data unavailability itself is a risk — inability to monitor news flow may miss sudden developments",
+            "source": "quoted_in_report",
+            "score": -0.763,
+            "label": "bearish",
+            "confidence": 0.763,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence could precede material undisclosed events",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.7907,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.2708,
+        "label": "bearish",
+        "confidence": 0.4997
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "e4500ee14b976304a050d832bdd8af56b834c5d9e8fd0bc3ad099fb4832b62cb",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 3811.9690420571715,
+  "timestamp_utc": "2026-06-19T00:23:59.378910+00:00",
+  "context_items": []
+}

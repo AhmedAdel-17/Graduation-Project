@@ -1,0 +1,173 @@
+{
+  "run_id": "c0b2391253b74491bf214b26f81fb8f6",
+  "ticker": "FWRY",
+  "trade_date": "2024-09-15",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "5921c623cd44506e93a4810bcd2ec1a2dcda44e30f87b99a3e978dfd53fbbb3a",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"No news articles found for FWRY.CA in the specified date range\",\n        \"Market news data also unavailable due to missing CSV file\",\n        \"Absence of news reduces confidence and suggests low market attention or trading activity\",\n        \"Silence can indicate either stability or lack of material developments\"\n    ],\n    \"explanation\": \"No news articles were retrieved for FWRY.CA between September 8 and September 15, 2024, and market-level news was also unavailable due to data source errors. The complete absence of coverage significantly reduces confidence in any directional sentiment, as silence is interpreted as a lack of catalysts or risks to drive price action.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-09-08 to 2024-09-15\"\n    },\n    \"risks_from_news\": [\"No news identified; risks cannot be assessed from available data\"],\n    \"catalysts_from_news\": [\"No news identified; catalysts cannot be assessed from available data\"]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"No news articles found for FWRY.CA in the specified date range\",\\n        \"Market news data also unavailable due to missing CSV file\",\\n        \"Absence of news reduces confidence and suggests low market attention or trading activity\",\\n        \"Silence can indicate either stability or lack of material developments\"\\n    ],\\n    \"explanation\": \"No news articles were retrieved for FWRY.CA between September 8 and September 15, 2024, and market-level news was also unavailable due to data source errors. The complete absence of coverage significantly reduces confidence in any directional sentiment, as silence is interpreted as a lack of catalysts or risks to drive price action.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-09-08 to 2024-09-15\"\\n    },\\n    \"risks_from_news\": [\"No news identified; risks cannot be assessed from available data\"],\\n    \"catalysts_from_news\": [\"No news identified; catalysts cannot be assessed from available data\"]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 287, 'prompt_tokens': 668, 'total_tokens': 955, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 668}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '6cb65809-6be9-4054-ba98-1cc7f52bf3ef', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edf3a-1c12-7ee0-88ad-10154c940c3e-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 668, 'output_tokens': 287, 'total_tokens': 955, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"No news articles found for FWRY.CA in the specified date range\",\n        \"Market news data also unavailable due to missing CSV file\",\n        \"Absence of news reduces confidence and suggests low market attention or trading activity\",\n        \"Silence can indicate either stability or lack of material developments\"\n    ],\n    \"explanation\": \"No news articles were retrieved for FWRY.CA between September 8 and September 15, 2024, and market-level news was also unavailable due to data source errors. The complete absence of coverage significantly reduces confidence in any directional sentiment, as silence is interpreted as a lack of catalysts or risks to drive price action.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-09-08 to 2024-09-15\"\n    },\n    \"risks_from_news\": [\"No news identified; risks cannot be assessed from available data\"],\n    \"catalysts_from_news\": [\"No news identified; catalysts cannot be assessed from available data\"]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "No news articles found for FWRY.CA in the specified date range",
+        "Market news data also unavailable due to missing CSV file",
+        "Absence of news reduces confidence and suggests low market attention or trading activity",
+        "Silence can indicate either stability or lack of material developments",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were retrieved for FWRY.CA between September 8 and September 15, 2024, and market-level news was also unavailable due to data source errors. The complete absence of coverage significantly reduces confidence in any directional sentiment, as silence is interpreted as a lack of catalysts or risks to drive price action.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-09-08 to 2024-09-15"
+      },
+      "risks_from_news": [
+        "No news identified; risks cannot be assessed from available data"
+      ],
+      "catalysts_from_news": [
+        "No news identified; catalysts cannot be assessed from available data"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.3198,
+        "label": "bearish",
+        "confidence": 0.6212,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No news articles found for FWRY.CA in the specified date range",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9299,
+            "model": "finbert"
+          },
+          {
+            "headline": "Market news data also unavailable due to missing CSV file",
+            "source": "quoted_in_report",
+            "score": -0.7218,
+            "label": "bearish",
+            "confidence": 0.7218,
+            "model": "finbert"
+          },
+          {
+            "headline": "Absence of news reduces confidence and suggests low market attention or trading activity",
+            "source": "quoted_in_report",
+            "score": -0.9666,
+            "label": "bearish",
+            "confidence": 0.9666,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence can indicate either stability or lack of material developments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8887,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were retrieved for FWRY.CA between September 8 and September 15, 2024, and market-l",
+            "source": "quoted_in_report",
+            "score": -0.9637,
+            "label": "bearish",
+            "confidence": 0.9637,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-09-08 to 2024-09-15",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9325,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news identified; risks cannot be assessed from available data",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9234,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No news identified; catalysts cannot be assessed from available data",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9276,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.2079,
+        "label": "bearish",
+        "confidence": 0.5127
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "b2cce68fa1b33034509b6ae12b501bf9d961f2bcd3a6176d5affabaf426d0ff6",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 3693.574458011426,
+  "timestamp_utc": "2026-06-19T09:33:12.090735+00:00",
+  "context_items": []
+}

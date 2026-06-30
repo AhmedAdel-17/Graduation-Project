@@ -1,0 +1,41 @@
+{
+  "run_id": "3f8699eff91b4e2eaa88e63d4a2bd3ac",
+  "ticker": "ADIB",
+  "trade_date": "2024-11-06",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "96c6fa61a4696dbd9c37d589e039c6860726a5d71ceae4626b139746a1719d9a",
+  "raw_output": "```json\n{\n    \"narrative\": \"No retail investor discussion was detected for ADIB.CA across the monitored social media platforms during the analysis window. There are no Arabic or English posts to analyze, and no sentiment signals or themes can be identified at this time.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No retail investor discussion was detected for ADIB.CA across the monitored social media platforms during the analysis window. There are no Arabic or English posts to analyze, and no sentiment signals or themes can be identified at this time.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 64, 'prompt_tokens': 612, 'total_tokens': 676, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 512}, 'prompt_cache_hit_tokens': 512, 'prompt_cache_miss_tokens': 100}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '05733812-2831-4f44-bc96-2bd3bc8552bb', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edfc1-0275-71f1-a33c-5faac778da31-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 612, 'output_tokens': 64, 'total_tokens': 676, 'input_token_details': {'cache_read': 512}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for ADIB.CA]\nNo retail investor discussion was detected for ADIB.CA across the monitored social media platforms during the analysis window. There are no Arabic or English posts to analyze, and no sentiment signals or themes can be identified at this time.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"ADIB.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No retail investor discussion was detected for ADIB.CA across the monitored social media platforms during the analysis window. There are no Arabic or English posts to analyze, and no sentiment signals or themes can be identified at this time.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "56453f4d07688c4a2afc6e27519ca9de6b4fd1cf8cb88bc8ae1a0f293ed981eb",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 2346.4297080645338,
+  "timestamp_utc": "2026-06-19T12:00:31.137280+00:00",
+  "context_items": []
+}

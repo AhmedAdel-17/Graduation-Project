@@ -1,0 +1,117 @@
+{
+  "run_id": "15eae5e51c984293997663aacd3d471d",
+  "ticker": "TMGH",
+  "trade_date": "2024-11-27",
+  "node_name": "trader",
+  "status": "success",
+  "input_state_keys": [
+    "company_of_interest",
+    "investment_plan",
+    "market_report",
+    "sentiment_report",
+    "news_report",
+    "fundamentals_report",
+    "technical_analysis",
+    "fundamental_analysis",
+    "sentiment_analysis",
+    "investment_debate_state",
+    "low_liquidity",
+    "current_position",
+    "avg_daily_volume",
+    "current_price",
+    "portfolio_value",
+    "macro_context"
+  ],
+  "input_hash": "d08f02d66c13a60c4f8f50b4692ffba814f2c6ec1343e23ce6c3a859d1abf2be",
+  "raw_output": "# EXECUTION PLAN — TMGH.CA\n\n## Analysis & Decision Framework\n\n### Signal Assessment\n\n| Signal Source | Direction | Confidence | Weight |\n|---------------|-----------|------------|--------|\n| **Technical** | Neutral | 40% | Low |\n| **Fundamental** | Bearish | 80% | High |\n| **Sentiment** | Neutral | 35% | Low |\n| **Macro Context** | Bearish | — | — |\n\n**Multi-Signal Alignment:** FAIL — Only 0 of 3 signals are positive. The fundamental signal (80% confidence) is decisively bearish and identifies a concrete solvency trajectory.\n\n### Key Risk Identification\n\n1. **Debt Spiral Confirmed**: Debt-to-equity at 4.18x, growing 29% YoY vs equity growing only 5.7%. Interest expense growing 64% — faster than revenue (43%) and net income (44%).\n\n2. **Earnings Yield Spread**: -24.7pp vs 27.25% risk-free rate — worst in market. The stock offers 2.5% earnings yield while T-bills yield 27.5%.\n\n3. **Margin Compression**: Operating margin -8.9% YoY, gross margin -3.2% YoY. Growth is being purchased at the cost of profitability.\n\n4. **No Institutional Demand**: Zero news coverage, zero analyst reports, zero insider buying. No catalysts on the horizon.\n\n5. **Liquidity Trap Risk**: ±10% daily limits + deteriorating fundamentals = risk of being trapped in a gap-down scenario.\n\n### Decision: HOLD\n\n**Rationale:**\n- The bear case (80% confidence) identifies a legitimate solvency deterioration trajectory\n- Zero positive stock-specific signals across all three analysis dimensions\n- The bull thesis relies on *hoped-for* catalysts (rate cuts in H2 2025, index rebalancing) rather than *existing* evidence\n- Risk/reward is asymmetric to the downside: bull case +20% vs bear case -40%\n- The -24.7pp earnings yield spread makes this the worst risk/reward in the market\n\n### Review Triggers\n\n| Trigger | Condition | Action |\n|---------|-----------|--------|\n| **FY2024 Earnings** | Release of annual results | Re-evaluate thesis |\n| **Technical Breakout** | Price > EGP 70 with volume >2x 20-day avg | Consider 1-2% position |\n| **Debt Improvement** | D/E drops below 3.0x | Upgrade to BUY |\n| **Rate Cut Cycle** | CBE cuts below 20% | Reassess earnings yield spread |\n\n---\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"TMGH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Do not enter. Re-evaluate upon FY2024 annual results release OR if stock breaks above EGP 70 with volume >2x 20-day average.\",\n            \"conditions\": [\n                \"FY2024 revenue growth >20% YoY\",\n                \"Interest expense growth decelerating below revenue growth\",\n                \"Debt-to-equity ratio below 4.0x\",\n                \"Current ratio above 1.5x\",\n                \"Technical breakout above EGP 70 with volume confirmation\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position to exit\",\n                \"note\": \"If hypothetically entered at EGP 55-57, stop-loss at EGP 49.50 (-10% from entry) using limit order only\"\n            },\n            \"time_stop\": \"N/A — no position\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A — no position\",\n            \"price_limit_risk\": \"If forced to exit a position and stock hits -10% daily limit, do NOT chase. Wait for next session. Use limit orders at -9% from previous close to avoid being caught in gap-down.\",\n            \"liquidity_exit_plan\": \"If volume drops below 50% of 20-day average for 5 consecutive days, reduce position by 50% using VWAP over 3 days. Accept execution at -2% to -3% from market.\"\n        },\n        \"invalidation_triggers\": [\n            \"FY2024 revenue growth decelerates below 20% YoY\",\n            \"Current ratio drops below 1.0x (liquidity stress signal)\",\n            \"Debt-to-equity exceeds 5.5x\",\n            \"EGP devalues >20% without corresponding real estate price adjustments\",\n            \"CBE raises policy rate above 30%\",\n            \"Daily price limit hit on downside (-10%) indicating forced selling\",\n            \"Volume drops below 50% of 20-day average for 5 consecutive days\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```",
+  "state_update": {
+    "messages": "[AIMessage(content='# EXECUTION PLAN — TMGH.CA\\n\\n## Analysis & Decision Framework\\n\\n### Signal Assessment\\n\\n| Signal Source | Direction | Confidence | Weight |\\n|---------------|-----------|------------|--------|\\n| **Technical** | Neutral | 40% | Low |\\n| **Fundamental** | Bearish | 80% | High |\\n| **Sentiment** | Neutral | 35% | Low |\\n| **Macro Context** | Bearish | — | — |\\n\\n**Multi-Signal Alignment:** FAIL — Only 0 of 3 signals are positive. The fundamental signal (80% confidence) is decisively bearish and identifies a concrete solvency trajectory.\\n\\n### Key Risk Identification\\n\\n1. **Debt Spiral Confirmed**: Debt-to-equity at 4.18x, growing 29% YoY vs equity growing only 5.7%. Interest expense growing 64% — faster than revenue (43%) and net income (44%).\\n\\n2. **Earnings Yield Spread**: -24.7pp vs 27.25% risk-free rate — worst in market. The stock offers 2.5% earnings yield while T-bills yield 27.5%.\\n\\n3. **Margin Compression**: Operating margin -8.9% YoY, gross margin -3.2% YoY. Growth is being purchased at the cost of profitability.\\n\\n4. **No Institutional Demand**: Zero news coverage, zero analyst reports, zero insider buying. No catalysts on the horizon.\\n\\n5. **Liquidity Trap Risk**: ±10% daily limits + deteriorating fundamentals = risk of being trapped in a gap-down scenario.\\n\\n### Decision: HOLD\\n\\n**Rationale:**\\n- The bear case (80% confidence) identifies a legitimate solvency deterioration trajectory\\n- Zero positive stock-specific signals across all three analysis dimensions\\n- The bull thesis relies on *hoped-for* catalysts (rate cuts in H2 2025, index rebalancing) rather than *existing* evidence\\n- Risk/reward is asymmetric to the downside: bull case +20% vs bear case -40%\\n- The -24.7pp earnings yield spread makes this the worst risk/reward in the market\\n\\n### Review Triggers\\n\\n| Trigger | Condition | Action |\\n|---------|-----------|--------|\\n| **FY2024 Earnings** | Release of annual results | Re-evaluate thesis |\\n| **Technical Breakout** | Price > EGP 70 with volume >2x 20-day avg | Consider 1-2% position |\\n| **Debt Improvement** | D/E drops below 3.0x | Upgrade to BUY |\\n| **Rate Cut Cycle** | CBE cuts below 20% | Reassess earnings yield spread |\\n\\n---\\n\\n```json\\n{\\n    \"execution_plan\": {\\n        \"symbol\": \"TMGH.CA\",\\n        \"market\": \"EGX\",\\n        \"currency\": \"EGP\",\\n        \"decision\": \"HOLD\",\\n        \"conviction\": \"high\",\\n        \"position_sizing\": {\\n            \"target_shares\": 0,\\n            \"max_shares_per_day\": 0,\\n            \"execution_days\": 0,\\n            \"pct_of_adv_per_day\": \"0%\",\\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\\n        },\\n        \"entry_logic\": {\\n            \"order_type\": \"N/A — no entry\",\\n            \"entry_zone\": {\\n                \"limit_price\": null,\\n                \"price_range_low\": null,\\n                \"price_range_high\": null\\n            },\\n            \"timing\": \"Do not enter. Re-evaluate upon FY2024 annual results release OR if stock breaks above EGP 70 with volume >2x 20-day average.\",\\n            \"conditions\": [\\n                \"FY2024 revenue growth >20% YoY\",\\n                \"Interest expense growth decelerating below revenue growth\",\\n                \"Debt-to-equity ratio below 4.0x\",\\n                \"Current ratio above 1.5x\",\\n                \"Technical breakout above EGP 70 with volume confirmation\"\\n            ]\\n        },\\n        \"exit_logic\": {\\n            \"take_profit\": {\\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\\n            },\\n            \"stop_loss\": {\\n                \"price\": null,\\n                \"type\": \"N/A — no position to exit\",\\n                \"note\": \"If hypothetically entered at EGP 55-57, stop-loss at EGP 49.50 (-10% from entry) using limit order only\"\\n            },\\n            \"time_stop\": \"N/A — no position\"\\n        },\\n        \"risk_controls\": {\\n            \"max_loss_per_trade\": \"N/A — no position\",\\n            \"max_daily_execution\": \"N/A — no position\",\\n            \"price_limit_risk\": \"If forced to exit a position and stock hits -10% daily limit, do NOT chase. Wait for next session. Use limit orders at -9% from previous close to avoid being caught in gap-down.\",\\n            \"liquidity_exit_plan\": \"If volume drops below 50% of 20-day average for 5 consecutive days, reduce position by 50% using VWAP over 3 days. Accept execution at -2% to -3% from market.\"\\n        },\\n        \"invalidation_triggers\": [\\n            \"FY2024 revenue growth decelerates below 20% YoY\",\\n            \"Current ratio drops below 1.0x (liquidity stress signal)\",\\n            \"Debt-to-equity exceeds 5.5x\",\\n            \"EGP devalues >20% without corresponding real estate price adjustments\",\\n            \"CBE raises policy rate above 30%\",\\n            \"Daily price limit hit on downside (-10%) indicating forced selling\",\\n            \"Volume drops below 50% of 20-day average for 5 consecutive days\"\\n        ]\\n    },\\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 1292, 'prompt_tokens': 9413, 'total_tokens': 10705, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 9413}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'c969c05e-2cc8-46e9-a802-af424f9e2ff3', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edf9c-add8-7382-8772-8d5ff24cf374-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 9413, 'output_tokens': 1292, 'total_tokens': 10705, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "trader_investment_plan": "# EXECUTION PLAN — TMGH.CA\n\n## Analysis & Decision Framework\n\n### Signal Assessment\n\n| Signal Source | Direction | Confidence | Weight |\n|---------------|-----------|------------|--------|\n| **Technical** | Neutral | 40% | Low |\n| **Fundamental** | Bearish | 80% | High |\n| **Sentiment** | Neutral | 35% | Low |\n| **Macro Context** | Bearish | — | — |\n\n**Multi-Signal Alignment:** FAIL — Only 0 of 3 signals are positive. The fundamental signal (80% confidence) is decisively bearish and identifies a concrete solvency trajectory.\n\n### Key Risk Identification\n\n1. **Debt Spiral Confirmed**: Debt-to-equity at 4.18x, growing 29% YoY vs equity growing only 5.7%. Interest expense growing 64% — faster than revenue (43%) and net income (44%).\n\n2. **Earnings Yield Spread**: -24.7pp vs 27.25% risk-free rate — worst in market. The stock offers 2.5% earnings yield while T-bills yield 27.5%.\n\n3. **Margin Compression**: Operating margin -8.9% YoY, gross margin -3.2% YoY. Growth is being purchased at the cost of profitability.\n\n4. **No Institutional Demand**: Zero news coverage, zero analyst reports, zero insider buying. No catalysts on the horizon.\n\n5. **Liquidity Trap Risk**: ±10% daily limits + deteriorating fundamentals = risk of being trapped in a gap-down scenario.\n\n### Decision: HOLD\n\n**Rationale:**\n- The bear case (80% confidence) identifies a legitimate solvency deterioration trajectory\n- Zero positive stock-specific signals across all three analysis dimensions\n- The bull thesis relies on *hoped-for* catalysts (rate cuts in H2 2025, index rebalancing) rather than *existing* evidence\n- Risk/reward is asymmetric to the downside: bull case +20% vs bear case -40%\n- The -24.7pp earnings yield spread makes this the worst risk/reward in the market\n\n### Review Triggers\n\n| Trigger | Condition | Action |\n|---------|-----------|--------|\n| **FY2024 Earnings** | Release of annual results | Re-evaluate thesis |\n| **Technical Breakout** | Price > EGP 70 with volume >2x 20-day avg | Consider 1-2% position |\n| **Debt Improvement** | D/E drops below 3.0x | Upgrade to BUY |\n| **Rate Cut Cycle** | CBE cuts below 20% | Reassess earnings yield spread |\n\n---\n\n```json\n{\n    \"execution_plan\": {\n        \"symbol\": \"TMGH.CA\",\n        \"market\": \"EGX\",\n        \"currency\": \"EGP\",\n        \"decision\": \"HOLD\",\n        \"conviction\": \"high\",\n        \"position_sizing\": {\n            \"target_shares\": 0,\n            \"max_shares_per_day\": 0,\n            \"execution_days\": 0,\n            \"pct_of_adv_per_day\": \"0%\",\n            \"portfolio_allocation\": \"0% — remain 100% cash\"\n        },\n        \"entry_logic\": {\n            \"order_type\": \"N/A — no entry\",\n            \"entry_zone\": {\n                \"limit_price\": null,\n                \"price_range_low\": null,\n                \"price_range_high\": null\n            },\n            \"timing\": \"Do not enter. Re-evaluate upon FY2024 annual results release OR if stock breaks above EGP 70 with volume >2x 20-day average.\",\n            \"conditions\": [\n                \"FY2024 revenue growth >20% YoY\",\n                \"Interest expense growth decelerating below revenue growth\",\n                \"Debt-to-equity ratio below 4.0x\",\n                \"Current ratio above 1.5x\",\n                \"Technical breakout above EGP 70 with volume confirmation\"\n            ]\n        },\n        \"exit_logic\": {\n            \"take_profit\": {\n                \"target_1\": {\"price\": null, \"pct_of_position\": null},\n                \"target_2\": {\"price\": null, \"pct_of_position\": null},\n                \"target_3\": {\"price\": null, \"pct_of_position\": null}\n            },\n            \"stop_loss\": {\n                \"price\": null,\n                \"type\": \"N/A — no position to exit\",\n                \"note\": \"If hypothetically entered at EGP 55-57, stop-loss at EGP 49.50 (-10% from entry) using limit order only\"\n            },\n            \"time_stop\": \"N/A — no position\"\n        },\n        \"risk_controls\": {\n            \"max_loss_per_trade\": \"N/A — no position\",\n            \"max_daily_execution\": \"N/A — no position\",\n            \"price_limit_risk\": \"If forced to exit a position and stock hits -10% daily limit, do NOT chase. Wait for next session. Use limit orders at -9% from previous close to avoid being caught in gap-down.\",\n            \"liquidity_exit_plan\": \"If volume drops below 50% of 20-day average for 5 consecutive days, reduce position by 50% using VWAP over 3 days. Accept execution at -2% to -3% from market.\"\n        },\n        \"invalidation_triggers\": [\n            \"FY2024 revenue growth decelerates below 20% YoY\",\n            \"Current ratio drops below 1.0x (liquidity stress signal)\",\n            \"Debt-to-equity exceeds 5.5x\",\n            \"EGP devalues >20% without corresponding real estate price adjustments\",\n            \"CBE raises policy rate above 30%\",\n            \"Daily price limit hit on downside (-10%) indicating forced selling\",\n            \"Volume drops below 50% of 20-day average for 5 consecutive days\"\n        ]\n    },\n    \"final_recommendation\": \"FINAL TRANSACTION PROPOSAL: **HOLD**\"\n}\n```",
+    "execution_plan": {
+      "execution_plan": {
+        "symbol": "TMGH.CA",
+        "market": "EGX",
+        "currency": "EGP",
+        "decision": "HOLD",
+        "conviction": "high",
+        "position_sizing": {
+          "target_shares": 0,
+          "max_shares_per_day": 0,
+          "execution_days": 0,
+          "pct_of_adv_per_day": "0%",
+          "portfolio_allocation": "0% — remain 100% cash"
+        },
+        "entry_logic": {
+          "order_type": "N/A — no entry",
+          "entry_zone": {
+            "limit_price": null,
+            "price_range_low": null,
+            "price_range_high": null
+          },
+          "timing": "Do not enter. Re-evaluate upon FY2024 annual results release OR if stock breaks above EGP 70 with volume >2x 20-day average.",
+          "conditions": [
+            "FY2024 revenue growth >20% YoY",
+            "Interest expense growth decelerating below revenue growth",
+            "Debt-to-equity ratio below 4.0x",
+            "Current ratio above 1.5x",
+            "Technical breakout above EGP 70 with volume confirmation"
+          ]
+        },
+        "exit_logic": {
+          "take_profit": {
+            "target_1": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_2": {
+              "price": null,
+              "pct_of_position": null
+            },
+            "target_3": {
+              "price": null,
+              "pct_of_position": null
+            }
+          },
+          "stop_loss": {
+            "price": null,
+            "type": "N/A — no position to exit",
+            "note": "If hypothetically entered at EGP 55-57, stop-loss at EGP 49.50 (-10% from entry) using limit order only"
+          },
+          "time_stop": "N/A — no position"
+        },
+        "risk_controls": {
+          "max_loss_per_trade": "N/A — no position",
+          "max_daily_execution": "N/A — no position",
+          "price_limit_risk": "If forced to exit a position and stock hits -10% daily limit, do NOT chase. Wait for next session. Use limit orders at -9% from previous close to avoid being caught in gap-down.",
+          "liquidity_exit_plan": "If volume drops below 50% of 20-day average for 5 consecutive days, reduce position by 50% using VWAP over 3 days. Accept execution at -2% to -3% from market."
+        },
+        "invalidation_triggers": [
+          "FY2024 revenue growth decelerates below 20% YoY",
+          "Current ratio drops below 1.0x (liquidity stress signal)",
+          "Debt-to-equity exceeds 5.5x",
+          "EGP devalues >20% without corresponding real estate price adjustments",
+          "CBE raises policy rate above 30%",
+          "Daily price limit hit on downside (-10%) indicating forced selling",
+          "Volume drops below 50% of 20-day average for 5 consecutive days"
+        ]
+      },
+      "final_recommendation": "FINAL TRANSACTION PROPOSAL: **HOLD**"
+    },
+    "sender": "Institutional_Trader"
+  },
+  "state_update_keys": [
+    "messages",
+    "trader_investment_plan",
+    "execution_plan",
+    "sender"
+  ],
+  "signal": "HOLD",
+  "prompt_hash": "f9cb733f640db9a99900ef4dcb6fbbf450888c37613c4370b6bd7d4efb43bae5",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 11358.899458078668,
+  "timestamp_utc": "2026-06-19T11:20:59.191692+00:00",
+  "context_items": []
+}

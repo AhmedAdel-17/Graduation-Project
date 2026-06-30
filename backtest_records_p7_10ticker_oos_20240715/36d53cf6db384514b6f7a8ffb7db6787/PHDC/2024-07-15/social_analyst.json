@@ -1,0 +1,41 @@
+{
+  "run_id": "36d53cf6db384514b6f7a8ffb7db6787",
+  "ticker": "PHDC",
+  "trade_date": "2024-07-15",
+  "node_name": "social_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_stock_datapoints",
+    "prefetched_social_sentiment",
+    "prefetched_social_posts",
+    "social_messages"
+  ],
+  "input_hash": "d4c2a5e5a01c13f4e4bb6a247839bbe5811a225bfa8a131450fb1cb8759f1d82",
+  "raw_output": "```json\n{\n    \"narrative\": \"No retail investor discussion was detected for PHDC.CA across the monitored social media platforms during the analysis window. There are no Arabic-language signals or Egyptian dialect mentions to report, and the absence of posts indicates a complete lack of social media engagement or sentiment data for this ticker.\",\n    \"cited_post_ids\": []\n}\n```",
+  "state_update": {
+    "social_messages": "[AIMessage(content='```json\\n{\\n    \"narrative\": \"No retail investor discussion was detected for PHDC.CA across the monitored social media platforms during the analysis window. There are no Arabic-language signals or Egyptian dialect mentions to report, and the absence of posts indicates a complete lack of social media engagement or sentiment data for this ticker.\",\\n    \"cited_post_ids\": []\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 76, 'prompt_tokens': 618, 'total_tokens': 694, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 618}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': 'a3ceca68-f853-4e6e-bcd1-2f215b9fb323', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edffb-204b-7b31-baed-a9c655f583f2-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 618, 'output_tokens': 76, 'total_tokens': 694, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "sentiment_report": "[Social sentiment for PHDC.CA]\nNo retail investor discussion was detected for PHDC.CA across the monitored social media platforms during the analysis window. There are no Arabic-language signals or Egyptian dialect mentions to report, and the absence of posts indicates a complete lack of social media engagement or sentiment data for this ticker.\n\nBlend modifiers: confidence×1.00, position-size×1.00\nNote: The above modifiers affect execution sizing only. Social sentiment does NOT alter the directional investment thesis.",
+    "social_sentiment_analysis": "{\"ticker\": \"PHDC.CA\", \"layer_c_status\": \"not_evaluated\", \"llm_narrative\": \"No retail investor discussion was detected for PHDC.CA across the monitored social media platforms during the analysis window. There are no Arabic-language signals or Egyptian dialect mentions to report, and the absence of posts indicates a complete lack of social media engagement or sentiment data for this ticker.\", \"cited_post_ids\": [], \"blend_result\": {\"confidence_multiplier\": 1.0, \"position_size_multiplier\": 1.0, \"audit\": \"blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000\"}}",
+    "sentiment_blend_result": {
+      "confidence_multiplier": 1.0,
+      "position_size_multiplier": 1.0,
+      "audit": "blend: market=NO_SIGNAL(gate=prefetch.market,pass-through); macro=NO_SIGNAL(pass-through); sector=NO_SIGNAL(pass-through) => conf×1.0000, size×1.0000"
+    }
+  },
+  "state_update_keys": [
+    "social_messages",
+    "sentiment_report",
+    "social_sentiment_analysis",
+    "sentiment_blend_result"
+  ],
+  "prompt_hash": "dea0c74b682b810c632e37785f523c4a9f16cc90ed3352e6790beb78cbea8a3c",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 3761.6879580309615,
+  "timestamp_utc": "2026-06-19T13:04:01.276597+00:00",
+  "context_items": []
+}

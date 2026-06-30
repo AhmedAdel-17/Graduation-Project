@@ -1,0 +1,191 @@
+{
+  "run_id": "781e1911525b4d779a05eac75311f2a6",
+  "ticker": "EAST",
+  "trade_date": "2024-07-15",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "98c981fc12501d8f03d14ed18994902ca487f80cfdf9b9a7c71334eb068dd37b",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for EAST.CA in the specified date range\",\n        \"No market-level news available for EGX context\",\n        \"Data source errors indicate missing news directories and CSV files\",\n        \"Silence in news coverage reduces confidence in any directional bias\",\n        \"Cannot confirm any corporate events, earnings, or regulatory filings\"\n    ],\n    \"explanation\": \"No news articles were found for EAST.CA between July 8-15, 2024, and no market-wide EGX news was available. The absence of news is a signal of low information flow, which reduces confidence in any sentiment assessment. Without any headlines, earnings reports, or market commentary, the sentiment is effectively neutral with weak conviction.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-07-08 to 2024-07-15\"\n    },\n    \"risks_from_news\": [\n        \"No news available to identify specific risks\",\n        \"Information vacuum may indicate low liquidity or reduced market attention\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to absence of news\"\n    ]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for EAST.CA in the specified date range\",\\n        \"No market-level news available for EGX context\",\\n        \"Data source errors indicate missing news directories and CSV files\",\\n        \"Silence in news coverage reduces confidence in any directional bias\",\\n        \"Cannot confirm any corporate events, earnings, or regulatory filings\"\\n    ],\\n    \"explanation\": \"No news articles were found for EAST.CA between July 8-15, 2024, and no market-wide EGX news was available. The absence of news is a signal of low information flow, which reduces confidence in any sentiment assessment. Without any headlines, earnings reports, or market commentary, the sentiment is effectively neutral with weak conviction.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-07-08 to 2024-07-15\"\\n    },\\n    \"risks_from_news\": [\\n        \"No news available to identify specific risks\",\\n        \"Information vacuum may indicate low liquidity or reduced market attention\"\\n    ],\\n    \"catalysts_from_news\": [\\n        \"No positive catalysts identified due to absence of news\"\\n    ]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 314, 'prompt_tokens': 661, 'total_tokens': 975, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}, 'prompt_cache_hit_tokens': 0, 'prompt_cache_miss_tokens': 661}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '34c609c5-ed86-43c3-a9a7-1ec4b4e8bccb', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edfcf-fd01-7ee3-8e64-1641645a86a0-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 661, 'output_tokens': 314, 'total_tokens': 975, 'input_token_details': {'cache_read': 0}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for EAST.CA in the specified date range\",\n        \"No market-level news available for EGX context\",\n        \"Data source errors indicate missing news directories and CSV files\",\n        \"Silence in news coverage reduces confidence in any directional bias\",\n        \"Cannot confirm any corporate events, earnings, or regulatory filings\"\n    ],\n    \"explanation\": \"No news articles were found for EAST.CA between July 8-15, 2024, and no market-wide EGX news was available. The absence of news is a signal of low information flow, which reduces confidence in any sentiment assessment. Without any headlines, earnings reports, or market commentary, the sentiment is effectively neutral with weak conviction.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-07-08 to 2024-07-15\"\n    },\n    \"risks_from_news\": [\n        \"No news available to identify specific risks\",\n        \"Information vacuum may indicate low liquidity or reduced market attention\"\n    ],\n    \"catalysts_from_news\": [\n        \"No positive catalysts identified due to absence of news\"\n    ]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for EAST.CA in the specified date range",
+        "No market-level news available for EGX context",
+        "Data source errors indicate missing news directories and CSV files",
+        "Silence in news coverage reduces confidence in any directional bias",
+        "Cannot confirm any corporate events, earnings, or regulatory filings",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for EAST.CA between July 8-15, 2024, and no market-wide EGX news was available. The absence of news is a signal of low information flow, which reduces confidence in any sentiment assessment. Without any headlines, earnings reports, or market commentary, the sentiment is effectively neutral with weak conviction.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-07-08 to 2024-07-15"
+      },
+      "risks_from_news": [
+        "No news available to identify specific risks",
+        "Information vacuum may indicate low liquidity or reduced market attention"
+      ],
+      "catalysts_from_news": [
+        "No positive catalysts identified due to absence of news"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.366,
+        "label": "bearish",
+        "confidence": 0.6663,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for EAST.CA in the specified date range",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9194,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market-level news available for EGX context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9195,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data source errors indicate missing news directories and CSV files",
+            "source": "quoted_in_report",
+            "score": -0.8475,
+            "label": "bearish",
+            "confidence": 0.8475,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence in news coverage reduces confidence in any directional bias",
+            "source": "quoted_in_report",
+            "score": -0.9322,
+            "label": "bearish",
+            "confidence": 0.9322,
+            "model": "finbert"
+          },
+          {
+            "headline": "Cannot confirm any corporate events, earnings, or regulatory filings",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8548,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for EAST.CA between July 8-15, 2024, and no market-wide EGX news was ava",
+            "source": "quoted_in_report",
+            "score": -0.9528,
+            "label": "bearish",
+            "confidence": 0.9528,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-07-08 to 2024-07-15",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.934,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news available to identify specific risks",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9351,
+            "model": "finbert"
+          },
+          {
+            "headline": "Information vacuum may indicate low liquidity or reduced market attention",
+            "source": "quoted_in_report",
+            "score": -0.9585,
+            "label": "bearish",
+            "confidence": 0.9585,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No positive catalysts identified due to absence of news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8737,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.2379,
+        "label": "bearish",
+        "confidence": 0.5398
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "3b6fb28228cd4953d56e7fccaca67a552b32bdd5667a3d2e86365d6986736e21",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 3983.155958005227,
+  "timestamp_utc": "2026-06-19T12:16:54.837932+00:00",
+  "context_items": []
+}

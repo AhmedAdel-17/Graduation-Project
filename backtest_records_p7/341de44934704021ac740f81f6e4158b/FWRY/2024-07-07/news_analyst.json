@@ -1,0 +1,173 @@
+{
+  "run_id": "341de44934704021ac740f81f6e4158b",
+  "ticker": "FWRY",
+  "trade_date": "2024-07-07",
+  "node_name": "news_analyst",
+  "status": "success",
+  "input_state_keys": [
+    "trade_date",
+    "company_of_interest",
+    "prefetched_company_news",
+    "prefetched_market_news",
+    "news_messages"
+  ],
+  "input_hash": "0862c8ca556ceb1c6e3c8aa8468250a74fe5d59fdd81767aa3f7a4c70a56ef0a",
+  "raw_output": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market-wide EGX news available for context\",\n        \"Silence reduces confidence and indicates lack of catalysts or risks\",\n        \"Data source errors suggest potential data retrieval issues, not necessarily true silence\"\n    ],\n    \"explanation\": \"No news articles were found for FWRY.CA during the June 30 to July 7, 2024 period, and no market-level EGX news was available. The absence of news reduces confidence and suggests no material developments, leaving sentiment neutral with weak conviction due to data gaps.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-06-30 to 2024-07-07\"\n    },\n    \"risks_from_news\": [\"No news identified; lack of information itself is a risk for uncertainty\"],\n    \"catalysts_from_news\": [\"No positive catalysts identified due to absence of news\"]\n}\n```",
+  "state_update": {
+    "news_messages": "[AIMessage(content='```json\\n{\\n    \"sentiment\": \"neutral\",\\n    \"sentiment_strength\": \"weak\",\\n    \"confidence_score\": 15,\\n    \"confidence_adjustments\": [\\n        \"Complete absence of news articles for the period\",\\n        \"No market-wide EGX news available for context\",\\n        \"Silence reduces confidence and indicates lack of catalysts or risks\",\\n        \"Data source errors suggest potential data retrieval issues, not necessarily true silence\"\\n    ],\\n    \"explanation\": \"No news articles were found for FWRY.CA during the June 30 to July 7, 2024 period, and no market-level EGX news was available. The absence of news reduces confidence and suggests no material developments, leaving sentiment neutral with weak conviction due to data gaps.\",\\n    \"key_headlines\": [],\\n    \"news_coverage\": {\\n        \"total_articles\": 0,\\n        \"sources_count\": 0,\\n        \"languages\": [\"arabic\", \"english\"],\\n        \"date_range\": \"2024-06-30 to 2024-07-07\"\\n    },\\n    \"risks_from_news\": [\"No news identified; lack of information itself is a risk for uncertainty\"],\\n    \"catalysts_from_news\": [\"No positive catalysts identified due to absence of news\"]\\n}\\n```', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 271, 'prompt_tokens': 668, 'total_tokens': 939, 'completion_tokens_details': None, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 640}, 'prompt_cache_hit_tokens': 640, 'prompt_cache_miss_tokens': 28}, 'model_provider': 'openai', 'model_name': 'deepseek-v4-flash', 'system_fingerprint': 'fp_8b330d02d0_prod0820_fp8_kvcache_20260402', 'id': '4e87cdf0-f095-49da-8fd6-f150e04a07c2', 'finish_reason': 'stop', 'logprobs': None}, id='lc_run--019edcc0-a084-7991-a702-e1a71ae67921-0', tool_calls=[], invalid_tool_calls=[], usage_metadata={'input_tokens': 668, 'output_tokens': 271, 'total_tokens': 939, 'input_token_details': {'cache_read': 640}, 'output_token_details': {}})]",
+    "news_report": "```json\n{\n    \"sentiment\": \"neutral\",\n    \"sentiment_strength\": \"weak\",\n    \"confidence_score\": 15,\n    \"confidence_adjustments\": [\n        \"Complete absence of news articles for the period\",\n        \"No market-wide EGX news available for context\",\n        \"Silence reduces confidence and indicates lack of catalysts or risks\",\n        \"Data source errors suggest potential data retrieval issues, not necessarily true silence\"\n    ],\n    \"explanation\": \"No news articles were found for FWRY.CA during the June 30 to July 7, 2024 period, and no market-level EGX news was available. The absence of news reduces confidence and suggests no material developments, leaving sentiment neutral with weak conviction due to data gaps.\",\n    \"key_headlines\": [],\n    \"news_coverage\": {\n        \"total_articles\": 0,\n        \"sources_count\": 0,\n        \"languages\": [\"arabic\", \"english\"],\n        \"date_range\": \"2024-06-30 to 2024-07-07\"\n    },\n    \"risks_from_news\": [\"No news identified; lack of information itself is a risk for uncertainty\"],\n    \"catalysts_from_news\": [\"No positive catalysts identified due to absence of news\"]\n}\n```",
+    "sentiment_analysis": {
+      "sentiment": "neutral",
+      "sentiment_strength": "weak",
+      "confidence_score": 35,
+      "confidence_adjustments": [
+        "Complete absence of news articles for the period",
+        "No market-wide EGX news available for context",
+        "Silence reduces confidence and indicates lack of catalysts or risks",
+        "Data source errors suggest potential data retrieval issues, not necessarily true silence",
+        "No news coverage available — confidence set to neutral default 35 (LLM returned 15, ignored — no articles to reason about). News absence is uninformative for EGX mid-caps, not a negative signal."
+      ],
+      "explanation": "No news articles were found for FWRY.CA during the June 30 to July 7, 2024 period, and no market-level EGX news was available. The absence of news reduces confidence and suggests no material developments, leaving sentiment neutral with weak conviction due to data gaps.",
+      "key_headlines": [],
+      "news_coverage": {
+        "total_articles": 0,
+        "sources_count": 0,
+        "languages": [
+          "arabic",
+          "english"
+        ],
+        "date_range": "2024-06-30 to 2024-07-07"
+      },
+      "risks_from_news": [
+        "No news identified; lack of information itself is a risk for uncertainty"
+      ],
+      "catalysts_from_news": [
+        "No positive catalysts identified due to absence of news"
+      ],
+      "news_absent": true,
+      "transformer_sentiment": {
+        "score": -0.3771,
+        "label": "bearish",
+        "confidence": 0.5916,
+        "model_status": "ok",
+        "per_headline_scores": [
+          {
+            "headline": "sentiment_strength",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_score",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "confidence_adjustments",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "Complete absence of news articles for the period",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8298,
+            "model": "finbert"
+          },
+          {
+            "headline": "No market-wide EGX news available for context",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.928,
+            "model": "finbert"
+          },
+          {
+            "headline": "Silence reduces confidence and indicates lack of catalysts or risks",
+            "source": "quoted_in_report",
+            "score": -0.9527,
+            "label": "bearish",
+            "confidence": 0.9527,
+            "model": "finbert"
+          },
+          {
+            "headline": "Data source errors suggest potential data retrieval issues, not necessarily true silence",
+            "source": "quoted_in_report",
+            "score": -0.9096,
+            "label": "bearish",
+            "confidence": 0.9096,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news articles were found for FWRY.CA during the June 30 to July 7, 2024 period, and no market-lev",
+            "source": "quoted_in_report",
+            "score": -0.9706,
+            "label": "bearish",
+            "confidence": 0.9706,
+            "model": "finbert"
+          },
+          {
+            "headline": "2024-06-30 to 2024-07-07",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.9313,
+            "model": "finbert"
+          },
+          {
+            "headline": "No news identified; lack of information itself is a risk for uncertainty",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.5029,
+            "model": "finbert"
+          },
+          {
+            "headline": "catalysts_from_news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.05,
+            "model": "filtered:low_quality"
+          },
+          {
+            "headline": "No positive catalysts identified due to absence of news",
+            "source": "quoted_in_report",
+            "score": 0.0,
+            "label": "neutral",
+            "confidence": 0.8737,
+            "model": "finbert"
+          }
+        ]
+      },
+      "combined_sentiment": {
+        "score": -0.2451,
+        "label": "bearish",
+        "confidence": 0.495
+      }
+    }
+  },
+  "state_update_keys": [
+    "news_messages",
+    "news_report",
+    "sentiment_analysis"
+  ],
+  "signal": "bearish",
+  "prompt_hash": "fdd968df1c46e5d7fb47ee3f38bdf6cd7e802bd7dde40086c0be943c9cd5b5a3",
+  "model_id": "deepseek-chat",
+  "temperature": 0.0,
+  "seed": 42,
+  "config_hash": "11015539396880aa91bbaf2664eb3955600e2c7fb61f864daac5a28765975a8f",
+  "wall_clock_ms": 3250.808542012237,
+  "timestamp_utc": "2026-06-18T22:01:15.524738+00:00",
+  "context_items": []
+}

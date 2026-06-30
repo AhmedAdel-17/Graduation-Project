@@ -9,8 +9,9 @@ export function useRunPrediction() {
 }
 
 export function useRunFullPipeline() {
-  return useMutation<PredictionResult, Error, string>({
-    mutationFn: (ticker) => endpoints.runFullPipeline(ticker),
+  return useMutation<PredictionResult, Error, { ticker: string; profileId?: string }>({
+    mutationFn: ({ ticker, profileId }) =>
+      endpoints.runFullPipeline(ticker, profileId),
   });
 }
 
