@@ -151,6 +151,7 @@ class BacktestingEngine:
         record_prompts: bool = False,
         records_dir: str = "./backtest_records",
         output_dir: str = "",
+        investor_context: Optional[Dict] = None,
     ):
         # decision_profile: "live_faithful" (default; untouched decision logic) or
         # "tuned" (disclosed sensitivity — lowers the required-return the
@@ -201,6 +202,10 @@ class BacktestingEngine:
         # Output directory for reports, trade CSVs, and partial checkpoints.
         # Empty string → default (backtest_results/ next to this script).
         self._output_dir = output_dir
+
+        # Optional investor context — injected into graph state on every propagate()
+        # so agent prompts adapt to the investor's risk tolerance, horizon, etc.
+        self._investor_context = investor_context
 
         # Configure system
         _bt_config = {
@@ -1135,6 +1140,7 @@ class BacktestingEngine:
     def _propagate_with_retry(
         self, graph, ticker: str, date: str,
         *, max_attempts: int = 4, base_delay: float = 20.0,
+        investor_context: Optional[Dict] = None,
     ):
         """Run ``graph.propagate`` with backoff on transient LLM errors.
 
@@ -1146,7 +1152,10 @@ class BacktestingEngine:
         last_exc: Optional[Exception] = None
         for attempt in range(1, max_attempts + 1):
             try:
-                return graph.propagate(ticker, date, run_type="backtest")
+                return graph.propagate(
+                    ticker, date, run_type="backtest",
+                    investor_context=investor_context,
+                )
             except (KeyboardInterrupt, SystemExit):
                 raise
             except Exception as exc:
@@ -2215,7 +2224,10 @@ class BacktestingEngine:
 
                 _call_log.clear()
                 _t0 = time.perf_counter()
-                final_state, _ = self._propagate_with_retry(graph, ticker, date)
+                final_state, _ = self._propagate_with_retry(
+                    graph, ticker, date,
+                    investor_context=self._investor_context,
+                )
                 _trade_time_s = time.perf_counter() - _t0
                 _llm_calls = len(_call_log)
                 _reasoning_score = _compute_reasoning_score(final_state)
@@ -2899,6 +2911,12 @@ if __name__ == "__main__":
     parser.add_argument("--no-hybrid-fundamentals", action="store_true",
                         help="Disable CoT enrichment for fundamentals (deterministic-only). "
                              "Default is hybrid (deterministic + 3-stage CoT).")
+    parser.add_argument("--investor-profile", type=str, default=None,
+                        help="Investor profile as JSON string or a JSON file path. "
+                             "Fields: risk_tolerance (conservative|moderate|aggressive), "
+                             "investment_horizon (short_term|medium_term|long_term), "
+                             "capital_size, max_position_pct, trading_style, benchmark_target. "
+                             "When provided, agent prompts adapt to the investor's profile.")
 
     args = parser.parse_args()
 
@@ -2928,6 +2946,24 @@ if __name__ == "__main__":
         _DC["use_hybrid_fundamental_analyst"] = False
         set_config({"use_hybrid_fundamental_analyst": False})
 
+    # Parse investor profile (JSON string or file path)
+    _investor_ctx = None
+    if args.investor_profile:
+        import json as _json
+        raw = args.investor_profile
+        if os.path.isfile(raw):
+            with open(raw) as f:
+                raw = f.read()
+        try:
+            _profile = _json.loads(raw)
+            from tradingagents.agents.utils.investor_context import build_investor_context
+            _investor_ctx = build_investor_context(_profile)
+            logger.info("[Backtest] Investor profile loaded: risk=%s, horizon=%s, capital=%.0f",
+                        _investor_ctx.get("risk_tolerance"), _investor_ctx.get("investment_horizon"),
+                        _investor_ctx.get("capital_size", 0))
+        except Exception as e:
+            logger.error("[Backtest] Failed to parse --investor-profile: %s", e)
+
     engine = BacktestingEngine(
         initial_capital=args.capital,
         benchmark_ticker=benchmark,
@@ -2937,6 +2973,7 @@ if __name__ == "__main__":
         record_prompts=args.record_prompts,
         records_dir=args.records_dir,
         output_dir=args.output_dir,
+        investor_context=_investor_ctx,
     )
     engine.run_backtest(
         args.ticker, args.start, args.end,

@@ -428,12 +428,19 @@ First call get_stock_data to retrieve OHLCV data. You may call get_technical_pan
                     "data_quality": {"parsing_error": True}
                 }
        
+        # Extract current price from the pre-computed panel so downstream nodes
+        # (Trader, Risk Scorer) use the real price instead of the 50 EGP fallback.
+        _current_price = 0.0
+        if panel_res and isinstance(panel_res.get("panel"), dict):
+            _current_price = float(panel_res["panel"].get("close", 0) or 0)
+
         return {
             "market_messages": [result],
             "market_report": report,
             "technical_analysis": structured_analysis,
             "technical_panel": panel_res,
             "low_liquidity": low_liquidity,
+            "current_price": _current_price,
         }
 
     return market_analyst_node
@@ -743,11 +750,20 @@ def create_deterministic_market_analyst():
                 as_of=panel_res.get("as_of", trade_date), bars=panel_res.get("bars"),
             )
 
+        # Write current price to state so Trader + Risk Scorer use the real
+        # price instead of the 50 EGP hardcoded fallback.
+        _current_price = closes[-1] if closes else 0.0
+        # Fallback: if closes was empty (EODHD + yfinance both failed),
+        # extract from the technical panel which has its own fetch chain.
+        if not _current_price and panel_res and isinstance(panel_res.get("panel"), dict):
+            _current_price = float(panel_res["panel"].get("close", 0) or 0)
+
         return {
             "market_report": report,
             "technical_analysis": structured_analysis,
             "technical_panel": panel_res,
             "low_liquidity": low_liquidity,
+            "current_price": _current_price,
             # Clear per-analyst message channel (no messages were added)
             "market_messages": [],
         }

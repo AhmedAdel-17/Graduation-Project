@@ -3,6 +3,7 @@ from tradingagents.dataflows.config import get_config
 from tradingagents.dataflows.social_v2.entities import ticker_display_name
 from tradingagents.agents.utils.temporal import point_in_time_notice
 from tradingagents.agents.utils.agent_context import (
+    format_investor_context,
     format_past_memories,
     format_sentiment_section,
     parse_fenced_json,
@@ -89,11 +90,14 @@ def create_bull_researcher(llm, memory):
 - Time required to accumulate/exit position
 """
 
+        investor_section = format_investor_context(state)
+
         as_of = state.get("trade_date", "")
         prompt = f"""You are a Bull Researcher building an institutional-grade investment thesis advocating for investing in {company_label}.
 
 {point_in_time_notice(as_of)}
 {egx_context}
+{investor_section}
 
 ## Your Task
 Build a comprehensive BULLISH thesis by:

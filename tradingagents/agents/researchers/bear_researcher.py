@@ -3,6 +3,7 @@ from tradingagents.dataflows.config import get_config
 from tradingagents.dataflows.social_v2.entities import ticker_display_name
 from tradingagents.agents.utils.temporal import point_in_time_notice
 from tradingagents.agents.utils.agent_context import (
+    format_investor_context,
     format_past_memories,
     format_sentiment_section,
     parse_fenced_json,
@@ -98,11 +99,14 @@ Your bearish thesis is about PROTECTING capital, not profiting from decline.
 - Risk of being "stuck" in the position
 """
 
+        investor_section = format_investor_context(state)
+
         as_of = state.get("trade_date", "")
         prompt = f"""You are a Bear Researcher building an institutional-grade investment thesis advising AGAINST investing in (or reducing exposure to) {company_label}.
 
 {point_in_time_notice(as_of)}
 {egx_context}
+{investor_section}
 
 ## Your Task
 Build a comprehensive BEARISH thesis by:

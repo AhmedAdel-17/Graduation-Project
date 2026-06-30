@@ -7,6 +7,7 @@ from tradingagents.dataflows.egx_costs import round_trip_cost_pct
 from tradingagents.agents.utils.temporal import point_in_time_notice
 from tradingagents.agents.utils.agent_context import (
     build_macro_section,
+    format_investor_context,
     format_past_memories,
 )
 
@@ -134,7 +135,10 @@ def create_trader(llm, memory):
         # reasons about execution strategy with correct arithmetic — not
         # reinventing position sizing from first principles.
         avg_daily_volume = state.get("avg_daily_volume") or 100000
-        current_price = state.get("current_price") or 50.0
+        current_price = state.get("current_price") or 0
+        if not current_price:
+            _panel = (state.get("technical_panel") or {}).get("panel") or {}
+            current_price = float(_panel.get("close", 0) or 0) or 50.0
         portfolio_value = state.get("portfolio_value") or 10000000
         position_limits = calculate_position_limits(
             avg_daily_volume=avg_daily_volume,
@@ -184,6 +188,9 @@ def create_trader(llm, memory):
         # Macro overlay: deterministic EGX macro context.
         macro_section = build_macro_section(state)
 
+        # Investor profile context (empty string when no profile is provided).
+        investor_section = format_investor_context(state)
+
         # Long-only rule for the per-style block: SELL is only available when the
         # portfolio actually holds shares. (Precomputed to avoid nested-quote
         # f-string expressions, which are a SyntaxError on Python < 3.12.)
@@ -202,6 +209,7 @@ def create_trader(llm, memory):
 
 {point_in_time_notice(state.get("trade_date", ""))}
 {macro_section}
+{investor_section}
 
 {egx_constraints}
 {position_info}

@@ -225,7 +225,32 @@ def check_stop_loss_atr(
     stop_loss = exit_logic.get("stop_loss", {})
 
     if stop_loss and _coerce_numeric(stop_loss.get("price", 0)) > 0:
-        return None  # Stop already defined — nothing to do
+        # Validate existing stop-loss is within EGX-reasonable range.
+        # LLMs sometimes hallucinate stops 30-40% away from current price,
+        # which is physically unreachable on EGX (±10% daily limit).
+        existing_stop = _coerce_numeric(stop_loss.get("price", 0))
+        max_stop_pct = EGX_RISK_LIMITS.get("atr_stop_max_pct", 0.07)
+        if current_price and current_price > 0 and existing_stop > 0:
+            stop_distance = abs(existing_stop - current_price) / current_price
+            if stop_distance > max_stop_pct:
+                # Auto-correct: clamp the stop to max allowed distance
+                if existing_stop < current_price:  # BUY stop
+                    corrected = round(current_price * (1 - max_stop_pct), 2)
+                else:  # SELL stop
+                    corrected = round(current_price * (1 + max_stop_pct), 2)
+                logger.warning(
+                    "[RiskScorer] Stop-loss %.2f EGP is %.1f%% from price %.2f "
+                    "(max %.0f%%). Clamping to %.2f EGP.",
+                    existing_stop, stop_distance * 100, current_price,
+                    max_stop_pct * 100, corrected,
+                )
+                exit_logic["stop_loss"]["price"] = corrected
+                exit_logic["stop_loss"]["note"] = (
+                    f"Original stop {existing_stop:.2f} EGP was {stop_distance:.1%} "
+                    f"from price — clamped to {max_stop_pct:.0%} (EGX magnet-zone cap)."
+                )
+                exit_logic["stop_loss"]["auto_corrected"] = True
+        return None  # Stop defined (possibly corrected) — no violation
 
     if not current_price or current_price <= 0:
         return RiskViolation(
@@ -391,21 +416,38 @@ def check_short_selling_violation(execution_plan: dict) -> Optional[RiskViolatio
 def check_leverage_violation(execution_plan: dict) -> Optional[RiskViolation]:
     """
     Detect leverage/margin language in the execution plan.
+
+    Fixed: previous code matched the bare substring 'margin' which false-positived
+    on 'margin of safety', 'net interest margin', 'profit margin', etc.
+    Now uses word-boundary regex targeting only actual leverage/margin-trading intent.
     """
     if not EGX_RISK_LIMITS["no_leverage"]:
         return None
 
     plan_text = json.dumps(execution_plan).lower()
-    leverage_indicators = ["margin", "leverage", "2x", "3x", "borrowed"]
 
-    for indicator in leverage_indicators:
-        if indicator in plan_text:
+    # Word-boundary patterns — only match actual leverage/margin-trading language.
+    # Avoids false positives on "margin of safety", "profit margin", "net margin",
+    # "net interest margin", "EBITDA margin".
+    leverage_patterns = [
+        r"\bmargin[\s_-]?trad(e|ing)\b",          # margin trading
+        r"\bmargin[\s_-]?account\b",                # margin account
+        r"\b(on|use|using|with)[\s_-]?margin\b",   # on/use/using margin
+        r"\bmargin\s+to\s+(increase|boost|add)\b",  # margin to increase position
+        r"\b\d+x\s*leverag",                        # 2x leverage, 3x leveraged
+        r"(?<!\d\.)\b[23]x\b",                      # standalone 2x, 3x (not 1.2x, 0.3x)
+        r"\bleverag(e|ed|ing)\b",                   # leverage, leveraged, leveraging
+        r"\bborrowed\s+(funds?|capital)\b",          # borrowed funds/capital
+    ]
+
+    for pattern in leverage_patterns:
+        if re.search(pattern, plan_text):
             return RiskViolation(
                 rule_name="LEVERAGE_FORBIDDEN",
                 severity="critical",
                 limit_value=1.0,
                 actual_value=2.0,
-                explanation=f"Leverage is forbidden on EGX. Found indicator: '{indicator}'",
+                explanation=f"Leverage is forbidden on EGX. Pattern matched: '{pattern}'",
                 remediation="Use 100% cash positions only. No margin or leveraged instruments.",
             )
 

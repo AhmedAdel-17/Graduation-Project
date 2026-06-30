@@ -10,16 +10,8 @@ import { InvestorPage } from "./features/investor/InvestorPage";
 // Lives entirely under /admin/* so the live dashboard below is untouched.
 const AdminApp = lazy(() => import("./features/admin/AdminApp"));
 
-// Portfolio Assistant — lazy so its (eventually heavy: recharts, chat) bundle
-// loads only when /portfolio is visited.
-const AssistantPage = lazy(() =>
-  import("./features/assistant/AssistantPage").then((m) => ({ default: m.AssistantPage }))
-);
-
-// Dev-only block gallery / visual-regression page for the chat blocks (P7).
-const BlocksDevPage = lazy(() =>
-  import("./features/assistant/BlocksDevPage").then((m) => ({ default: m.BlocksDevPage }))
-);
+// Portfolio Assistant — excluded from thesis scope (out of scope).
+// Route removed; component kept in source for future use.
 
 function AdminLoading() {
   return (
@@ -53,8 +45,7 @@ function MainApp() {
           <Route path="/" element={<Navigate to="/predict" replace />} />
           <Route path="/predict" element={<HomeScreen />} />
           <Route path="/prediction/:sessionId" element={<HomeScreen />} />
-          <Route path="/portfolio" element={<AssistantPage />} />
-          <Route path="/portfolio/__blocks" element={<BlocksDevPage />} />
+          {/* /portfolio removed — out of thesis scope */}
           <Route path="/backtest" element={<BacktestScreen />} />
           <Route path="/history" element={<HistoryScreen />} />
           <Route path="/decisions" element={<InvestorPage />} />

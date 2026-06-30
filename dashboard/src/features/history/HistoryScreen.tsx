@@ -36,7 +36,7 @@ import { Markdown } from "../../components/ui/Markdown";
 type Tab = "analyses" | "backtests";
 
 export function HistoryScreen() {
-  const [tab, setTab] = useState<Tab>("analyses");
+  const [tab, setTab] = useState<Tab>("backtests");
   const [query, setQuery] = useState("");
   const [selectedAnalysis, setSelectedAnalysis] = useState<string | null>(null);
   const [selectedBacktest, setSelectedBacktest] = useState<string | null>(null);
@@ -151,7 +151,7 @@ export function HistoryScreen() {
                 key={s.session_id}
                 row={s}
                 active={selectedAnalysis === s.session_id}
-                onClick={() => navigate(`/prediction/${s.session_id}`)}
+                onClick={() => setSelectedAnalysis(s.session_id)}
               />
             ))}
 

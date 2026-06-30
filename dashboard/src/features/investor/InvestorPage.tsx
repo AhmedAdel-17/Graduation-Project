@@ -36,7 +36,8 @@ export function InvestorPage() {
   const activeProfileId = useAppStore((s) => s.activeProfileId);
   const profileQ = useQuery({
     queryKey: ["profile", activeProfileId],
-    queryFn: () => endpoints.getProfile(activeProfileId),
+    queryFn: () => endpoints.getProfile(activeProfileId!),
+    enabled: !!activeProfileId,
   });
   const runsQ = useQuery({
     queryKey: ["shadow-runs"],

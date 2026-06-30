@@ -171,7 +171,7 @@ class AgentState(MessagesState):
     # Investor context — runtime snapshot of investor profile (profile_id,
     # risk_tolerance, horizon, capital, position limits, sector prefs/exclusions).
     # Injected by TradingAgentsGraph.propagate() when a profile_id is provided.
-    # Consumed by Research Manager, Trader, and Risk Manager prompts.
+    # Consumed by Bull/Bear Researchers, Research Manager, Trader, and Risk Manager.
     investor_context: Annotated[Optional[Dict], _keep_last]
 
     # Anti-churn context (Fix A, P8) — populated by backtester from audit history

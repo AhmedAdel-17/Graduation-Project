@@ -11,6 +11,7 @@ import {
   Gavel,
   Loader2,
   Scale,
+  Shield,
   Sparkles,
   Target,
   TrendingDown,
@@ -119,6 +120,16 @@ export function HomeScreen() {
 
   const signal = (rec?.signal || "").toUpperCase();
   const confidence = (rec?.confidence || "").toUpperCase();
+
+  // Detect risk-layer override: trader proposed X but final signal is different.
+  const traderProposal = useMemo(() => {
+    const raw = String(rec?.recommendation ?? rec?.full_text ?? "");
+    const m = raw.match(/(?:PROPOSAL|DECISION|RECOMMENDATION)[:\s]*\*{0,2}(BUY|SELL|HOLD)\*{0,2}/i);
+    return m ? m[1].toUpperCase() : undefined;
+  }, [rec?.recommendation, rec?.full_text]);
+  const isRiskOverride = !!traderProposal && !!signal && traderProposal !== signal;
+  // When final signal is HOLD due to risk override, hide trader's target/stop from headline
+  const showTraderLevels = signal !== "HOLD";
   const isQuickLoading = runPrediction.isPending;
   const isFullLoading = runFullPipeline.isPending;
   const isPastLoading = pastPrediction.isLoading;
@@ -128,9 +139,9 @@ export function HomeScreen() {
   async function handleRunFull() {
     try {
       toast.info("Pipeline started — four agents are now debating");
-      const res = await runFullPipeline.mutateAsync(ticker);
+      const res = await runFullPipeline.mutateAsync({ ticker });
       if (res?.error) {
-        toast.error(res.error);
+        toast.error(typeof res.error === "string" ? res.error : JSON.stringify(res.error));
         return;
       }
       if (res?.llm_error) {
@@ -189,30 +200,31 @@ export function HomeScreen() {
               <ChartPanel
                 bars={history}
                 current={current}
-                target={target}
-                stop={stop}
+                target={showTraderLevels ? target : undefined}
+                stop={showTraderLevels ? stop : undefined}
               />
               <VerdictPanel
                 signal={signal}
                 confidence={confidence}
                 current={current}
-                target={target}
-                stop={stop}
-                upside={upside}
-                downside={downside}
+                target={showTraderLevels ? target : undefined}
+                stop={showTraderLevels ? stop : undefined}
+                upside={showTraderLevels ? upside : undefined}
+                downside={showTraderLevels ? downside : undefined}
                 risk={rec?.risk as string | undefined}
                 timeHorizon={rec?.time_horizon as string | undefined}
+                traderProposal={isRiskOverride ? traderProposal : undefined}
               />
             </div>
 
             {/* Key levels — quote stats strip */}
             <KeyStats
               current={current}
-              target={target}
-              stop={stop}
-              upside={upside}
-              downside={downside}
-              riskReward={riskReward}
+              target={showTraderLevels ? target : undefined}
+              stop={showTraderLevels ? stop : undefined}
+              upside={showTraderLevels ? upside : undefined}
+              downside={showTraderLevels ? downside : undefined}
+              riskReward={showTraderLevels ? riskReward : undefined}
               rsi={toNum(indicators?.rsi)}
               trend={indicators?.trend}
               timeHorizon={rec?.time_horizon as string | undefined}
@@ -406,30 +418,31 @@ export function HomeScreen() {
             <ChartPanel
               bars={history}
               current={current}
-              target={target}
-              stop={stop}
+              target={showTraderLevels ? target : undefined}
+              stop={showTraderLevels ? stop : undefined}
             />
             <VerdictPanel
               signal={signal}
               confidence={confidence}
               current={current}
-              target={target}
-              stop={stop}
-              upside={upside}
-              downside={downside}
+              target={showTraderLevels ? target : undefined}
+              stop={showTraderLevels ? stop : undefined}
+              upside={showTraderLevels ? upside : undefined}
+              downside={showTraderLevels ? downside : undefined}
               risk={rec?.risk as string | undefined}
               timeHorizon={rec?.time_horizon as string | undefined}
+              traderProposal={isRiskOverride ? traderProposal : undefined}
             />
           </div>
 
           {/* Key levels — quote stats strip */}
           <KeyStats
             current={current}
-            target={target}
-            stop={stop}
-            upside={upside}
-            downside={downside}
-            riskReward={riskReward}
+            target={showTraderLevels ? target : undefined}
+            stop={showTraderLevels ? stop : undefined}
+            upside={showTraderLevels ? upside : undefined}
+            downside={showTraderLevels ? downside : undefined}
+            riskReward={showTraderLevels ? riskReward : undefined}
             rsi={toNum(indicators?.rsi)}
             trend={indicators?.trend}
             timeHorizon={rec?.time_horizon as string | undefined}
@@ -765,6 +778,7 @@ function VerdictPanel({
   downside,
   risk,
   timeHorizon,
+  traderProposal,
 }: {
   signal: string;
   confidence: string;
@@ -775,6 +789,7 @@ function VerdictPanel({
   downside?: number;
   risk?: string;
   timeHorizon?: string;
+  traderProposal?: string;
 }) {
   const dir = dirOf(signal);
   const head =
@@ -797,10 +812,23 @@ function VerdictPanel({
             {signal || "—"}
           </span>
         </div>
-        <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 text-[11.5px] font-medium">
-          <GaugeIcon className="h-3.5 w-3.5" />
-          {confidence ? `${confidence} confidence` : "Confidence —"}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 text-[11.5px] font-medium">
+            <GaugeIcon className="h-3.5 w-3.5" />
+            {confidence ? `${confidence} confidence` : "Confidence —"}
+          </span>
+          {traderProposal && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/20 text-[11.5px] font-medium text-amber-100 border border-amber-400/30">
+              <Shield className="h-3.5 w-3.5" />
+              Risk override
+            </span>
+          )}
         </div>
+        {traderProposal && (
+          <p className="mt-2.5 text-[11.5px] text-white/70 leading-relaxed">
+            Trader proposed <span className="font-semibold text-white/90">{traderProposal}</span> — EGX risk controls changed the final signal to <span className="font-semibold text-white/90">{signal}</span>.
+          </p>
+        )}
       </div>
 
       {/* Thesis ladder */}

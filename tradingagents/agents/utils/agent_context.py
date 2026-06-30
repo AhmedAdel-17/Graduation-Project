@@ -179,3 +179,68 @@ def format_sentiment_section(
         f"  confidence×{conf_mult:.2f}  |  position-size×{size_mult:.2f}\n"
         f"  [{blend_audit}]"
     )
+
+
+# ---------------------------------------------------------------------------
+# Investor context formatting
+# ---------------------------------------------------------------------------
+
+_HORIZON_LABELS = {
+    "short_term": "Short-term (< 3 months)",
+    "medium_term": "Medium-term (3–12 months)",
+    "long_term": "Long-term (1+ years)",
+}
+
+_RISK_LABELS = {
+    "conservative": "Conservative — capital preservation priority",
+    "moderate": "Moderate — balanced risk/reward",
+    "aggressive": "Aggressive — growth-oriented, tolerates drawdowns",
+}
+
+_STYLE_LABELS = {
+    "swing": "Swing trading (days–weeks)",
+    "position": "Position trading (weeks–months)",
+    "core": "Core holding (long-term accumulation)",
+    "intraday": "Intraday (not applicable on EGX — treat as swing)",
+}
+
+
+def format_investor_context(state: Dict[str, Any]) -> str:
+    """Build a prompt section from the investor_context in graph state.
+
+    Returns an empty string when no investor context is present, so callers
+    can embed the result without conditional guards.
+    """
+    ctx = state.get("investor_context")
+    if not ctx or not isinstance(ctx, dict):
+        return ""
+
+    risk = ctx.get("risk_tolerance", "moderate")
+    horizon = ctx.get("investment_horizon", "medium_term")
+    capital = ctx.get("capital_size", 1_000_000)
+    max_pos = ctx.get("max_position_pct", 0.10)
+    style = ctx.get("trading_style", "position")
+    benchmark = ctx.get("benchmark_target", "EGX30")
+    sector_prefs = ctx.get("sector_preferences", [])
+    sector_excl = ctx.get("sector_exclusions", [])
+
+    lines = [
+        "## Investor Profile",
+        f"- **Risk tolerance**: {_RISK_LABELS.get(risk, risk)}",
+        f"- **Investment horizon**: {_HORIZON_LABELS.get(horizon, horizon)}",
+        f"- **Portfolio capital**: {capital:,.0f} EGP",
+        f"- **Max single-stock allocation**: {max_pos:.0%}",
+        f"- **Trading style**: {_STYLE_LABELS.get(style, style)}",
+        f"- **Benchmark**: {benchmark}",
+    ]
+    if sector_prefs:
+        lines.append(f"- **Preferred sectors**: {', '.join(sector_prefs)}")
+    if sector_excl:
+        lines.append(f"- **Excluded sectors**: {', '.join(sector_excl)}")
+    lines.append("")
+    lines.append(
+        "Adapt your analysis to this investor's risk appetite, horizon, and "
+        "position-sizing constraints. A conservative investor with a short horizon "
+        "needs tighter stops and smaller positions than an aggressive long-term holder."
+    )
+    return "\n".join(lines)

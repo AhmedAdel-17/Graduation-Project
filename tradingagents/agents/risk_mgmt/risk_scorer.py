@@ -341,7 +341,12 @@ def create_risk_scorer_node():
         # Portfolio context
         portfolio_value = state.get("portfolio_value") or 10_000_000
         avg_daily_volume = state.get("avg_daily_volume") or 100_000
-        current_price = state.get("current_price") or 50.0
+        current_price = state.get("current_price") or 0
+        # Fallback: extract close from the technical panel if current_price
+        # was not populated by the market analyst (legacy/edge case).
+        if not current_price:
+            _panel = (state.get("technical_panel") or {}).get("panel") or {}
+            current_price = float(_panel.get("close", 0) or 0) or 50.0
         low_liquidity = state.get("low_liquidity", False)
         technical_analysis = state.get("technical_analysis") or {}
 

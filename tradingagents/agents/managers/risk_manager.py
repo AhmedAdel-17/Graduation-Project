@@ -41,6 +41,7 @@ from tradingagents.dataflows.egx_costs import round_trip_cost_pct
 from tradingagents.agents.utils.temporal import point_in_time_notice
 from tradingagents.agents.utils.agent_context import (
     build_macro_section,
+    format_investor_context,
     format_past_memories,
 )
 
@@ -298,11 +299,15 @@ Risk Action: **{risk_action}**
         # Macro overlay: deterministic EGX macro context for veto reasoning.
         macro_section = build_macro_section(state)
 
+        # Investor profile context (empty string when no profile is provided).
+        investor_section = format_investor_context(state)
+
         # ── Full prompt ───────────────────────────────────────────────────────
         prompt = f"""You are the Constitutional Risk Manager for {company_name} on {"EGX" if is_egx else "the market"}.
 
 {point_in_time_notice(state.get("trade_date", ""))}
 {macro_section}
+{investor_section}
 
 {constitution_section}
 

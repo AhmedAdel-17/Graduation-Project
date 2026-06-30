@@ -266,7 +266,17 @@ def latest_panel(df: pd.DataFrame) -> Dict[str, Any]:
     sig = compute_signals(df).iloc[-1].to_dict()
     piv = compute_pivots(df).iloc[-1].to_dict()
     piv.pop("date", None)
-    return {**sig, **{f"pivot_{k}": v for k, v in piv.items()}}
+    # Include OHLCV from the last bar so downstream consumers (Risk Scorer,
+    # Trader) can access the current price without a separate fetch.
+    last_bar = df.iloc[-1]
+    ohlcv = {
+        "close": float(last_bar["close"]),
+        "open": float(last_bar["open"]),
+        "high": float(last_bar["high"]),
+        "low": float(last_bar["low"]),
+        "volume": float(last_bar["volume"]),
+    }
+    return {**ohlcv, **sig, **{f"pivot_{k}": v for k, v in piv.items()}}
 
 
 def _fmt(v, nd=2):
