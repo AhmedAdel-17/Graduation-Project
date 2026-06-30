@@ -179,9 +179,9 @@ class TestLiquidityParticipation:
 
 class TestPriceBand:
     def test_price_above_upper_band_veto(self):
-        """Limit price above +10% band → CRITICAL."""
+        """Limit price far above +10% band (>5% overshoot) → CRITICAL veto."""
         plan = {
-            "entry_logic": {"entry_zone": {"limit_price": 115.0}},
+            "entry_logic": {"entry_zone": {"limit_price": 120.0}},
             "decision": "BUY",
         }
         v = check_egx_price_band(plan, current_price=100.0)
@@ -189,10 +189,20 @@ class TestPriceBand:
         assert v.severity == "critical"
         assert "BAND" in v.rule_name
 
-    def test_price_below_lower_band_veto(self):
-        """Limit price below -10% band → CRITICAL."""
+    def test_price_slightly_above_band_auto_corrects(self):
+        """Limit price slightly above band (≤5% overshoot) → auto-corrected, no veto."""
         plan = {
-            "entry_logic": {"entry_zone": {"limit_price": 85.0}},
+            "entry_logic": {"entry_zone": {"limit_price": 112.0}},
+            "decision": "BUY",
+        }
+        v = check_egx_price_band(plan, current_price=100.0)
+        assert v is None  # No violation — auto-corrected
+        assert plan["entry_logic"]["entry_zone"]["limit_price"] == 110.0  # Clamped to upper band
+
+    def test_price_below_lower_band_veto(self):
+        """Limit price far below -10% band (>5% undershoot) → CRITICAL veto."""
+        plan = {
+            "entry_logic": {"entry_zone": {"limit_price": 80.0}},
             "decision": "SELL",
         }
         v = check_egx_price_band(plan, current_price=100.0)

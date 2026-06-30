@@ -488,32 +488,69 @@ def check_egx_price_band(
 
     decision = (execution_plan.get("decision") or "").strip().upper()
 
-    # Hard veto: order price outside the band (would be rejected by EGX)
+    # Price outside band: auto-correct if close (within 5% overshoot),
+    # hard veto only if wildly wrong (>5% beyond band = broken plan).
+    # Rationale: on EGX the exchange rejects out-of-band orders; a real
+    # trader would simply resubmit at the band edge. Auto-correcting
+    # avoids vetoing an otherwise valid BUY/SELL over a trivial LLM
+    # rounding error (e.g. 141 vs 139.58).
+    _AUTO_CORRECT_THRESHOLD = 0.05  # 5% beyond band → auto-correct; above → veto
+
     if limit_price > upper_band:
-        return RiskViolation(
-            rule_name="PRICE_OUTSIDE_EGX_BAND",
-            severity="critical",
-            limit_value=round(upper_band, 2),
-            actual_value=round(limit_price, 2),
-            explanation=(
-                f"Limit price {limit_price:.2f} EGP exceeds EGX upper band "
-                f"{upper_band:.2f} EGP (+{daily_limit:.0%}). Order would be rejected by exchange."
-            ),
-            remediation=f"Set limit price at or below {upper_band:.2f} EGP.",
-        )
+        overshoot_pct = (limit_price - upper_band) / current_price
+        if overshoot_pct <= _AUTO_CORRECT_THRESHOLD:
+            # Auto-correct: clamp to upper band edge
+            corrected = round(upper_band, 2)
+            logger.warning(
+                "[RiskScorer] Limit price %.2f EGP exceeds upper band %.2f EGP "
+                "by %.1f%%. Auto-correcting to %.2f EGP.",
+                limit_price, upper_band, overshoot_pct * 100, corrected,
+            )
+            entry_zone["limit_price"] = corrected
+            # Also clamp price_range_high if present
+            if _coerce_numeric(entry_zone.get("price_range_high", 0)) > upper_band:
+                entry_zone["price_range_high"] = corrected
+            return None  # Corrected — no violation
+        else:
+            return RiskViolation(
+                rule_name="PRICE_OUTSIDE_EGX_BAND",
+                severity="critical",
+                limit_value=round(upper_band, 2),
+                actual_value=round(limit_price, 2),
+                explanation=(
+                    f"Limit price {limit_price:.2f} EGP exceeds EGX upper band "
+                    f"{upper_band:.2f} EGP (+{daily_limit:.0%}) by {overshoot_pct:.1%}. "
+                    f"Order would be rejected by exchange."
+                ),
+                remediation=f"Set limit price at or below {upper_band:.2f} EGP.",
+            )
 
     if limit_price < lower_band:
-        return RiskViolation(
-            rule_name="PRICE_OUTSIDE_EGX_BAND",
-            severity="critical",
-            limit_value=round(lower_band, 2),
-            actual_value=round(limit_price, 2),
-            explanation=(
-                f"Limit price {limit_price:.2f} EGP below EGX lower band "
-                f"{lower_band:.2f} EGP (-{daily_limit:.0%}). Order would be rejected by exchange."
-            ),
-            remediation=f"Set limit price at or above {lower_band:.2f} EGP.",
-        )
+        undershoot_pct = (lower_band - limit_price) / current_price
+        if undershoot_pct <= _AUTO_CORRECT_THRESHOLD:
+            corrected = round(lower_band, 2)
+            logger.warning(
+                "[RiskScorer] Limit price %.2f EGP below lower band %.2f EGP "
+                "by %.1f%%. Auto-correcting to %.2f EGP.",
+                limit_price, lower_band, undershoot_pct * 100, corrected,
+            )
+            entry_zone["limit_price"] = corrected
+            if _coerce_numeric(entry_zone.get("price_range_low", 0)) < lower_band:
+                entry_zone["price_range_low"] = corrected
+            return None  # Corrected — no violation
+        else:
+            return RiskViolation(
+                rule_name="PRICE_OUTSIDE_EGX_BAND",
+                severity="critical",
+                limit_value=round(lower_band, 2),
+                actual_value=round(limit_price, 2),
+                explanation=(
+                    f"Limit price {limit_price:.2f} EGP below EGX lower band "
+                    f"{lower_band:.2f} EGP (-{daily_limit:.0%}) by {undershoot_pct:.1%}. "
+                    f"Order would be rejected by exchange."
+                ),
+                remediation=f"Set limit price at or above {lower_band:.2f} EGP.",
+            )
 
     # Magnet-zone warning: within 1.5% of band (Farag 2013 adverse selection)
     upper_magnet_threshold = current_price * (1 + daily_limit - magnet_zone)
