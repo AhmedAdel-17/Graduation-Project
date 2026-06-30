@@ -5,7 +5,6 @@ import { HomeScreen } from "./features/home/HomeScreen";
 import { BacktestScreen } from "./features/backtest/BacktestScreen";
 import { HistoryScreen } from "./features/history/HistoryScreen";
 import { InvestorPage } from "./features/investor/InvestorPage";
-import { MonitoringPage } from "./features/monitoring/MonitoringPage";
 
 // Admin Monitoring Suite — isolated, lazy-loaded, owns its own shell.
 // Lives entirely under /admin/* so the live dashboard below is untouched.
@@ -60,7 +59,7 @@ function MainApp() {
           <Route path="/history" element={<HistoryScreen />} />
           <Route path="/decisions" element={<InvestorPage />} />
           <Route path="/investor" element={<Navigate to="/decisions" replace />} />
-          <Route path="/monitoring" element={<MonitoringPage />} />
+          <Route path="/monitoring" element={<Navigate to="/admin/system-health" replace />} />
           <Route path="*" element={<Navigate to="/predict" replace />} />
         </Routes>
       </Suspense>

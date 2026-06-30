@@ -1,5 +1,4 @@
 import { NavLink } from "react-router-dom";
-import { Activity } from "lucide-react";
 import { cn } from "../../../lib/utils";
 import { ADMIN_NAV } from "./adminNav";
 
@@ -8,15 +7,17 @@ export function AdminSidebarContent({ onItemClick }: { onItemClick?: () => void 
     <div className="flex flex-col h-full">
       <div className="flex items-center h-14 px-4 border-b border-stone-200/80 dark:border-[var(--hairline)]">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="h-8 w-8 shrink-0 rounded-md border border-stone-200 bg-white text-stone-900 flex items-center justify-center dark:border-[var(--hairline)] dark:bg-[var(--bg)] dark:text-white">
-            <Activity className="h-[15px] w-[15px]" aria-hidden />
-          </div>
+          <img
+            src="/brand/stockhive-icon-64.png"
+            alt="StockHive"
+            className="h-8 w-8 shrink-0 rounded-md object-contain"
+          />
           <div className="leading-tight min-w-0">
             <div className="display text-[14px] font-semibold tracking-tight truncate">
-              Admin Monitor
+              StockHive
             </div>
             <div className="text-[10.5px] text-stone-500 dark:text-[var(--ink-3)] mt-0.5 truncate">
-              Observability suite
+              Admin &amp; Monitoring
             </div>
           </div>
         </div>

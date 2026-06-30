@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
-  Activity,
   BarChart3,
   Clock4,
   LineChart,
@@ -10,32 +9,10 @@ import {
   PanelLeft,
   Scale,
   Sun,
-  Wallet,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { ADMIN_NAV } from "../../features/admin/layout/adminNav";
-
-function BrandMark({ className }: { className?: string }) {
-  // Geometric "E" monogram — three horizontal strokes of decreasing length.
-  // Reads as the letter E and as a chart simultaneously. Stroke weight tuned
-  // to match Lucide icons used elsewhere in the shell.
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className={className}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      aria-hidden
-    >
-      <line x1="6.5" y1="6.5" x2="17.5" y2="6.5" />
-      <line x1="6.5" y1="12" x2="13.5" y2="12" />
-      <line x1="6.5" y1="17.5" x2="16" y2="17.5" />
-    </svg>
-  );
-}
 import { cn } from "../../lib/utils";
 import { useTheme } from "../../hooks/useTheme";
 
@@ -51,10 +28,8 @@ interface NavItem {
 // truth) so the two never drift, plus Backtesting which lives in the main app.
 const USER_NAV: NavItem[] = [
   { to: "/predict", label: "Stock Prediction", icon: LineChart },
-  { to: "/portfolio", label: "Portfolio Assistant", icon: Wallet },
   { to: "/decisions", label: "Decisions", icon: Scale },
   { to: "/history", label: "My Analyses", icon: Clock4 },
-  { to: "/monitoring", label: "Monitoring", icon: Activity },
 ];
 
 const ADMIN_GROUP: NavItem[] = [
@@ -139,16 +114,17 @@ function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
       {/* Brand */}
       <div className="flex items-center h-14 px-4 border-b border-stone-200/80 dark:border-[var(--hairline)]">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="h-8 w-8 shrink-0 rounded-md border border-stone-200 bg-white text-stone-900 flex items-center justify-center
-            dark:border-[var(--hairline)] dark:bg-[var(--bg)] dark:text-white">
-            <BrandMark className="h-[16px] w-[16px]" />
-          </div>
+          <img
+            src="/brand/stockhive-icon-64.png"
+            alt="StockHive"
+            className="h-8 w-8 shrink-0 rounded-md object-contain"
+          />
           <div className="leading-tight min-w-0">
             <div className="display text-[14px] font-semibold tracking-tight truncate">
-              EGX Intelligence
+              StockHive
             </div>
             <div className="text-[10.5px] text-stone-500 dark:text-[var(--ink-3)] mt-0.5 truncate">
-              Research console
+              Analyze. Reason. Signal.
             </div>
           </div>
         </div>
