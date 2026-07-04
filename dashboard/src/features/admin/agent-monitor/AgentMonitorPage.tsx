@@ -94,7 +94,7 @@ export function AgentMonitorPage() {
 
   return (
     <AdminShell
-      title="Agent Architecture Monitor"
+      title="Pipeline Graph"
       subtitle="Interactive map of the EGX multi-agent pipeline"
     >
       <div className="flex flex-col gap-5">
