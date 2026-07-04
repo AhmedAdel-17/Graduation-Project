@@ -1,36 +1,35 @@
-"""Hand-rolled single-step CQL training loop.
+"""Hand-rolled single-step CQL training loop for the decision policy.
 
-Why hand-rolled? The plan (§3.5) allowed a ``d3rlpy``-backed implementation
-with this loop as a fallback when d3rlpy doesn't install cleanly. On the
-target Windows + Python 3.13 + uv environment d3rlpy is unavailable, so we
-take the documented fallback. The benefit is also defensibility: every
-line of the loss formulation is readable and reviewable here, which is
-useful for a graduation defense.
+Why hand-rolled? On the target Windows + Python 3.13 + uv environment
+``d3rlpy`` is unavailable, so we take the documented fallback. The benefit is
+also defensibility: every line of the loss formulation is readable here, which
+is useful for a graduation defense.
 
-Single-step framing recap (plan §3.4): each (ticker, trade_date) is a
-one-step bandit. ``gamma = 0``, so the Bellman target collapses to the
-shaped reward ``r``. The training objective becomes::
+Single-step framing (gamma = 0): each ``(ticker, trade_date)`` is a one-step
+bandit, so the Bellman target collapses to the reward. The new logic supplies
+a **counterfactual reward for every action** (BUY / HOLD / SELL), computed from
+the realized forward return, so the objective is full-feedback regression plus
+a conservative anchor to the committee's historical action::
 
-    L_td   = MSE( Q(s, a_behavior), r )
-    L_cql  = α · ( log Σ_a exp( Q(s, a) / τ ) - Q(s, a_behavior) )
-    L      = L_td + L_cql
+    L_reg  = MSE( Q(s, ·), r(s, ·) )           over all 3 actions
+    L_cql  = α · ( log Σ_a exp( Q(s, a) / τ ) - Q(s, a_committee) )
+    L      = L_reg + L_cql
 
-The conservative term L_cql pulls Q-values down on actions that were never
-observed in the dataset, mitigating offline-RL extrapolation error on a
-small EGX sample. With α = 0 the loss reduces to plain regression to
-rewards — useful baseline if you ever want to sanity-check.
+``L_reg`` teaches the policy what each decision would have earned. ``L_cql``
+pulls the value mass back toward the committee's action, so the policy only
+deviates when the counterfactual reward gap is decisive — the "conservative"
+property that makes offline learning safe on a small EGX sample. With α = 0
+the loss is plain counterfactual regression.
 """
 
 from __future__ import annotations
 
-import json
 import logging
-import math
 import random
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -39,13 +38,13 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 
 from tradingagents.rl.config import (
+    DECISION_ACTIONS,
     DEFAULT_TRAINING_CONFIG,
     N_ACTIONS,
-    SIZE_TIERS,
     TrainingConfig,
 )
 from tradingagents.rl.feature_extractor import FEATURE_NAMES, FEATURE_VERSION, feature_vector_size
-from tradingagents.rl.policy import QNetwork, RLSizingPolicy
+from tradingagents.rl.policy import QNetwork, RLDecisionPolicy
 
 logger = logging.getLogger("tradingagents.rl.train")
 
@@ -62,7 +61,6 @@ def seed_everything(seed: int) -> None:
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
-    # Disable cuDNN benchmarking so identical inputs produce identical kernels.
     try:
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
@@ -79,10 +77,9 @@ def seed_everything(seed: int) -> None:
 class TrainingTensors:
     """The parquet/CSV converted to dense tensors ready for the loop."""
 
-    states: torch.Tensor          # (N, state_dim) float32
-    actions: torch.Tensor         # (N,) int64        — discretized behavior tier
-    rewards: torch.Tensor         # (N,) float32
-    behavior_size_pct: torch.Tensor  # (N,) float32   — for off-policy eval
+    states: torch.Tensor              # (N, state_dim) float32
+    reward_matrix: torch.Tensor       # (N, N_ACTIONS) float32 — counterfactual rewards
+    behavior_action: torch.Tensor     # (N,) int64 — committee action index (CQL anchor)
     tickers: List[str]
     dates: List[str]
 
@@ -91,7 +88,6 @@ def _load_parquet_or_csv(path: str | Path):
     import pandas as pd
     path = Path(path)
     if not path.exists():
-        # Try the CSV fallback that ``dataset.write_parquet`` may emit.
         csv = path.with_suffix(".csv")
         if csv.exists():
             path = csv
@@ -102,22 +98,25 @@ def _load_parquet_or_csv(path: str | Path):
     return pd.read_csv(path)
 
 
+# Column order MUST match DECISION_ACTIONS = (BUY, HOLD, SELL).
+_REWARD_COLS: Tuple[str, ...] = ("reward_buy", "reward_hold", "reward_sell")
+
+
 def materialize_dataset(
     dataset_path: str | Path,
     *,
     drop_pending: bool = True,
-    drop_hold: bool = True,
 ) -> TrainingTensors:
     """Load the parquet/CSV and convert to training tensors.
 
-    ``drop_pending=True`` removes rows whose 20-day horizon hasn't elapsed
-    (reward is NaN). ``drop_hold=True`` removes HOLD decisions whose reward
-    is 0 by construction — they don't teach the Q-network anything about
-    sizing, and they would otherwise dominate the action histogram.
+    ``drop_pending=True`` removes rows whose horizon hasn't elapsed (the
+    acting counterfactual rewards are NaN). HOLD rows are NOT dropped: under
+    the decision-policy logic every row carries a full reward vector, so HOLD
+    decisions still teach the policy (their BUY/SELL counterfactuals are
+    exactly the signal that corrects an over-cautious committee).
     """
     df = _load_parquet_or_csv(dataset_path)
 
-    # Schema sanity
     feat_cols = [f"feat__{name}" for name in FEATURE_NAMES]
     missing = [c for c in feat_cols if c not in df.columns]
     if missing:
@@ -125,32 +124,37 @@ def materialize_dataset(
             f"dataset {dataset_path} missing {len(missing)} feature columns: "
             f"{missing[:5]}{'…' if len(missing) > 5 else ''}"
         )
-    if "reward" not in df.columns or "behavior_size_tier" not in df.columns:
-        raise ValueError("dataset must include 'reward' and 'behavior_size_tier' columns")
+    missing_reward = [c for c in _REWARD_COLS if c not in df.columns]
+    if missing_reward:
+        raise ValueError(
+            f"dataset {dataset_path} missing counterfactual reward columns "
+            f"{missing_reward}; regenerate with dataset_schema_version rl_dataset_v2 "
+            f"(scripts/generate_rl_training_data.py)"
+        )
+    if "committee_action_index" not in df.columns:
+        raise ValueError("dataset must include 'committee_action_index' column")
 
     if drop_pending:
-        df = df[df["reward"].notna()].reset_index(drop=True)
-    if drop_hold and "llm_action" in df.columns:
-        df = df[df["llm_action"] != "HOLD"].reset_index(drop=True)
+        # A row is usable once its acting counterfactuals are known.
+        df = df[df["reward_buy"].notna() & df["reward_sell"].notna()].reset_index(drop=True)
 
     if len(df) == 0:
         raise ValueError(
             f"dataset {dataset_path} has zero usable rows after filtering "
-            f"(pending dropped={drop_pending}, hold dropped={drop_hold})"
+            f"(pending dropped={drop_pending})"
         )
 
     states = torch.from_numpy(df[feat_cols].to_numpy(dtype=np.float32))
-    actions = torch.from_numpy(df["behavior_size_tier"].to_numpy(dtype=np.int64))
-    rewards = torch.from_numpy(df["reward"].to_numpy(dtype=np.float32))
+    reward_np = df[list(_REWARD_COLS)].fillna(0.0).to_numpy(dtype=np.float32)
+    reward_matrix = torch.from_numpy(reward_np)
     behavior = torch.from_numpy(
-        df["behavior_size_pct"].fillna(1.0).to_numpy(dtype=np.float32)
+        df["committee_action_index"].fillna(1).to_numpy(dtype=np.int64)
     )
 
     return TrainingTensors(
         states=states,
-        actions=actions,
-        rewards=rewards,
-        behavior_size_pct=behavior,
+        reward_matrix=reward_matrix,
+        behavior_action=behavior,
         tickers=df.get("ticker", ["?"] * len(df)).tolist(),
         dates=df.get("trade_date", ["?"] * len(df)).tolist(),
     )
@@ -170,9 +174,8 @@ def time_aware_split(
 ) -> Tuple[TrainingTensors, TrainingTensors]:
     """Split into train / validation.
 
-    ``mode="time"`` (default and recommended): per-ticker chronological tail
-    is the validation set. ``mode="random"`` uses a seeded random split —
-    debug-only because it mixes future and past.
+    ``mode="time"`` (default): per-ticker chronological tail is the validation
+    set. ``mode="random"`` uses a seeded random split — debug-only.
     """
     n = data.states.shape[0]
     if n < 2:
@@ -186,19 +189,17 @@ def time_aware_split(
         val_idx = sorted(idx[:n_val].tolist())
         train_idx = sorted(idx[n_val:].tolist())
     elif mode == "time":
-        # Sort by (ticker, date) then peel the tail of each ticker.
         by_ticker: Dict[str, List[int]] = {}
         for i, (tk, dt) in enumerate(zip(data.tickers, data.dates)):
             by_ticker.setdefault(tk, []).append(i)
-        train_idx: List[int] = []
-        val_idx: List[int] = []
+        train_idx = []
+        val_idx = []
         for tk, idxs in by_ticker.items():
             ordered = sorted(idxs, key=lambda i: data.dates[i])
             n_val_tk = max(1, int(round(len(ordered) * val_fraction)))
             train_idx.extend(ordered[:-n_val_tk])
             val_idx.extend(ordered[-n_val_tk:])
         if not train_idx:
-            # Degenerate single-ticker tiny dataset — fall back to global tail.
             cutoff = max(1, int(n * (1 - val_fraction)))
             train_idx = list(range(cutoff))
             val_idx = list(range(cutoff, n))
@@ -210,9 +211,8 @@ def time_aware_split(
     def _take(indices: List[int]) -> TrainingTensors:
         return TrainingTensors(
             states=data.states[indices],
-            actions=data.actions[indices],
-            rewards=data.rewards[indices],
-            behavior_size_pct=data.behavior_size_pct[indices],
+            reward_matrix=data.reward_matrix[indices],
+            behavior_action=data.behavior_action[indices],
             tickers=[data.tickers[i] for i in indices],
             dates=[data.dates[i] for i in indices],
         )
@@ -227,26 +227,28 @@ def time_aware_split(
 
 def cql_loss(
     q_values: torch.Tensor,        # (B, N_ACTIONS)
-    actions: torch.Tensor,         # (B,)
-    rewards: torch.Tensor,         # (B,)
+    reward_matrix: torch.Tensor,   # (B, N_ACTIONS) — counterfactual rewards
+    behavior_action: torch.Tensor,  # (B,) — committee action index
     *,
     alpha: float,
     temperature: float,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
-    """Single-step CQL: TD loss (γ=0) + conservative log-sum-exp penalty.
+    """Single-step counterfactual CQL.
 
-    Returns ``(total_loss, telemetry_dict)``. Telemetry is detached.
+    ``L_reg`` regresses every Q toward its known counterfactual reward.
+    ``L_cql`` is the conservative anchor: it pushes the soft-max value mass
+    toward the committee's historical action. Returns ``(total, telemetry)``.
     """
-    batch = q_values.shape[0]
-    q_taken = q_values.gather(1, actions.view(-1, 1)).squeeze(1)
-    td_loss = F.mse_loss(q_taken, rewards)
+    reg_loss = F.mse_loss(q_values, reward_matrix)
 
+    q_committee = q_values.gather(1, behavior_action.view(-1, 1)).squeeze(1)
     logsumexp = torch.logsumexp(q_values / temperature, dim=1) * temperature
-    cql_penalty = (logsumexp - q_taken).mean()
+    cql_penalty = (logsumexp - q_committee).mean()
 
-    total = td_loss + alpha * cql_penalty
+    total = reg_loss + alpha * cql_penalty
     telemetry = {
-        "td_loss": float(td_loss.detach().cpu().item()),
+        "td_loss": float(reg_loss.detach().cpu().item()),  # name kept for card compat
+        "reg_loss": float(reg_loss.detach().cpu().item()),
         "cql_penalty": float(cql_penalty.detach().cpu().item()),
         "total_loss": float(total.detach().cpu().item()),
         "q_mean": float(q_values.detach().mean().cpu().item()),
@@ -268,14 +270,14 @@ class _TensorDataset(Dataset):
         return self.t.states.shape[0]
 
     def __getitem__(self, i: int):
-        return self.t.states[i], self.t.actions[i], self.t.rewards[i]
+        return self.t.states[i], self.t.reward_matrix[i], self.t.behavior_action[i]
 
 
 @dataclass
 class TrainingResult:
     """Returned by :func:`train` — caller writes this into the model card."""
 
-    policy: RLSizingPolicy
+    policy: RLDecisionPolicy
     config: TrainingConfig
     train_history: List[Dict[str, float]] = field(default_factory=list)
     val_history: List[Dict[str, float]] = field(default_factory=list)
@@ -304,7 +306,7 @@ def _validate(network: QNetwork, val: TrainingTensors, config: TrainingConfig) -
     with torch.no_grad():
         q = network(val.states)
         _, tele = cql_loss(
-            q, val.actions, val.rewards,
+            q, val.reward_matrix, val.behavior_action,
             alpha=config.cql_alpha, temperature=config.cql_temperature,
         )
     network.train()
@@ -316,17 +318,16 @@ def train(
     *,
     config: TrainingConfig = DEFAULT_TRAINING_CONFIG,
     drop_pending: bool = True,
-    drop_hold: bool = True,
+    drop_hold: bool = False,  # retained for CLI compat; HOLD rows are now kept
 ) -> TrainingResult:
-    """Run the full CQL training pipeline.
+    """Run the full counterfactual-CQL training pipeline.
 
     Returns a :class:`TrainingResult`. Saves nothing on disk; the caller is
-    responsible for ``result.policy.save(path)``. This keeps tests fast and
-    side-effect-free.
+    responsible for ``result.policy.save(path)``.
     """
     seed_everything(config.seed)
 
-    full = materialize_dataset(dataset_path, drop_pending=drop_pending, drop_hold=drop_hold)
+    full = materialize_dataset(dataset_path, drop_pending=drop_pending)
     if full.states.shape[1] != feature_vector_size():
         raise ValueError(
             f"dataset state_dim={full.states.shape[1]} != FEATURE_NAMES "
@@ -340,8 +341,9 @@ def train(
         seed=config.seed,
     )
     logger.info(
-        "rl-train: %d total samples → %d train / %d val (split=%s)",
-        full.states.shape[0], train_t.states.shape[0], val_t.states.shape[0], config.split_mode,
+        "rl-train: %d total samples → %d train / %d val (split=%s, actions=%s)",
+        full.states.shape[0], train_t.states.shape[0], val_t.states.shape[0],
+        config.split_mode, ",".join(DECISION_ACTIONS),
     )
 
     network = QNetwork(
@@ -376,11 +378,11 @@ def train(
     network.train()
     for epoch in range(1, config.n_epochs + 1):
         epoch_metrics: List[Dict[str, float]] = []
-        for states, actions, rewards in loader:
+        for states, rewards, behavior in loader:
             optimizer.zero_grad(set_to_none=True)
             q = network(states)
             loss, tele = cql_loss(
-                q, actions, rewards,
+                q, rewards, behavior,
                 alpha=config.cql_alpha, temperature=config.cql_temperature,
             )
             loss.backward()
@@ -389,7 +391,6 @@ def train(
             optimizer.step()
             epoch_metrics.append(tele)
 
-        # Aggregate by simple mean
         train_summary = {
             "epoch": epoch,
             "td_loss": float(np.mean([m["td_loss"] for m in epoch_metrics])),
@@ -421,7 +422,7 @@ def train(
 
         if epoch == 1 or epoch % 10 == 0:
             logger.info(
-                "rl-train: epoch %3d  train_td=%.6f  cql=%.6f  val_td=%.6f  q_mean=%.4f",
+                "rl-train: epoch %3d  train_reg=%.6f  cql=%.6f  val_reg=%.6f  q_mean=%.4f",
                 epoch, train_summary["td_loss"], train_summary["cql_penalty"],
                 current_val_td, train_summary["q_mean"],
             )
@@ -438,7 +439,7 @@ def train(
         "best_val_td_loss": float(best_val_td),
         "best_epoch": int(best_epoch),
     }
-    policy = RLSizingPolicy(q_network=network, config=config, model_fingerprint=fingerprint)
+    policy = RLDecisionPolicy(q_network=network, config=config, model_fingerprint=fingerprint)
 
     wall = time.perf_counter() - t0
     return TrainingResult(

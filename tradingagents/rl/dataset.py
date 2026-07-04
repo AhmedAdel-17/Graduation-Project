@@ -47,6 +47,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import numpy as np
 
+from tradingagents.rl.config import DECISION_ACTIONS, action_to_index
 from tradingagents.rl.feature_extractor import (
     FEATURE_NAMES,
     FEATURE_VERSION,
@@ -57,7 +58,9 @@ logger = logging.getLogger("tradingagents.rl.dataset")
 
 from tradingagents.dataflows.egx_costs import ROUND_TRIP_COMMISSION_PCT
 
-DATASET_SCHEMA_VERSION = "rl_dataset_v1"
+# v2: decision policy with a counterfactual per-action reward vector
+# (reward_buy / reward_hold / reward_sell) computed from the forward return.
+DATASET_SCHEMA_VERSION = "rl_dataset_v2"
 DEFAULT_REWARD_HORIZON_DAYS = 20
 DEFAULT_DRAWDOWN_PENALTY = 0.5
 # Round-trip commission (0.189% per side × 2). Sourced from the shared EGX cost
@@ -99,8 +102,17 @@ class RLSample:
     forward_return_20d: Optional[float]
     drawdown_during_holding: Optional[float]
     transaction_cost_pct: float
-    reward: Optional[float]           # computed shaped reward; None when PENDING
+    reward: Optional[float]           # behavior reward (committee action); None when PENDING
     trade_result: str                 # WIN / LOSS / NEUTRAL / PENDING
+
+    # Counterfactual per-action rewards (the new logic). Each is computable
+    # from the forward return at every decision point, so the policy can learn
+    # what BUY / HOLD / SELL would each have earned — including the action the
+    # committee did NOT take. ``None`` when the horizon has not yet elapsed.
+    reward_buy: Optional[float] = None
+    reward_hold: Optional[float] = 0.0
+    reward_sell: Optional[float] = None
+    committee_action_index: int = 1   # index into DECISION_ACTIONS (default HOLD)
 
     # Audit / debugging
     source: str = "unknown"           # "postgres" | "json_report"
@@ -193,6 +205,47 @@ def shaped_reward(
     return r
 
 
+def counterfactual_rewards(
+    forward_return: Optional[float],
+    *,
+    transaction_cost_pct: float = DEFAULT_TX_COST_PCT,
+    drawdown_during_holding: Optional[float] = None,
+) -> Dict[str, Optional[float]]:
+    """Reward of EVERY decision at one state, computable from the forward return.
+
+    This is the core of the decision-policy logic: because the realized
+    forward return is known after the horizon, we can label the reward of
+    BUY, HOLD, *and* SELL at every historical decision — not only the action
+    the committee actually took. The policy learns from this full-feedback
+    signal where acting or abstaining was historically rewarded.
+
+    Returns a dict keyed by ``DECISION_ACTIONS``. Acting rewards are ``None``
+    until the horizon elapses; HOLD is always 0 (no exposure, no cost).
+    Each acting reward reuses :func:`shaped_reward` at full conviction
+    (``size_pct=1.0``), so BUY is rewarded when the stock rose and SELL
+    (exit / avoid, long-only) is rewarded when it fell.
+    """
+    out: Dict[str, Optional[float]] = {a: None for a in DECISION_ACTIONS}
+    out["HOLD"] = 0.0
+    if forward_return is None:
+        return out
+    out["BUY"] = shaped_reward(
+        forward_return=forward_return,
+        action="BUY",
+        size_pct=1.0,
+        transaction_cost_pct=transaction_cost_pct,
+        drawdown_during_holding=drawdown_during_holding,
+    )
+    out["SELL"] = shaped_reward(
+        forward_return=forward_return,
+        action="SELL",
+        size_pct=1.0,
+        transaction_cost_pct=transaction_cost_pct,
+        drawdown_during_holding=drawdown_during_holding,
+    )
+    return out
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # JSON-report ingestion path
 # ─────────────────────────────────────────────────────────────────────────────
@@ -252,12 +305,10 @@ def _build_sample_from_json_record(
     if not _no_lookahead_window(trade_date, horizon_days):
         trade_result = "PENDING"
         reward: Optional[float] = None
+        cf = counterfactual_rewards(None)
     else:
-        reward = shaped_reward(
-            forward_return=fwd_20d,
-            action=action,
-            size_pct=behavior_size_pct,
-        )
+        cf = counterfactual_rewards(fwd_20d)
+        reward = cf.get(action)
 
     state_features = {name: 0.0 for name in FEATURE_NAMES}
     # The JSON path can populate the action one-hots + confidence proxy.
@@ -282,8 +333,73 @@ def _build_sample_from_json_record(
         transaction_cost_pct=DEFAULT_TX_COST_PCT,
         reward=reward,
         trade_result=trade_result,
+        reward_buy=cf.get("BUY"),
+        reward_hold=cf.get("HOLD", 0.0),
+        reward_sell=cf.get("SELL"),
+        committee_action_index=action_to_index(action),
         source=source_tag,
         notes="json_path: features are sparse (audit_log lacks full state snapshot)",
+    )
+
+
+def _build_sample_from_decision_log_entry(
+    entry: Dict[str, Any],
+    *,
+    horizon_days: int,
+    source_tag: str,
+) -> Optional[RLSample]:
+    """Construct a RICH RLSample from one ``rl_decision_log`` entry.
+
+    Unlike the legacy trades path, these entries carry the committee's full
+    feature vector (captured by scripts/backtester.py at decision time) and a
+    realized forward return, so the resulting sample has dense features and a
+    full counterfactual reward vector — the preferred offline training source.
+    """
+    trade_date = _iso(entry.get("trade_date", ""))
+    if not trade_date:
+        return None
+    ticker = str(entry.get("ticker") or "?")
+    committee_action = str(entry.get("committee_action", "HOLD")).upper()
+
+    raw_feats = entry.get("features") or {}
+    state_features = {name: float(raw_feats.get(name, 0.0) or 0.0) for name in FEATURE_NAMES}
+
+    fwd_20d = entry.get("forward_return_20d")
+    if fwd_20d is None:
+        cf = counterfactual_rewards(None)
+        reward: Optional[float] = None
+        trade_result = "PENDING"
+    else:
+        fwd_20d = float(fwd_20d)
+        cf = counterfactual_rewards(fwd_20d)
+        reward = cf.get(committee_action)
+        if abs(fwd_20d) < 0.01:
+            trade_result = "NEUTRAL"
+        else:
+            trade_result = "WIN" if fwd_20d > 0 else "LOSS"
+
+    return RLSample(
+        session_id=None,
+        ticker=ticker,
+        trade_date=trade_date,
+        feature_version=FEATURE_VERSION,
+        state_features=state_features,
+        llm_action=committee_action,
+        behavior_size_pct=1.0,
+        behavior_size_tier=4,
+        reward_horizon_days=int(horizon_days),
+        forward_return_5d=None,
+        forward_return_20d=fwd_20d,
+        drawdown_during_holding=None,
+        transaction_cost_pct=DEFAULT_TX_COST_PCT,
+        reward=reward,
+        trade_result=trade_result,
+        reward_buy=cf.get("BUY"),
+        reward_hold=cf.get("HOLD", 0.0),
+        reward_sell=cf.get("SELL"),
+        committee_action_index=action_to_index(committee_action),
+        source=source_tag,
+        notes="decision_log: rich features + counterfactual reward",
     )
 
 
@@ -310,6 +426,26 @@ def build_from_json_reports(
             logger.warning("rl-dataset: cannot read %s: %s", path, exc)
             continue
 
+        # ── Preferred path: the rich rl_decision_log (dense features + realized
+        #    forward returns) written by scripts/backtester.py. ──────────────
+        decision_log = data.get("rl_decision_log") or []
+        if decision_log:
+            for entry in decision_log:
+                if not entry.get("ticker"):
+                    # backfill ticker from the filename if the writer omitted it
+                    stem = path.stem.replace("bt_", "")
+                    for token in stem.split("_"):
+                        if "." in token:
+                            entry = {**entry, "ticker": token}
+                            break
+                sample = _build_sample_from_decision_log_entry(
+                    entry, horizon_days=horizon_days, source_tag=f"decision_log:{path.name}",
+                )
+                if sample is not None:
+                    samples.append(sample)
+            continue  # don't double-count via the legacy trades path
+
+        # ── Legacy fallback: sparse features from executed trades. ──────────
         ticker = None
         session = data.get("session") or {}
         if isinstance(session, dict):
@@ -470,11 +606,8 @@ def build_from_postgres(
             fwd_20d = None
 
         action = _infer_action_from_state(full_state, r.get("final_decision"))
-        reward = shaped_reward(
-            forward_return=fwd_20d,
-            action=action,
-            size_pct=behavior_size_pct,
-        ) if fwd_20d is not None else None
+        cf = counterfactual_rewards(fwd_20d if fwd_20d is not None else None)
+        reward = cf.get(action) if fwd_20d is not None else None
 
         samples.append(RLSample(
             session_id=str(r["session_id"]),
@@ -492,6 +625,10 @@ def build_from_postgres(
             transaction_cost_pct=DEFAULT_TX_COST_PCT,
             reward=reward,
             trade_result=trade_result,
+            reward_buy=cf.get("BUY"),
+            reward_hold=cf.get("HOLD", 0.0),
+            reward_sell=cf.get("SELL"),
+            committee_action_index=action_to_index(action),
             source="postgres",
         ))
 
@@ -609,6 +746,10 @@ def samples_to_dataframe(samples: Sequence[RLSample]):
             "transaction_cost_pct": s.transaction_cost_pct,
             "reward": s.reward,
             "trade_result": s.trade_result,
+            "reward_buy": s.reward_buy,
+            "reward_hold": s.reward_hold,
+            "reward_sell": s.reward_sell,
+            "committee_action_index": s.committee_action_index,
             "source": s.source,
             "notes": s.notes,
         }

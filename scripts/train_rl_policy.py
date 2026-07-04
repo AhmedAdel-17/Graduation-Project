@@ -46,6 +46,7 @@ def _config_from_args(args: argparse.Namespace) -> TrainingConfig:
     """Apply CLI overrides on top of the default config."""
     base = DEFAULT_TRAINING_CONFIG.as_dict()
     # Drop derived fields the dataclass doesn't accept
+    base.pop("decision_actions", None)
     base.pop("size_tiers", None)
     base.pop("n_actions", None)
 
@@ -112,9 +113,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     # Build OPE on the same held-out split so the eval and the card match.
-    full = materialize_dataset(
-        args.dataset, drop_pending=True, drop_hold=not args.keep_hold_rows,
-    )
+    full = materialize_dataset(args.dataset, drop_pending=True)
     _train_t, val_t = time_aware_split(
         full,
         val_fraction=config.val_fraction,

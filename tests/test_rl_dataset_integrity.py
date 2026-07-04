@@ -276,6 +276,55 @@ def test_build_from_json_reports_ignores_unreadable(tmp_path: Path, caplog):
     assert samples == []
 
 
+def test_build_from_decision_log_yields_rich_counterfactual_samples(tmp_path: Path):
+    """The rich rl_decision_log path: dense features + per-action rewards."""
+    td = (datetime.utcnow() - timedelta(days=90)).strftime("%Y-%m-%d")
+    feats = {name: 0.0 for name in FEATURE_NAMES}
+    feats["market_sentiment_score"] = 0.8
+    feats["action_hold"] = 1.0
+    report = {
+        "session": "COMI.CA",
+        "rl_decision_log": [
+            {"ticker": "COMI.CA", "trade_date": td, "committee_action": "HOLD",
+             "forward_return_20d": 0.06, "features": feats},
+        ],
+        "trades": [],
+        "audit_log": [],
+    }
+    report_path = tmp_path / "report_COMI.CA_dl.json"
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+
+    samples = build_from_json_reports([report_path])
+    assert len(samples) == 1
+    s = samples[0]
+    assert s.ticker == "COMI.CA"
+    assert s.llm_action == "HOLD"
+    assert s.committee_action_index == 1  # HOLD
+    # Full counterfactual vector is present: price rose ⇒ BUY good, SELL bad.
+    assert s.reward_buy is not None and s.reward_buy > 0
+    assert s.reward_sell is not None and s.reward_sell < 0
+    assert s.reward_hold == 0.0
+    # Dense features survived the round-trip (not the sparse legacy path).
+    assert s.state_features["market_sentiment_score"] == pytest.approx(0.8, abs=1e-6)
+
+
+def test_decision_log_pending_when_forward_return_missing(tmp_path: Path):
+    feats = {name: 0.0 for name in FEATURE_NAMES}
+    report = {
+        "session": "COMI.CA",
+        "rl_decision_log": [
+            {"ticker": "COMI.CA", "trade_date": "2024-06-01", "committee_action": "BUY",
+             "forward_return_20d": None, "features": feats},
+        ],
+    }
+    report_path = tmp_path / "report_COMI.CA_pending.json"
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    samples = build_from_json_reports([report_path])
+    assert len(samples) == 1
+    assert samples[0].trade_result == "PENDING"
+    assert samples[0].reward_buy is None
+
+
 def test_build_from_json_reports_infers_ticker_from_filename(tmp_path: Path):
     """When ``session.ticker`` is missing, filename pattern saves us."""
     td = (datetime.utcnow() - timedelta(days=90)).strftime("%Y-%m-%d")

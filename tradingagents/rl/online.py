@@ -51,16 +51,16 @@ import torch
 import torch.nn as nn
 
 from tradingagents.rl.config import (
+    DECISION_ACTIONS,
     DEFAULT_TRAINING_CONFIG,
     N_ACTIONS,
-    SIZE_TIERS,
     TrainingConfig,
+    action_to_index,
 )
 from tradingagents.rl.dataset import (
     DEFAULT_REWARD_HORIZON_DAYS,
     _no_lookahead_window,
-    _size_pct_to_tier,
-    shaped_reward,
+    counterfactual_rewards,
 )
 from tradingagents.rl.feature_extractor import (
     FEATURE_NAMES,
@@ -68,8 +68,18 @@ from tradingagents.rl.feature_extractor import (
     extract_state_features,
     feature_vector_size,
 )
-from tradingagents.rl.policy import QNetwork, RLSizingPolicy
+from tradingagents.rl.policy import QNetwork, RLDecisionPolicy, RLSizingPolicy
 from tradingagents.rl.train import cql_loss, seed_everything
+
+
+def _reward_vector(forward_return, drawdown=None) -> Optional[np.ndarray]:
+    """Counterfactual reward vector [BUY, HOLD, SELL] or None if not yet known."""
+    cf = counterfactual_rewards(forward_return, drawdown_during_holding=drawdown)
+    if cf.get("BUY") is None or cf.get("SELL") is None:
+        return None
+    return np.asarray(
+        [cf["BUY"], cf.get("HOLD", 0.0), cf["SELL"]], dtype=np.float32
+    )
 
 logger = logging.getLogger("tradingagents.rl.online")
 
@@ -86,7 +96,9 @@ class OnlineConfig:
     learning_rate: float = 1e-4          # smaller than offline (3e-4): gentle adaptation
     weight_decay: float = 1e-4
     grad_clip_norm: float = 1.0
-    cql_alpha: float = 1.0
+    # Matches the offline default: tuned to the EGX reward scale so the
+    # conservative anchor to the committee action doesn't dominate the signal.
+    cql_alpha: float = 0.01
     cql_temperature: float = 1.0
 
     updates_per_call: int = 8            # gradient steps per update() invocation
@@ -102,7 +114,7 @@ class OnlineConfig:
 
     seed: int = 42
     algorithm: str = "online_cql_single_step"
-    algorithm_version: str = "v1"
+    algorithm_version: str = "v2"
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -118,44 +130,55 @@ DEFAULT_ONLINE_CONFIG = OnlineConfig()
 
 @dataclass
 class _ReplayBuffer:
-    """Bounded FIFO buffer of committed (state, action, reward) transitions.
+    """Bounded FIFO buffer of committed (state, reward_vector, behavior_action).
 
-    ``keys`` dedups by (ticker, trade_date) so re-ingesting the same matured
-    trade (e.g. across overlapping walk-forward windows) never double-counts it.
+    Each transition carries the full counterfactual reward vector over
+    ``DECISION_ACTIONS`` and the committee's action index (the CQL anchor),
+    matching the offline decision-policy training scheme. ``keys`` dedups by
+    (ticker, trade_date) so re-ingesting the same matured trade never
+    double-counts it.
     """
 
     state_dim: int
     capacity: int = 5000
     states: List[np.ndarray] = field(default_factory=list)
-    actions: List[int] = field(default_factory=list)
-    rewards: List[float] = field(default_factory=list)
+    reward_vectors: List[np.ndarray] = field(default_factory=list)
+    behavior_actions: List[int] = field(default_factory=list)
     keys: set = field(default_factory=set)
 
     def __len__(self) -> int:
-        return len(self.rewards)
+        return len(self.reward_vectors)
 
-    def add(self, state: np.ndarray, action: int, reward: float, key: Optional[str]) -> bool:
+    def add(
+        self,
+        state: np.ndarray,
+        reward_vector: np.ndarray,
+        behavior_action: int,
+        key: Optional[str],
+    ) -> bool:
         if key is not None and key in self.keys:
             return False
         self.states.append(np.asarray(state, dtype=np.float32))
-        self.actions.append(int(action))
-        self.rewards.append(float(reward))
+        self.reward_vectors.append(np.asarray(reward_vector, dtype=np.float32))
+        self.behavior_actions.append(int(behavior_action))
         if key is not None:
             self.keys.add(key)
         # FIFO eviction (keys for evicted rows are intentionally left in the set:
         # we never want to relearn an already-seen, already-evicted transition).
-        while len(self.rewards) > self.capacity:
+        while len(self.reward_vectors) > self.capacity:
             self.states.pop(0)
-            self.actions.pop(0)
-            self.rewards.pop(0)
+            self.reward_vectors.pop(0)
+            self.behavior_actions.pop(0)
         return True
 
     def tensors(self, indices: Optional[List[int]] = None):
-        idx = range(len(self.rewards)) if indices is None else indices
-        s = torch.from_numpy(np.stack([self.states[i] for i in idx])) if idx else torch.empty(0)
-        a = torch.tensor([self.actions[i] for i in idx], dtype=torch.int64)
-        r = torch.tensor([self.rewards[i] for i in idx], dtype=torch.float32)
-        return s, a, r
+        idx = list(range(len(self.reward_vectors))) if indices is None else list(indices)
+        if not idx:
+            return torch.empty(0), torch.empty(0, N_ACTIONS), torch.empty(0, dtype=torch.int64)
+        s = torch.from_numpy(np.stack([self.states[i] for i in idx]))
+        r = torch.from_numpy(np.stack([self.reward_vectors[i] for i in idx]))
+        a = torch.tensor([self.behavior_actions[i] for i in idx], dtype=torch.int64)
+        return s, r, a
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -188,7 +211,7 @@ class OnlineRLTrainer:
         trainer = OnlineRLTrainer.from_offline_policy("models/rl_sizing.pt")
         ...
         # at decision time, for inference:
-        size = trainer.policy.predict(final_state, ticker=t, trade_date=d).size_multiplier
+        action = trainer.policy.predict(final_state, ticker=t, trade_date=d).action
         ...
         # once the 20-day horizon for that trade has elapsed:
         trainer.observe_closed_trade(
@@ -388,14 +411,13 @@ class OnlineRLTrainer:
         if trade_date is not None and not _no_lookahead_window(trade_date, horizon_days, now=now):
             logger.debug("online: skip %s — reward horizon not elapsed", key)
             return False
-        reward = shaped_reward(
-            forward_return=forward_return, action=action, size_pct=size_pct,
-            drawdown_during_holding=drawdown,
-        )
-        if reward is None:
+        # ``size_pct`` is retained on the signature for call-site compatibility
+        # but no longer shapes the reward — the decision policy learns over the
+        # counterfactual per-action reward vector instead.
+        rv = _reward_vector(forward_return, drawdown=drawdown)
+        if rv is None:
             return False
-        tier = _size_pct_to_tier(size_pct)
-        added = self.buffer.add(state_features, tier, reward, key)
+        added = self.buffer.add(state_features, rv, action_to_index(action), key)
         if added:
             self.n_observed += 1
         return added
@@ -420,8 +442,8 @@ class OnlineRLTrainer:
         hold_idx = perm[:n_hold].tolist()
         train_idx = perm[n_hold:].tolist() or perm.tolist()  # tiny-buffer fallback
 
-        hs, ha, hr = self.buffer.tensors(hold_idx)
-        loss_before = self._holdout_loss(hs, ha, hr)
+        hs, hr, ha = self.buffer.tensors(hold_idx)
+        loss_before = self._holdout_loss(hs, hr, ha)
 
         snapshot = {k: v.detach().clone() for k, v in self.q_network.state_dict().items()}
 
@@ -429,18 +451,18 @@ class OnlineRLTrainer:
         bs = min(self.online.batch_size, len(train_idx))
         for _ in range(steps):
             batch = self._rng.choice(train_idx, size=bs, replace=len(train_idx) < bs)
-            s, a, r = self.buffer.tensors(batch.tolist())
+            s, r, a = self.buffer.tensors(batch.tolist())
             self._optimizer.zero_grad(set_to_none=True)
             q = self.q_network(s)
             loss, _ = cql_loss(
-                q, a, r, alpha=self.online.cql_alpha, temperature=self.online.cql_temperature
+                q, r, a, alpha=self.online.cql_alpha, temperature=self.online.cql_temperature
             )
             loss.backward()
             if self.online.grad_clip_norm and self.online.grad_clip_norm > 0:
                 nn.utils.clip_grad_norm_(self.q_network.parameters(), self.online.grad_clip_norm)
             self._optimizer.step()
 
-        loss_after = self._holdout_loss(hs, ha, hr)
+        loss_after = self._holdout_loss(hs, hr, ha)
         self.n_online_updates += 1
 
         # Guardrail: revert if holdout loss degraded beyond tolerance.
@@ -489,12 +511,18 @@ class OnlineRLTrainer:
         """
         committed = 0
         for s in samples:
-            if getattr(s, "reward", None) is None:
+            rb = getattr(s, "reward_buy", None)
+            rs = getattr(s, "reward_sell", None)
+            if rb is None or rs is None:
                 continue  # PENDING — horizon not elapsed
             feats = self._coerce_features(s.state_features)
-            tier = int(getattr(s, "behavior_size_tier", _size_pct_to_tier(s.behavior_size_pct)))
+            rv = np.asarray(
+                [float(rb), float(getattr(s, "reward_hold", 0.0) or 0.0), float(rs)],
+                dtype=np.float32,
+            )
+            behavior = int(getattr(s, "committee_action_index", 1))
             key = self._key(getattr(s, "ticker", "?"), getattr(s, "trade_date", None))
-            if self.buffer.add(feats, tier, float(s.reward), key):
+            if self.buffer.add(feats, rv, behavior, key):
                 committed += 1
                 self.n_observed += 1
         return committed
@@ -513,8 +541,8 @@ class OnlineRLTrainer:
             "feature_names": list(FEATURE_NAMES),
             "buffer": {
                 "states": [s.tolist() for s in self.buffer.states],
-                "actions": list(self.buffer.actions),
-                "rewards": list(self.buffer.rewards),
+                "reward_vectors": [rv.tolist() for rv in self.buffer.reward_vectors],
+                "behavior_actions": list(self.buffer.behavior_actions),
                 "keys": list(self.buffer.keys),
                 "capacity": self.buffer.capacity,
             },
@@ -541,8 +569,11 @@ class OnlineRLTrainer:
                 f"{FEATURE_VERSION!r}; retrain or downgrade the extractor."
             )
         cfg_dict = dict(payload.get("config") or {})
+        cfg_dict.pop("decision_actions", None)
         cfg_dict.pop("size_tiers", None)
         cfg_dict.pop("n_actions", None)
+        cfg_dict.pop("size_multiplier_min", None)
+        cfg_dict.pop("size_multiplier_max", None)
         if isinstance(cfg_dict.get("hidden_dims"), list):
             cfg_dict["hidden_dims"] = tuple(cfg_dict["hidden_dims"])
         config = TrainingConfig(**cfg_dict) if cfg_dict else DEFAULT_TRAINING_CONFIG
@@ -562,10 +593,14 @@ class OnlineRLTrainer:
             model_fingerprint=payload.get("model_fingerprint") or {},
         )
         buf = payload.get("buffer") or {}
-        for st, ac, rw in zip(buf.get("states", []), buf.get("actions", []), buf.get("rewards", [])):
+        for st, rv, ba in zip(
+            buf.get("states", []),
+            buf.get("reward_vectors", []),
+            buf.get("behavior_actions", []),
+        ):
             trainer.buffer.states.append(np.asarray(st, dtype=np.float32))
-            trainer.buffer.actions.append(int(ac))
-            trainer.buffer.rewards.append(float(rw))
+            trainer.buffer.reward_vectors.append(np.asarray(rv, dtype=np.float32))
+            trainer.buffer.behavior_actions.append(int(ba))
         trainer.buffer.keys = set(buf.get("keys", []))
         trainer.n_online_updates = int(payload.get("n_online_updates", 0))
         trainer.n_observed = int(payload.get("n_observed", 0))
@@ -575,14 +610,14 @@ class OnlineRLTrainer:
         return trainer
 
     # ── Internals ──────────────────────────────────────────────────────────────
-    def _holdout_loss(self, s: torch.Tensor, a: torch.Tensor, r: torch.Tensor) -> float:
+    def _holdout_loss(self, s: torch.Tensor, r: torch.Tensor, a: torch.Tensor) -> float:
         if s.numel() == 0:
             return float("inf")
         self.q_network.eval()
         with torch.no_grad():
             q = self.q_network(s)
             _, tele = cql_loss(
-                q, a, r, alpha=self.online.cql_alpha, temperature=self.online.cql_temperature
+                q, r, a, alpha=self.online.cql_alpha, temperature=self.online.cql_temperature
             )
         self.q_network.train()
         return float(tele["td_loss"])

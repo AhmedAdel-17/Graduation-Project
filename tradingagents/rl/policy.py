@@ -1,15 +1,22 @@
-"""Q-network architecture + the inference-time policy wrapper.
+"""Q-network architecture + the inference-time decision policy wrapper.
 
 The Q-network is intentionally tiny (~5k parameters): two hidden layers of
-64 units each, ReLU, dropout 0.1, head emitting one Q-value per size tier.
+64 units each, ReLU, dropout 0.1, head emitting one Q-value per decision
+action (BUY / HOLD / SELL).
 
 Two classes here:
 
 - :class:`QNetwork` — pure ``torch.nn.Module``. Used inside ``train.py``.
-- :class:`RLSizingPolicy` — inference wrapper. Loads weights, normalizes /
-  validates state vectors, applies the inference-time guardrail clamp
-  (``size_mult ∈ [0.0, 1.0]``), and exposes the model fingerprint to
-  ``tradingagents/db/audit_writer.py``.
+- :class:`RLDecisionPolicy` — inference wrapper. Loads weights, normalizes /
+  validates state vectors, picks the argmax decision, and exposes the model
+  fingerprint to ``tradingagents/db/audit_writer.py``. ``RLSizingPolicy`` is
+  kept as a backwards-compatible alias for existing import sites.
+
+The policy is a *parallel decision arm*: it returns an independent BUY/HOLD/
+SELL opinion learned from the realized outcomes of past decisions. It never
+sizes a position and never overrides the deterministic EGX risk veto — the
+caller decides what to do with the recommendation (today: log it and compare
+it against the committee; see ``scripts/backtester.py``).
 
 Both paths use exactly the same feature extractor
 (``tradingagents.rl.feature_extractor.extract_state_features``) so training
@@ -19,10 +26,9 @@ and inference observation spaces cannot drift.
 from __future__ import annotations
 
 import hashlib
-import io
 import json
 import logging
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -31,9 +37,9 @@ import torch
 import torch.nn as nn
 
 from tradingagents.rl.config import (
+    DECISION_ACTIONS,
     DEFAULT_TRAINING_CONFIG,
     N_ACTIONS,
-    SIZE_TIERS,
     TrainingConfig,
 )
 from tradingagents.rl.feature_extractor import (
@@ -52,13 +58,13 @@ logger = logging.getLogger("tradingagents.rl.policy")
 
 
 class QNetwork(nn.Module):
-    """MLP returning one Q-value per size tier.
+    """MLP returning one Q-value per decision action.
 
     Input:  ``(batch, state_dim)`` float32
-    Output: ``(batch, N_ACTIONS)`` float32 — Q(s, a) for a in SIZE_TIERS
+    Output: ``(batch, N_ACTIONS)`` float32 — Q(s, a) for a in DECISION_ACTIONS
 
     The architecture is fixed by ``TrainingConfig.hidden_dims``; we don't
-    expose more knobs in v1 because the data scale doesn't justify them.
+    expose more knobs because the data scale doesn't justify them.
     """
 
     def __init__(
@@ -109,25 +115,26 @@ class QNetwork(nn.Module):
 class PolicyPrediction:
     """The single object the backtester / API server consumes at inference.
 
-    ``size_multiplier`` is clamped to ``[size_multiplier_min, size_multiplier_max]``
-    (see :class:`TrainingConfig`). Stage A and the plan promise this is the
-    final knob; the backtester multiplies ``trader_target_shares * confidence
-    * size_multiplier`` and then re-applies the deterministic risk veto.
+    ``action`` is the policy's recommended decision (one of
+    ``DECISION_ACTIONS``). The recommendation is advisory: the backtester runs
+    it as a parallel arm and never lets it override the deterministic risk
+    veto. ``q_values`` are recorded for audit.
     """
 
-    size_multiplier: float          # the actual fraction to apply
-    action_index: int               # argmax tier index
-    q_values: Tuple[float, ...]     # one Q-value per tier (for audit)
+    action: str                     # argmax decision: BUY / HOLD / SELL
+    action_index: int               # index into DECISION_ACTIONS
+    committee_action: str           # the decision the LLM committee proposed
+    q_values: Tuple[float, ...]     # one Q-value per action (for audit)
     feature_version: str
     model_fingerprint: Dict[str, Any]
 
+    @property
+    def agrees_with_committee(self) -> bool:
+        return self.action.strip().upper() == self.committee_action.strip().upper()
+
 
 def _hash_state_dict(state_dict: Dict[str, torch.Tensor]) -> str:
-    """Stable 16-char hex digest of a Q-network's parameters.
-
-    Used so the audit trail can record *which* weights produced a prediction
-    without dumping the full tensor.
-    """
+    """Stable 16-char hex digest of a Q-network's parameters."""
     h = hashlib.sha256()
     for key in sorted(state_dict.keys()):
         tensor = state_dict[key].detach().cpu().to(torch.float32).contiguous()
@@ -136,14 +143,30 @@ def _hash_state_dict(state_dict: Dict[str, torch.Tensor]) -> str:
     return h.hexdigest()[:16]
 
 
-class RLSizingPolicy:
+def _committee_action(final_state: Dict[str, Any]) -> str:
+    """Extract the committee's BUY/HOLD/SELL via the project's regex extractor."""
+    try:
+        from tradingagents.graph.signal_processing import SignalProcessor
+
+        signal = (
+            final_state.get("final_trade_decision")
+            or final_state.get("trader_investment_plan")
+            or ""
+        )
+        return SignalProcessor().process_signal(signal)
+    except Exception:
+        return "HOLD"
+
+
+class RLDecisionPolicy:
     """Inference wrapper around a trained :class:`QNetwork`.
 
-    Stage C will call ``predict(final_state, ticker, trade_date,
-    portfolio_ctx)`` from inside ``scripts/backtester.py``. The class is
-    fail-closed: if no model is loaded ``predict`` returns the identity
-    multiplier (``1.0``) with a warning, so the feature flag's "off" path
-    is also the "model missing" path.
+    The backtester calls ``predict(final_state, ticker, trade_date,
+    portfolio_ctx)``. The class is fail-closed: if no model is loaded
+    ``predict`` returns the *committee's own* decision (identity / pass-through)
+    with a warning, so the feature flag's "off" path is also the
+    "model missing" path and the parallel arm degrades to "agree with the
+    committee".
     """
 
     def __init__(
@@ -174,8 +197,6 @@ class RLSizingPolicy:
 
     @property
     def model_fingerprint(self) -> Dict[str, Any]:
-        # Compose the fingerprint each call so it always reflects current
-        # config (caller cannot tamper with the underlying dict).
         fp = dict(self._model_fingerprint)
         fp.setdefault("feature_version", FEATURE_VERSION)
         fp.setdefault("algorithm", self.config.algorithm)
@@ -199,14 +220,21 @@ class RLSizingPolicy:
         ``final_state`` is the LangGraph output. ``portfolio_ctx`` carries
         out-of-state context (drawdown, settled cash) from the backtester.
         """
+        committee = _committee_action(final_state if isinstance(final_state, dict) else {})
+
         if not self.is_loaded:
             logger.warning(
-                "RLSizingPolicy.predict called without a loaded model; "
-                "returning identity multiplier=1.0"
+                "RLDecisionPolicy.predict called without a loaded model; "
+                "passing through the committee decision (%s)", committee
             )
+            try:
+                idx = DECISION_ACTIONS.index(committee.strip().upper())
+            except ValueError:
+                idx = DECISION_ACTIONS.index("HOLD")
             return PolicyPrediction(
-                size_multiplier=1.0,
-                action_index=N_ACTIONS - 1,  # = 1.0 in SIZE_TIERS
+                action=DECISION_ACTIONS[idx],
+                action_index=idx,
+                committee_action=committee,
                 q_values=tuple(0.0 for _ in range(N_ACTIONS)),
                 feature_version=FEATURE_VERSION,
                 model_fingerprint=self.model_fingerprint,
@@ -223,13 +251,10 @@ class RLSizingPolicy:
             q_vals = self.q_network(x).squeeze(0).cpu().numpy()
 
         action_idx = int(np.argmax(q_vals))
-        raw_size = float(SIZE_TIERS[action_idx])
-        size = float(
-            np.clip(raw_size, self.config.size_multiplier_min, self.config.size_multiplier_max)
-        )
         return PolicyPrediction(
-            size_multiplier=size,
+            action=DECISION_ACTIONS[action_idx],
             action_index=action_idx,
+            committee_action=committee,
             q_values=tuple(float(v) for v in q_vals),
             feature_version=FEATURE_VERSION,
             model_fingerprint=self.model_fingerprint,
@@ -252,7 +277,7 @@ class RLSizingPolicy:
             "config": self.config.as_dict(),
             "feature_version": FEATURE_VERSION,
             "feature_names": list(FEATURE_NAMES),
-            "size_tiers": list(SIZE_TIERS),
+            "decision_actions": list(DECISION_ACTIONS),
             "architecture": self.q_network.architecture_summary(),
             "model_fingerprint": self.model_fingerprint,
             "extra_metadata": extra_metadata or {},
@@ -270,7 +295,7 @@ class RLSizingPolicy:
         return path
 
     @classmethod
-    def load(cls, path: str | Path) -> "RLSizingPolicy":
+    def load(cls, path: str | Path) -> "RLDecisionPolicy":
         """Load a previously :meth:`save`-d policy."""
         path = Path(path)
         if not path.exists():
@@ -279,8 +304,11 @@ class RLSizingPolicy:
         # Trusted local file, weights-only would reject the metadata dict.
         payload = torch.load(path, map_location="cpu", weights_only=False)
         cfg_dict = dict(payload.get("config") or {})
-        cfg_dict.pop("size_tiers", None)
+        cfg_dict.pop("decision_actions", None)
+        cfg_dict.pop("size_tiers", None)      # tolerate legacy v1 cards
         cfg_dict.pop("n_actions", None)
+        cfg_dict.pop("size_multiplier_min", None)
+        cfg_dict.pop("size_multiplier_max", None)
         if "hidden_dims" in cfg_dict and isinstance(cfg_dict["hidden_dims"], list):
             cfg_dict["hidden_dims"] = tuple(cfg_dict["hidden_dims"])
         config = TrainingConfig(**cfg_dict) if cfg_dict else DEFAULT_TRAINING_CONFIG
@@ -297,12 +325,20 @@ class RLSizingPolicy:
         state_dim = int(arch.get("state_dim", feature_vector_size()))
         hidden = tuple(int(h) for h in arch.get("hidden_dims", config.hidden_dims))
         dropout = float(arch.get("dropout_p", config.dropout_p))
+        n_actions = int(arch.get("n_actions", N_ACTIONS))
+        if n_actions != N_ACTIONS:
+            raise ValueError(
+                f"Model has a {n_actions}-action head but the decision policy "
+                f"expects {N_ACTIONS} actions ({', '.join(DECISION_ACTIONS)}). "
+                f"This checkpoint predates the decision-policy action space — "
+                f"retrain with scripts/train_rl_policy.py."
+            )
 
         net = QNetwork(
             state_dim=state_dim,
             hidden_dims=hidden,
             dropout_p=dropout,
-            n_actions=N_ACTIONS,
+            n_actions=n_actions,
         )
         net.load_state_dict(payload["state_dict"])
         net.eval()
@@ -313,16 +349,22 @@ class RLSizingPolicy:
         )
 
 
+# Backwards-compatible alias: existing import sites (api_server, backtester,
+# audit_writer, tests) reference ``RLSizingPolicy``. The class is now a
+# decision policy; the alias keeps those imports working.
+RLSizingPolicy = RLDecisionPolicy
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Utility: identity / fail-closed policy
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def identity_policy() -> RLSizingPolicy:
-    """The no-op policy: returns ``size_multiplier=1.0`` always.
+def identity_policy() -> RLDecisionPolicy:
+    """The no-op policy: passes the committee's own decision through.
 
-    The backtester uses this when the feature flag is off OR the model
-    fails to load. Centralizing the construction here means there is one
+    The backtester uses this when the feature flag is off OR the model fails
+    to load. Centralizing the construction here means there is one
     well-tested no-op path, not several.
     """
-    return RLSizingPolicy(q_network=None)
+    return RLDecisionPolicy(q_network=None)

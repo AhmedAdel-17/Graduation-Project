@@ -34,8 +34,8 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from tradingagents.rl.config import N_ACTIONS, SIZE_TIERS
-from tradingagents.rl.policy import RLSizingPolicy
+from tradingagents.rl.config import DECISION_ACTIONS, N_ACTIONS
+from tradingagents.rl.policy import RLDecisionPolicy, RLSizingPolicy
 from tradingagents.rl.train import TrainingTensors
 
 logger = logging.getLogger("tradingagents.rl.eval")
@@ -50,11 +50,19 @@ logger = logging.getLogger("tradingagents.rl.eval")
 class OPEResult:
     n_samples: int
     direct_value: float                   # Q(s, π(s)) averaged
-    behavior_mean_reward: float            # plain mean of dataset rewards
+    behavior_mean_reward: float            # committee actions' realized reward
     snips_value: float                     # self-normalized IPS
     snips_effective_sample_size: float     # ess for the importance weights
     action_distribution: Dict[str, float]  # π's action histogram on the eval set
     behavior_action_distribution: Dict[str, float]
+    # Headline metric enabled by the counterfactual reward: because we know the
+    # realized reward of EVERY action at each state, the policy's value is an
+    # exact average (no importance weighting, no bias) — and so is the
+    # committee's. ``counterfactual_uplift`` is the difference: how much the
+    # learned decisions would have improved on the committee on this set.
+    counterfactual_policy_value: float = 0.0
+    counterfactual_behavior_value: float = 0.0
+    counterfactual_uplift: float = 0.0
     notes: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -101,7 +109,7 @@ def _empirical_behavior_distribution(
 def _action_histogram(actions: torch.Tensor, n_actions: int) -> Dict[str, float]:
     n = max(1, actions.shape[0])
     counts = torch.bincount(actions, minlength=n_actions).float()
-    return {f"tier_{i}_size_{SIZE_TIERS[i]}": float(counts[i].item() / n) for i in range(n_actions)}
+    return {DECISION_ACTIONS[i]: float(counts[i].item() / n) for i in range(n_actions)}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -138,6 +146,9 @@ def evaluate(
     assert network is not None
     network.eval()
 
+    behavior_actions = val.behavior_action
+    arange = torch.arange(behavior_actions.shape[0])
+
     with torch.no_grad():
         q = network(val.states)                              # (N, A)
         greedy_actions = q.argmax(dim=1)                     # (N,)
@@ -145,14 +156,26 @@ def evaluate(
         direct_q = q.gather(1, greedy_actions.view(-1, 1)).squeeze(1)
         direct_value = float(direct_q.mean().cpu().item())
 
-    rewards = val.rewards
+    # Realized reward of the committee's action at each state.
+    rewards = val.reward_matrix.gather(1, behavior_actions.view(-1, 1)).squeeze(1)
     behavior_mean = float(rewards.mean().cpu().item())
+
+    # ── Counterfactual (exact) values ─────────────────────────────────────
+    # We know the realized reward of every action, so the on-policy value of
+    # the learned policy is simply the average reward of the action it picks —
+    # no importance weighting, no bias. Same for the committee. This is the
+    # headline RL-vs-committee comparison.
+    cf_policy = float(
+        val.reward_matrix.gather(1, greedy_actions.view(-1, 1)).squeeze(1).mean().cpu().item()
+    )
+    cf_behavior = behavior_mean
+    cf_uplift = cf_policy - cf_behavior
 
     # SNIPS = sum( w_i * r_i ) / sum( w_i ), w_i = π(a_i|s_i) / β(a_i)
     pi = _epsilon_greedy_pi(q, epsilon=epsilon)
-    beta = _empirical_behavior_distribution(val.actions, N_ACTIONS)
-    pi_a = pi[torch.arange(val.actions.shape[0]), val.actions]
-    beta_a = beta[val.actions]
+    beta = _empirical_behavior_distribution(behavior_actions, N_ACTIONS)
+    pi_a = pi[arange, behavior_actions]
+    beta_a = beta[behavior_actions]
     weights = pi_a / beta_a.clamp_min(1e-6)
     snips_value = float((weights * rewards).sum().cpu().item() / weights.sum().clamp_min(1e-6).cpu().item())
     ess = float((weights.sum() ** 2 / (weights ** 2).sum().clamp_min(1e-12)).cpu().item())
@@ -161,7 +184,7 @@ def evaluate(
     if ess < 5.0:
         notes.append(
             f"SNIPS effective sample size = {ess:.2f} (< 5); "
-            f"importance-weighted value is unstable, trust the direct method"
+            f"importance-weighted value is unstable, trust the counterfactual value"
         )
     if val.states.shape[0] < 30:
         notes.append(
@@ -176,7 +199,10 @@ def evaluate(
         snips_value=snips_value,
         snips_effective_sample_size=ess,
         action_distribution=_action_histogram(greedy_actions, N_ACTIONS),
-        behavior_action_distribution=_action_histogram(val.actions, N_ACTIONS),
+        behavior_action_distribution=_action_histogram(behavior_actions, N_ACTIONS),
+        counterfactual_policy_value=cf_policy,
+        counterfactual_behavior_value=cf_behavior,
+        counterfactual_uplift=cf_uplift,
         notes=notes,
     )
 
@@ -196,9 +222,14 @@ def compare_to_baseline(result: OPEResult) -> Dict[str, Any]:
         "direct_value": result.direct_value,
         "behavior_mean_reward": result.behavior_mean_reward,
         "snips_value": result.snips_value,
+        "counterfactual_policy_value": result.counterfactual_policy_value,
+        "counterfactual_behavior_value": result.counterfactual_behavior_value,
+        "counterfactual_uplift": result.counterfactual_uplift,
         "direct_uplift_vs_behavior": direct_uplift,
         "snips_uplift_vs_behavior": snips_uplift,
-        "preliminary_ok": direct_uplift > 0,
+        # Primary criterion: the exact counterfactual uplift of the learned
+        # decisions over the committee on the held-out set.
+        "preliminary_ok": result.counterfactual_uplift > 0,
         "snips_ok": snips_uplift > 0,
         "snips_ess": result.snips_effective_sample_size,
     }
