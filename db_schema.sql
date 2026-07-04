@@ -37,6 +37,27 @@ CREATE INDEX IF NOT EXISTS idx_agent_memories_ticker ON agent_memories (ticker);
 --     USING ivfflat (embedding vector_cosine_ops) WITH (lists = 10);
 
 -- =============================================================================
+-- 1b. USERS  (Firebase-auth identity; was scripts/db/apply_schema_v3.sql)
+-- =============================================================================
+-- firebase_uid is the Firebase Authentication UID (TEXT, NOT a UUID). The
+-- user_id columns on analysis_sessions / backtest_runs store this same value.
+-- 'local' is the single-user demo owner until the token guard is switched on.
+-- The user_id references are LOGICAL (no enforced FK yet) — matches the dashed
+-- links in docs/erd/egx_thesis_erd.svg.
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS users (
+    firebase_uid  TEXT        PRIMARY KEY,
+    email         TEXT,
+    display_name  TEXT,
+    photo_url     TEXT,
+    created_at    TIMESTAMPTZ DEFAULT NOW(),
+    last_seen_at  TIMESTAMPTZ DEFAULT NOW()
+);
+INSERT INTO users (firebase_uid, display_name)
+VALUES ('local', 'Local Demo User')
+ON CONFLICT (firebase_uid) DO NOTHING;
+
+-- =============================================================================
 -- 2. ANALYSIS SESSIONS  (replaces audit_logs/*.jsonl files)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS analysis_sessions (
@@ -53,11 +74,17 @@ CREATE TABLE IF NOT EXISTS analysis_sessions (
     risk_assessment     JSONB,
     data_quality        JSONB,
     full_state          JSONB,
-    created_at          TIMESTAMPTZ DEFAULT NOW()
+    created_at          TIMESTAMPTZ DEFAULT NOW(),
+    -- added by apply_schema_v2.sql / v3.sql (inlined here to match live DB):
+    user_id             TEXT,                          -- logical ref → users.firebase_uid
+    model_fingerprint   JSONB,                         -- LLM provider/model/seed snapshot
+    run_type            TEXT        NOT NULL DEFAULT 'live'  -- 'live' | 'backtest'
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_ticker      ON analysis_sessions (ticker);
 CREATE INDEX IF NOT EXISTS idx_sessions_date        ON analysis_sessions (trade_date);
 CREATE INDEX IF NOT EXISTS idx_sessions_ticker_date ON analysis_sessions (ticker, trade_date DESC);
+CREATE INDEX IF NOT EXISTS idx_sessions_run_type    ON analysis_sessions (run_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sessions_user        ON analysis_sessions (user_id, created_at DESC);
 
 -- =============================================================================
 -- 3. AGENT EVENTS  (granular per-agent event log)
@@ -71,7 +98,8 @@ CREATE TABLE IF NOT EXISTS agent_events (
     opinion_summary  TEXT,
     confidence_score NUMERIC(5,3),
     structured_output JSONB,
-    logged_at        TIMESTAMPTZ DEFAULT NOW()
+    logged_at        TIMESTAMPTZ DEFAULT NOW(),
+    model_fingerprint JSONB                      -- added by apply_schema_v2.sql (inlined)
 );
 CREATE INDEX IF NOT EXISTS idx_events_session ON agent_events (session_id);
 
@@ -96,10 +124,12 @@ CREATE TABLE IF NOT EXISTS backtest_runs (
     total_commissions    NUMERIC(12,2),
     final_portfolio_egp  NUMERIC(14,2),
     metrics              JSONB,
-    created_at           TIMESTAMPTZ DEFAULT NOW()
+    created_at           TIMESTAMPTZ DEFAULT NOW(),
+    user_id              TEXT                    -- added by apply_schema_v3.sql (inlined); logical ref → users.firebase_uid
 );
 CREATE INDEX IF NOT EXISTS idx_backtest_ticker   ON backtest_runs (ticker);
 CREATE INDEX IF NOT EXISTS idx_backtest_strategy ON backtest_runs (strategy);
+CREATE INDEX IF NOT EXISTS idx_backtest_user     ON backtest_runs (user_id, created_at DESC);
 
 -- =============================================================================
 -- 5. BACKTEST TRADES  (replaces trades_*.csv files)
@@ -197,6 +227,15 @@ WHERE llm.strategy = 'llm'
 -- pipeline run. Lets future backtests replay real historical social data
 -- instead of using news-derived proxies. The signal_adapter falls back to
 -- this table when curr_date is more than 1 day in the past.
+--
+-- Holds TWO row classes, distinguished by `platform`:
+--   * social/news-RSS posts from the social_v2 sentiment pipeline — carry a
+--     sentiment_score and FEED the social-sentiment backtest replay.
+--   * News-Analyst articles (platform='news', content_label='NEWS') archived by
+--     post_store.archive_news_articles() for reproducibility/audit ONLY. These
+--     are stored with sentiment_score = NULL on purpose, so the replay reader
+--     (signal_adapter._try_archive_replay, WHERE sentiment_score IS NOT NULL)
+--     excludes them — archiving news does not alter the social signal.
 --
 -- Idempotency: post_hash = sha256(platform|url|timestamp|text[:500]).
 -- Conflicting rows are ignored, so re-scraping the same posts is safe.
@@ -374,3 +413,19 @@ CREATE TABLE IF NOT EXISTS pa_events (
 );
 CREATE INDEX IF NOT EXISTS idx_pa_events_conv
     ON pa_events (conversation_id, id);
+
+-- =============================================================================
+-- 10. Agent-output translation cache (dashboard i18n)
+-- =============================================================================
+-- On-demand EN → Egyptian-Arabic translations of dynamic LLM agent prose
+-- (theses, verdicts, reasoning). Keyed by sha256 of the source text + target
+-- locale so repeat views / historical runs are free and deterministic.
+-- English remains the source of truth; this table is a pure cache and can be
+-- truncated safely at any time. See server/translation.py.
+CREATE TABLE IF NOT EXISTS translation_cache (
+    content_hash    TEXT        NOT NULL,   -- sha256(source_text)
+    target_locale   TEXT        NOT NULL,   -- e.g. 'ar'
+    translated_text TEXT        NOT NULL,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (content_hash, target_locale)
+);

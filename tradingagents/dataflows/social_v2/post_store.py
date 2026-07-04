@@ -229,3 +229,85 @@ def archive(enriched_records: Iterable[dict]) -> int:
     except Exception as exc:
         log.warning("post_store: insert failed (%s)", exc)
         return 0
+
+
+def archive_news_articles(articles: Iterable[dict], ticker: str = "") -> int:
+    """Persist News-Analyst articles into the shared social_v2_posts archive.
+
+    These come from the News Analyst's live aggregator flow
+    (``news_data_tools._fetch_live_news``), NOT the social_v2 sentiment
+    pipeline. They are stored for archival / backtest reproducibility —
+    symmetric to the social posts — and tagged ``platform='news'`` /
+    ``content_label='NEWS'`` so they stay distinguishable.
+
+    IMPORTANT — sentiment is stored as NULL on purpose. The News Analyst
+    computes transformer sentiment POST-LLM on headlines extracted from its own
+    report, not per source-article at fetch time, so there is no honest
+    per-article score here. NULL also keeps these rows OUT of the
+    social-sentiment backtest replay, whose reader filters
+    ``WHERE sentiment_score IS NOT NULL`` (``signal_adapter._try_archive_replay``)
+    — so archiving news does NOT alter the social signal. Opt-in scoring would
+    require a dedicated sentiment pass + a backtest before it can feed the blend.
+
+    Best-effort: no-op when Postgres is unavailable. Idempotent via post_hash.
+    Returns the number of rows offered for insertion (ON CONFLICT DO NOTHING).
+    """
+    conn = _connect()
+    if conn is None:
+        return 0
+
+    bare = (ticker or "").upper().replace(".CA", "").strip()
+    # Market-wide news (ticker == "EGX") carries no per-stock symbol tag.
+    symbols = [bare] if bare and bare != "EGX" else None
+    sectors, indices = _derive_tags(symbols, None)
+
+    rows = []
+    for art in articles:
+        if not isinstance(art, dict):
+            continue
+        title = (art.get("title") or "").strip()
+        summary = (art.get("summary") or "").strip()
+        text = (f"{title} — {summary}" if summary else title).strip()
+        if not text:
+            continue
+        url = art.get("url") or ""
+        ts_raw = art.get("published_at") or ""
+        rows.append((
+            _post_hash("news", url, text, str(ts_raw)),
+            "news",                       # platform
+            art.get("source") or "news",  # source (outlet/provider)
+            url,
+            None,                         # username — news has no author handle
+            _parse_ts(ts_raw),
+            text[:4000],
+            0,                            # engagement — N/A for news
+            symbols,
+            None,                         # intents — not classified in this flow
+            "NEWS",                       # content_label
+            None,                         # sentiment_score — NULL on purpose
+            None,                         # sentiment_label — NULL on purpose
+            sectors or None,
+            indices or None,
+        ))
+
+    if not rows:
+        return 0
+
+    try:
+        with conn.cursor() as cur:
+            cur.executemany(
+                """
+                INSERT INTO social_v2_posts (
+                    post_hash, platform, source, url, username,
+                    post_timestamp, text, engagement, symbols,
+                    intents, content_label, sentiment_score, sentiment_label,
+                    sectors, indices
+                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                ON CONFLICT (post_hash) DO NOTHING
+                """,
+                rows,
+            )
+        return len(rows)
+    except Exception as exc:
+        log.warning("post_store: news insert failed (%s)", exc)
+        return 0

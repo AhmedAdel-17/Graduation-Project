@@ -39,8 +39,10 @@ import json
 import logging
 import os
 import time
+import threading
+from collections import deque
 from datetime import datetime
-from typing import Any, AsyncIterator, Dict, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 logger = logging.getLogger("tradingagents.redis")
 
@@ -62,6 +64,43 @@ except ImportError:
 def _channel(ticker: str) -> str:
     """Pub/sub channel name for a ticker's analysis session."""
     return f"egx:analysis:{ticker.replace('.', '_')}"
+
+
+# ── In-memory event ring buffer for replay ──────────────────────────────────
+# Stores the last MAX_EVENTS_PER_CHANNEL events per channel so a client that
+# connects mid-pipeline (or after it finishes) can catch up.  Thread-safe.
+# This is deliberately simple — no Redis Streams, no Postgres, just deques.
+
+MAX_EVENTS_PER_CHANNEL = 100
+_event_buffers: Dict[str, deque] = {}
+_buffer_lock = threading.Lock()
+
+
+def _buffer_event(channel: str, payload: Dict[str, Any]) -> None:
+    """Append an event to the channel's ring buffer."""
+    with _buffer_lock:
+        if channel not in _event_buffers:
+            _event_buffers[channel] = deque(maxlen=MAX_EVENTS_PER_CHANNEL)
+        _event_buffers[channel].append(payload)
+
+
+def get_buffered_events(ticker: str) -> List[Dict[str, Any]]:
+    """Return all buffered events for a ticker's channel (oldest first)."""
+    channel = _channel(ticker)
+    with _buffer_lock:
+        buf = _event_buffers.get(channel)
+        return list(buf) if buf else []
+
+
+def get_all_recent_events(limit: int = 50) -> List[Dict[str, Any]]:
+    """Return the most recent events across all channels (newest first)."""
+    with _buffer_lock:
+        all_events: List[Dict[str, Any]] = []
+        for buf in _event_buffers.values():
+            all_events.extend(buf)
+    # Sort by timestamp descending, take limit
+    all_events.sort(key=lambda e: e.get("timestamp", ""), reverse=True)
+    return all_events[:limit]
 
 
 # ── Synchronous publisher (used inside agent nodes / trading_graph.py) ────────
@@ -89,11 +128,13 @@ class AgentEventPublisher:
                 self._r = None
 
     def _publish(self, payload: Dict[str, Any]) -> None:
-        if not self._r:
-            return
         payload.setdefault("session_id", self.session_id)
         payload.setdefault("ticker", self.ticker)
         payload.setdefault("timestamp", datetime.now().isoformat())
+        # Always buffer locally (works even without Redis)
+        _buffer_event(self.channel, payload)
+        if not self._r:
+            return
         try:
             self._r.publish(self.channel, json.dumps(payload, default=str))
         except Exception as e:
