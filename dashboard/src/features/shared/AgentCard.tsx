@@ -1,5 +1,7 @@
+import { useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/utils";
-import type { LucideIcon } from "lucide-react";
+import { useT } from "../../lib/i18n";
+import { Minus, Plus, type LucideIcon } from "lucide-react";
 
 export type AgentTone = "bull" | "bear" | "judge" | "manager" | "risk";
 
@@ -77,6 +79,12 @@ export interface AgentCardProps {
   meta?: { label: string; value: string }[];
   children?: React.ReactNode;
   className?: string;
+  /** When true, long body content collapses to a preview with a "Show more" toggle. */
+  collapsible?: boolean;
+  /** Collapsed preview height in px (default 176). */
+  previewHeight?: number;
+  /** Start expanded instead of collapsed (only relevant when collapsible). */
+  defaultExpanded?: boolean;
 }
 
 export function AgentCard({
@@ -88,8 +96,30 @@ export function AgentCard({
   meta,
   children,
   className,
+  collapsible = false,
+  previewHeight = 176,
+  defaultExpanded = false,
 }: AgentCardProps) {
   const t = TONES[tone];
+  const tr = useT();
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [overflowing, setOverflowing] = useState(false);
+
+  // Only surface the toggle when the content is actually taller than the preview.
+  useEffect(() => {
+    if (!collapsible) return;
+    const el = bodyRef.current;
+    if (!el) return;
+    const check = () => setOverflowing(el.scrollHeight > previewHeight + 24);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [collapsible, previewHeight, children]);
+
+  const collapsed = collapsible && overflowing && !expanded;
+
   return (
     <article
       className={cn(
@@ -133,10 +163,49 @@ export function AgentCard({
           )}
         </div>
 
-        {/* Body — children may be rendered markdown (agent prose) or rich JSX */}
-        <div className="mt-4 text-[14px] leading-[1.65] text-ink-2">
-          {children}
+        {/* Body — children may be rendered markdown (agent prose) or rich JSX.
+            When collapsible + overflowing, clamp to a preview with a fade mask. */}
+        <div className="relative mt-4">
+          <div
+            ref={bodyRef}
+            className="overflow-hidden text-[14px] leading-[1.65] text-ink-2 transition-[max-height] duration-300 ease-out"
+            style={{ maxHeight: collapsed ? previewHeight : undefined }}
+          >
+            {children}
+          </div>
+          {collapsed && (
+            <div
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent dark:from-[var(--paper)]"
+              aria-hidden
+            />
+          )}
         </div>
+
+        {collapsible && overflowing && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            className={cn(
+              "mt-3 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-colors",
+              t.chip,
+              t.chipText,
+              "hover:brightness-95"
+            )}
+          >
+            {expanded ? (
+              <>
+                <Minus className="h-3.5 w-3.5" strokeWidth={2.4} />
+                {tr("common.showLess")}
+              </>
+            ) : (
+              <>
+                <Plus className="h-3.5 w-3.5" strokeWidth={2.4} />
+                {tr("common.showMore")}
+              </>
+            )}
+          </button>
+        )}
 
         {/* Meta footer */}
         {meta && meta.length > 0 && (

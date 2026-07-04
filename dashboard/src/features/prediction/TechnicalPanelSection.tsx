@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Activity, Gauge, Layers } from "lucide-react";
 import { cn, formatNumber } from "../../lib/utils";
+import { useT } from "../../lib/i18n";
 import type { TechnicalPanel, TechnicalPanelData } from "../../services/api/types";
 
 /* ─ helpers ─ */
@@ -81,6 +82,7 @@ const PIVOT_SYSTEMS = [
 ] as const;
 
 export function TechnicalPanelSection({ data }: { data?: TechnicalPanel | null }) {
+  const t = useT();
   const [pivot, setPivot] = useState<(typeof PIVOT_SYSTEMS)[number]["id"]>("classic");
 
   if (!data || data.error || !data.panel) {
@@ -94,9 +96,9 @@ export function TechnicalPanelSection({ data }: { data?: TechnicalPanel | null }
       <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3 border-b border-stone-200/80 dark:border-[var(--hairline)] flex-wrap">
         <div className="flex items-center gap-2">
           <Activity className="h-4 w-4 text-stone-500" />
-          <span className="text-[14px] font-semibold text-ink">Technical panel</span>
+          <span className="text-[14px] font-semibold text-ink">{t("tech.title")}</span>
           <span className="text-[11.5px] text-ink-3">
-            · Investing-style summary{data.as_of ? ` · as of ${data.as_of}` : ""}
+            {t("tech.summary")}{data.as_of ? ` ${t("tech.asOf", { date: data.as_of })}` : ""}
           </span>
         </div>
         <Verdict label={p.overall_summary} />
@@ -107,21 +109,28 @@ export function TechnicalPanelSection({ data }: { data?: TechnicalPanel | null }
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <SummaryTile
             icon={<Gauge className="h-3.5 w-3.5" />}
-            title="Indicators"
+            title={t("tech.tile.indicators")}
             summary={p.ind_summary}
-            counts={`${num(p.ind_buy) ?? 0} buy · ${num(p.ind_sell) ?? 0} sell · ${num(p.ind_neutral) ?? 0} neutral`}
+            counts={t("tech.counts.ind", {
+              buy: num(p.ind_buy) ?? 0,
+              sell: num(p.ind_sell) ?? 0,
+              neutral: num(p.ind_neutral) ?? 0,
+            })}
           />
           <SummaryTile
             icon={<Layers className="h-3.5 w-3.5" />}
-            title="Moving averages"
+            title={t("tech.tile.ma")}
             summary={p.ma_summary}
-            counts={`${num(p.ma_buy) ?? 0} buy · ${num(p.ma_sell) ?? 0} sell`}
+            counts={t("tech.counts.ma", {
+              buy: num(p.ma_buy) ?? 0,
+              sell: num(p.ma_sell) ?? 0,
+            })}
           />
           <SummaryTile
             icon={<Activity className="h-3.5 w-3.5" />}
-            title="Overall"
+            title={t("tech.tile.overall")}
             summary={p.overall_summary}
-            counts="indicators + MAs"
+            counts={t("tech.counts.overall")}
           />
         </div>
 
@@ -129,7 +138,7 @@ export function TechnicalPanelSection({ data }: { data?: TechnicalPanel | null }
         <div className="grid gap-5 lg:grid-cols-2">
           {/* Indicators */}
           <div>
-            <h4 className="eyebrow text-stone-500 mb-2">Technical Indicators</h4>
+            <h4 className="eyebrow text-stone-500 mb-2">{t("tech.indicators")}</h4>
             <div className="rounded-xl border border-stone-200/80 dark:border-[var(--hairline)] divide-y divide-stone-100 dark:divide-[var(--hairline)] overflow-hidden">
               {INDICATORS.map((ind) => (
                 <Row
@@ -144,14 +153,14 @@ export function TechnicalPanelSection({ data }: { data?: TechnicalPanel | null }
 
           {/* Moving averages */}
           <div>
-            <h4 className="eyebrow text-stone-500 mb-2">Moving Averages</h4>
+            <h4 className="eyebrow text-stone-500 mb-2">{t("tech.movingAverages")}</h4>
             <div className="rounded-xl border border-stone-200/80 dark:border-[var(--hairline)] divide-y divide-stone-100 dark:divide-[var(--hairline)] overflow-hidden">
               {MA_PERIODS.map((n) => (
                 <div key={n} className="flex items-center gap-2 px-3 py-2 text-[12px]">
                   <span className="text-ink-3 w-10 shrink-0">MA{n}</span>
                   <span className="mono text-ink">{fmt(p[`sma_${n}`])}</span>
-                  <Verdict label={`SMA ${String(p[`sma_${n}_signal`] ?? "")}`} className="ml-1" />
-                  <Verdict label={`EMA ${String(p[`ema_${n}_signal`] ?? "")}`} className="ml-auto" />
+                  <Verdict label={`SMA ${String(p[`sma_${n}_signal`] ?? "")}`} className="ms-1" />
+                  <Verdict label={`EMA ${String(p[`ema_${n}_signal`] ?? "")}`} className="ms-auto" />
                 </div>
               ))}
             </div>
@@ -161,7 +170,7 @@ export function TechnicalPanelSection({ data }: { data?: TechnicalPanel | null }
         {/* Pivot points */}
         <div>
           <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-            <h4 className="eyebrow text-stone-500">Pivot Points</h4>
+            <h4 className="eyebrow text-stone-500">{t("tech.pivots")}</h4>
             <div className="inline-flex items-center rounded-lg border border-stone-200 dark:border-[var(--hairline)] p-0.5">
               {PIVOT_SYSTEMS.map((s) => (
                 <button
@@ -176,7 +185,7 @@ export function TechnicalPanelSection({ data }: { data?: TechnicalPanel | null }
                       : "text-ink-2 hover:bg-stone-100 dark:hover:bg-white/5"
                   )}
                 >
-                  {s.label}
+                  {t(`tech.pivot.${s.id}`)}
                 </button>
               ))}
             </div>
@@ -199,7 +208,7 @@ export function TechnicalPanelSection({ data }: { data?: TechnicalPanel | null }
                   )}
                 >
                   <div className="text-[10px] uppercase tracking-wider text-ink-3">
-                    {lvl === "P" ? "Pivot" : lvl}
+                    {lvl === "P" ? t("tech.pivotP") : lvl}
                   </div>
                   <div className="display-num text-[14px] font-semibold text-ink">
                     {fmt(p[key])}
@@ -211,9 +220,7 @@ export function TechnicalPanelSection({ data }: { data?: TechnicalPanel | null }
         </div>
 
         <p className="text-[11px] text-ink-3 border-t border-stone-200/80 dark:border-[var(--hairline)] pt-3">
-          Values are exact and computed from daily OHLCV (look-ahead-safe); Buy/Sell/Neutral
-          verdicts follow standard rules approximating the Investing.com panel. ATR is shown
-          as volatility, not a directional signal.
+          {t("tech.foot")}
         </p>
       </div>
     </section>

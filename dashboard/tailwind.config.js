@@ -50,6 +50,23 @@ export default {
           600: "#1E40AF",
           700: "#1E3A8A",
         },
+        // StockHive brand — navy shell + green accent
+        navy: {
+          50: "#EEF1F7",
+          100: "#D6DDEB",
+          400: "#3A5488",
+          500: "#1E3A66",
+          600: "#14284A",
+          700: "#0E1D38",
+        },
+        hive: {
+          50: "#E7F5EC",
+          100: "#C6E7D2",
+          400: "#43C07A",
+          500: "#2FA35B",
+          600: "#26894B",
+          700: "#1C6B3A",
+        },
         up: "#16A34A",
         down: "#DC2626",
         accent: "#7C3AED",

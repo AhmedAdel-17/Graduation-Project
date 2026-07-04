@@ -15,6 +15,12 @@
     --hairline: #EAE7E1;
     --hairline-2: #D6D3CE;
     --accent: #1A1A1A;
+    /* StockHive brand */
+    --brand-navy: #14284A;
+    --brand-navy-2: #1E3A66;
+    --brand-green: #2FA35B;
+    --brand-green-2: #26894B;
+    --brand-green-soft: #E7F5EC;
   }
   html.dark {
     color-scheme: dark;
@@ -26,6 +32,12 @@
     --hairline: #2A2A30;
     --hairline-2: #3A3A42;
     --accent: #F5F4EF;
+    /* StockHive brand — lightened for contrast on dark surfaces */
+    --brand-navy: #6E8BC0;
+    --brand-navy-2: #8AA3D0;
+    --brand-green: #43C07A;
+    --brand-green-2: #35A868;
+    --brand-green-soft: rgba(67, 192, 122, 0.14);
   }
   html, body, #root { height: 100%; }
   body {

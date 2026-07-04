@@ -17,17 +17,23 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
+import { useAuth } from "../../components/auth/AuthProvider";
 import { useRunPrediction, useRunFullPipeline, usePastPrediction } from "../../hooks/usePrediction";
 import { AgentCard, AgentCardSkeleton } from "../shared/AgentCard";
 import { TickerPicker } from "../shared/TickerPicker";
 import { PriceChart } from "../../components/charts/PriceChart";
 import { cn, formatNumber, formatPercent } from "../../lib/utils";
+import { useT, tEnum } from "../../lib/i18n";
+import { useTranslatedText } from "../../hooks/useTranslatedText";
 import { getTickerMeta } from "../../data/egxTickerMeta";
 import { TickerLogo } from "../../components/ui/TickerLogo";
 import { MarketIndicesBar } from "./MarketIndicesBar";
+import { TopMovers } from "./TopMovers";
+import { SectorPerformance } from "./SectorPerformance";
+import { MacroIndicators } from "./MacroIndicators";
 import { PivotLevels } from "./PivotLevels";
 import { TechnicalPanelSection } from "../prediction/TechnicalPanelSection";
-import { Markdown } from "../../components/ui/Markdown";
+import { TranslatedMarkdown } from "../../components/ui/TranslatedMarkdown";
 import type {
   StockBar,
   StyledRecommendations as StyledRecs,
@@ -40,12 +46,23 @@ import type {
 //  - Leading "# TICKER — ..." H1 (redundant — the card header already names the agent)
 function cleanAgentText(raw: string): string {
   let s = raw;
-  // Remove trailing fenced JSON/code blocks (greedy from last ``` pair)
-  s = s.replace(/\n*```(?:json)?\s*\n[\s\S]*?```\s*$/i, "").trimEnd();
+  // Remove the structured-thesis echo the LLM appends after the prose:
+  //  1) fenced ```json … ``` blocks (anywhere — they're machine output, not prose)
+  s = s.replace(/```json[\s\S]*?```/gi, "");
+  //  2) any remaining trailing fenced code block, regardless of language tag
+  s = s.replace(/\n*```[a-zA-Z]*\s*\n[\s\S]*?```\s*$/, "");
+  //  3) a trailing BARE JSON object (same thesis, unfenced) — keyed off the
+  //     structured-thesis field names so we never eat real prose
+  s = s.replace(
+    /\n+\{[\s\S]*?(?:"thesis_type"|"conviction_level"|"signal_summary"|"signal_integration_rationale")[\s\S]*\}\s*$/i,
+    ""
+  );
   // Strip "Bull Analyst: " / "Bear Analyst: " prefix
   s = s.replace(/^(?:Bull|Bear)\s+Analyst:\s*/i, "");
   // Strip leading H1 line ("# TICKER — ...") — the card header is enough
   s = s.replace(/^#\s+.+\n+/, "");
+  // Drop a now-dangling trailing horizontal rule left behind by the JSON strip
+  s = s.replace(/\n+\s*-{3,}\s*$/, "");
   return s.trim();
 }
 
@@ -65,6 +82,8 @@ function toNum(v: unknown): number | undefined {
 
 export function HomeScreen() {
   const { sessionId } = useParams<{ sessionId: string }>();
+  const t = useT();
+  const { user } = useAuth();
   const [ticker, setTicker] = useState("COMI.CA");
   const runPrediction = useRunPrediction();
   const runFullPipeline = useRunFullPipeline();
@@ -125,21 +144,28 @@ export function HomeScreen() {
   const isLoading = isQuickLoading || isFullLoading || isPastLoading;
   const hasResult = !!result && !result.error;
 
+  function handleSelectFromMovers(t: string) {
+    setTicker(t);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
   async function handleRunFull() {
     try {
-      toast.info("Pipeline started — four agents are now debating");
+      toast.info(t("home.toast.started"));
       const res = await runFullPipeline.mutateAsync(ticker);
       if (res?.error) {
         toast.error(res.error);
         return;
       }
       if (res?.llm_error) {
-        toast.warning(`Pipeline completed with errors: ${res.llm_error}`);
+        toast.warning(t("home.toast.withErrors", { error: res.llm_error }));
       } else {
-        toast.success(`Full pipeline complete · ${res?.recommendation?.signal ?? "—"}`);
+        toast.success(t("home.toast.complete", { signal: res?.recommendation?.signal ?? "—" }));
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Full pipeline failed");
+      toast.error(e instanceof Error ? e.message : t("home.toast.failed"));
     }
   }
 
@@ -148,30 +174,30 @@ export function HomeScreen() {
       <div className="space-y-6">
         <header className="flex items-end justify-between gap-6 flex-wrap">
           <div>
-            <div className="eyebrow mb-3">Historical Record · Postgres</div>
+            <div className="eyebrow mb-3">{t("home.past.eyebrow")}</div>
             <h1 className="display text-[32px] md:text-[36px] font-semibold leading-none text-ink">
-              Past Prediction
+              {t("home.past.title")}
             </h1>
             <p className="text-[14px] text-ink-3 mt-3 max-w-xl leading-relaxed">
-              Viewing an archived analysis session. This is a read-only snapshot.
+              {t("home.past.desc")}
             </p>
           </div>
           <button
             onClick={() => window.history.back()}
             className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-stone-200 text-[13px] font-medium hover:bg-stone-50"
           >
-            &larr; Back
+            {t("home.past.back")}
           </button>
         </header>
 
         {isPastLoading ? (
           <div className="py-24 flex flex-col items-center justify-center text-stone-500">
             <Loader2 className="h-6 w-6 animate-spin mb-4" />
-            Loading historical run...
+            {t("home.past.loading")}
           </div>
         ) : !hasResult ? (
           <div className="py-24 flex flex-col items-center justify-center text-stone-500">
-            Run not found or failed to load.
+            {t("home.past.notFound")}
           </div>
         ) : (
           <div className="space-y-6">
@@ -222,89 +248,86 @@ export function HomeScreen() {
             <PivotLevels bars={history} current={current} />
 
             {/* Bull + Bear */}
-            <SectionLabel index="01" label="Adversarial research" />
+            <SectionLabel index="01" label={t("home.section.research")} />
             <div className="grid gap-5 md:grid-cols-2">
               <AgentCard
-                tone="bull"
-                icon={TrendingUp}
-                agent="Bull researcher"
-                role="The constructive case"
-                chip="Long thesis"
+                tone="bull"                icon={TrendingUp}
+                agent={t("home.bull.agent")}
+                role={t("home.bull.role")}
+                chip={t("home.bull.chip")}
                 meta={
                   target && current
                     ? [
-                        { label: "Implied upside", value: formatPercent(upside ?? 0) },
-                        { label: "Target", value: `${formatNumber(target)} EGP` },
+                        { label: t("home.meta.impliedUpside"), value: formatPercent(upside ?? 0) },
+                        { label: t("home.meta.target"), value: `${formatNumber(target)} EGP` },
                       ]
                     : undefined
                 }
               >
                 {rec?.bull_case ? (
-                  <Markdown variant="paper">{cleanAgentText(rec.bull_case)}</Markdown>
+                  <TranslatedMarkdown sectioned>{cleanAgentText(rec.bull_case)}</TranslatedMarkdown>
                 ) : (
-                  "No bullish thesis was returned for this run."
+                  t("home.bull.empty")
                 )}
               </AgentCard>
               <AgentCard
-                tone="bear"
-                icon={TrendingDown}
-                agent="Bear researcher"
-                role="The cautionary case"
-                chip="Risk-off thesis"
+                tone="bear"                icon={TrendingDown}
+                agent={t("home.bear.agent")}
+                role={t("home.bear.role")}
+                chip={t("home.bear.chip")}
                 meta={
                   stop && current
                     ? [
                         {
-                          label: "Downside to stop",
+                          label: t("home.meta.downsideToStop"),
                           value: formatPercent(downside ?? 0),
                         },
-                        { label: "Stop", value: `${formatNumber(stop)} EGP` },
+                        { label: t("home.meta.stop"), value: `${formatNumber(stop)} EGP` },
                       ]
                     : undefined
                 }
               >
                 {rec?.bear_case ? (
-                  <Markdown variant="paper">{cleanAgentText(rec.bear_case)}</Markdown>
+                  <TranslatedMarkdown sectioned>{cleanAgentText(rec.bear_case)}</TranslatedMarkdown>
                 ) : (
-                  "No bearish thesis was returned for this run."
+                  t("home.bear.empty")
                 )}
               </AgentCard>
             </div>
 
             {/* Judge */}
-            <SectionLabel index="02" label="Debate resolution" />
+            <SectionLabel index="02" label={t("home.section.resolution")} />
             <AgentCard
-              tone="judge"
-              icon={Gavel}
-              agent="Debate judge"
-              role="Research manager verdict"
-              chip={signal ? `Verdict: ${signal}` : "Verdict"}
+              tone="judge"              icon={Gavel}
+              agent={t("home.judge.agent")}
+              role={t("home.judge.role")}
+              chip={signal ? t("home.judge.chipWith", { signal }) : t("home.judge.chip")}
               meta={[
-                { label: "Signal", value: signal || "—" },
-                { label: "Confidence", value: confidence || "—" },
+                { label: t("home.meta.signal"), value: signal || "—" },
+                { label: t("home.meta.confidence"), value: confidence || "—" },
                 {
-                  label: "Risk profile",
+                  label: t("home.meta.riskProfile"),
                   value: (rec?.risk as string | undefined) || "—",
                 },
               ]}
             >
               {rec?.neutral_case || rec?.rationale ? (
-                <Markdown variant="paper">
+                <TranslatedMarkdown sectioned>
                   {cleanAgentText((rec?.neutral_case || rec?.rationale) as string)}
-                </Markdown>
+                </TranslatedMarkdown>
               ) : (
-                "No reconciled verdict was returned for this run."
+                t("home.judge.empty")
               )}
             </AgentCard>
 
             {/* Portfolio manager */}
-            <SectionLabel index="03" label="Execution plan" />
+            <SectionLabel index="03" label={t("home.section.execution")} />
             <AgentCard
               tone="manager"
               icon={Briefcase}
-              agent="Portfolio manager"
-              role="Trade construction"
-              chip={confidence ? `${confidence} conviction` : "Trade plan"}
+              agent={t("home.manager.agent")}
+              role={t("home.manager.role")}
+              chip={confidence ? t("home.manager.chipWith", { level: confidence }) : t("home.manager.chip")}
             >
               <ExecutionPlan
                 signal={signal}
@@ -318,7 +341,7 @@ export function HomeScreen() {
             </AgentCard>
 
             {/* Technical panel */}
-            <SectionLabel index="04" label="Technical reference" />
+            <SectionLabel index="04" label={t("home.section.technical")} />
             <TechnicalPanelSection data={result?.technical_panel} />
           </div>
         )}
@@ -331,60 +354,25 @@ export function HomeScreen() {
       {/* ─── Market indices strip ────────────────────────────────── */}
       <MarketIndicesBar />
 
-      {/* ─── Page header ─────────────────────────────────────────── */}
-      <header className="flex items-end justify-between gap-6 flex-wrap">
-        <div>
-          <div className="eyebrow mb-3">Home · EGX research desk</div>
-          <h1 className="display text-[36px] md:text-[42px] font-semibold leading-[1.05] text-ink">
-            A second opinion,
-            <br />
-            from <span className="italic">four</span> minds at once.
-          </h1>
-          <p className="text-[14px] text-ink-3 mt-3 max-w-xl leading-relaxed">
-            Run a full bull, bear, judge and portfolio review on any EGX-30
-            ticker. Every thesis is traceable, sized to EGX risk limits, and
-            ready in seconds.
-          </p>
-        </div>
-      </header>
-
-      {/* ─── Run bar ─────────────────────────────────────────────── */}
-      <div>
-        <div className="card-elevated p-2 flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          <div className="flex-1 min-w-[200px]">
-            <TickerPicker value={ticker} onChange={setTicker} />
-          </div>
-          <button
-            onClick={handleRunFull}
-            disabled={isLoading}
-            className={cn(
-              "shrink-0 inline-flex items-center gap-2 h-12 px-6 rounded-xl",
-              "bg-stone-900 hover:bg-stone-800 text-white text-[14px] font-medium",
-              "transition-all duration-200 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.18)]",
-              "disabled:opacity-60 disabled:cursor-not-allowed"
-            )}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Agents deliberating…
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                Analyze
-                <ArrowRight className="h-4 w-4 ml-1" />
-              </>
-            )}
-          </button>
-        </div>
-        <p className="mt-2 px-1.5 text-[12px] text-ink-3 italic">
-          Four agents will debate, challenge each other, and converge on a single thesis — expect ~20 minutes of deep thinking.
-        </p>
+      {/* ─── Welcome Message ─────────────────────────────────────── */}
+      <div className="pt-4 pb-2 px-1">
+        <h2 className="display text-[22px] md:text-[26px] font-semibold text-ink">
+          {t("home.welcome", { name: user?.displayName || user?.email?.split('@')[0] || 'User' })}
+        </h2>
       </div>
 
-      {/* ─── Empty ───────────────────────────────────────────────── */}
-      {!isLoading && !hasResult && <EmptyHero />}
+      {/* ─── Hero — brand headline + run bar ─────────────────────── */}
+      <HeroPanel
+        ticker={ticker}
+        onChange={setTicker}
+        onRun={handleRunFull}
+        isLoading={isLoading}
+      />
+
+      {/* ─── Empty → market overview ─────────────────────────────── */}
+      {!isLoading && !hasResult && (
+        <MarketOverview onSelectTicker={handleSelectFromMovers} />
+      )}
 
       {/* ─── Loading ─────────────────────────────────────────────── */}
       {isLoading && <LoadingHero mode={isFullLoading ? "full" : "quick"} />}
@@ -439,14 +427,13 @@ export function HomeScreen() {
           <PivotLevels bars={history} current={current} />
 
           {/* Bull + Bear */}
-          <SectionLabel index="01" label="Adversarial research" />
+          <SectionLabel index="01" label={t("home.section.research")} />
           <div className="grid gap-5 md:grid-cols-2">
             <AgentCard
-              tone="bull"
-              icon={TrendingUp}
-              agent="Bull researcher"
-              role="The constructive case"
-              chip="Long thesis"
+              tone="bull"              icon={TrendingUp}
+              agent={t("home.bull.agent")}
+              role={t("home.bull.role")}
+              chip={t("home.bull.chip")}
               meta={
                 target && current
                   ? [
@@ -457,17 +444,16 @@ export function HomeScreen() {
               }
             >
               {rec?.bull_case ? (
-                <Markdown variant="paper">{cleanAgentText(rec.bull_case)}</Markdown>
+                <TranslatedMarkdown sectioned>{cleanAgentText(rec.bull_case)}</TranslatedMarkdown>
               ) : (
-                "No bullish thesis was returned for this run."
+                t("home.bull.empty")
               )}
             </AgentCard>
             <AgentCard
-              tone="bear"
-              icon={TrendingDown}
-              agent="Bear researcher"
-              role="The cautionary case"
-              chip="Risk-off thesis"
+              tone="bear"              icon={TrendingDown}
+              agent={t("home.bear.agent")}
+              role={t("home.bear.role")}
+              chip={t("home.bear.chip")}
               meta={
                 stop && current
                   ? [
@@ -481,47 +467,46 @@ export function HomeScreen() {
               }
             >
               {rec?.bear_case ? (
-                <Markdown variant="paper">{cleanAgentText(rec.bear_case)}</Markdown>
+                <TranslatedMarkdown sectioned>{cleanAgentText(rec.bear_case)}</TranslatedMarkdown>
               ) : (
-                "No bearish thesis was returned for this run."
+                t("home.bear.empty")
               )}
             </AgentCard>
           </div>
 
           {/* Judge */}
-          <SectionLabel index="02" label="Debate resolution" />
+          <SectionLabel index="02" label={t("home.section.resolution")} />
           <AgentCard
-            tone="judge"
-            icon={Gavel}
-            agent="Debate judge"
-            role="Research manager verdict"
-            chip={signal ? `Verdict: ${signal}` : "Verdict"}
+            tone="judge"            icon={Gavel}
+            agent={t("home.judge.agent")}
+            role={t("home.judge.role")}
+            chip={signal ? t("home.judge.chipWith", { signal }) : t("home.judge.chip")}
             meta={[
-              { label: "Signal", value: signal || "—" },
-              { label: "Confidence", value: confidence || "—" },
+              { label: t("home.meta.signal"), value: signal || "—" },
+              { label: t("home.meta.confidence"), value: confidence || "—" },
               {
-                label: "Risk profile",
+                label: t("home.meta.riskProfile"),
                 value: (rec?.risk as string | undefined) || "—",
               },
             ]}
           >
             {rec?.neutral_case || rec?.rationale ? (
-              <Markdown variant="paper">
+              <TranslatedMarkdown sectioned>
                 {cleanAgentText((rec?.neutral_case || rec?.rationale) as string)}
-              </Markdown>
+              </TranslatedMarkdown>
             ) : (
-              "No reconciled verdict was returned for this run."
+              t("home.judge.empty")
             )}
           </AgentCard>
 
           {/* Portfolio manager */}
-          <SectionLabel index="03" label="Execution plan" />
+          <SectionLabel index="03" label={t("home.section.execution")} />
           <AgentCard
             tone="manager"
             icon={Briefcase}
-            agent="Portfolio manager"
-            role="Trade construction"
-            chip={confidence ? `${confidence} conviction` : "Trade plan"}
+            agent={t("home.manager.agent")}
+            role={t("home.manager.role")}
+            chip={confidence ? t("home.manager.chipWith", { level: confidence }) : t("home.manager.chip")}
           >
             <ExecutionPlan
               signal={signal}
@@ -538,7 +523,7 @@ export function HomeScreen() {
               SMA/EMA grid + 5 pivot systems) — the same engine output that is
               fed to the market analyst agent. Renders nothing if unavailable.
               Placed last: it's reference detail, not part of the decision flow. */}
-          <SectionLabel index="04" label="Technical reference" />
+          <SectionLabel index="04" label={t("home.section.technical")} />
           <TechnicalPanelSection data={result?.technical_panel} />
         </div>
       )}
@@ -565,6 +550,7 @@ function QuoteHeader({
   weeklyChange?: number;
   signal: string;
   }) {
+  const t = useT();
   const meta = getTickerMeta(ticker);
   const dir = dirOf(signal);
   const dayDir: Dir =
@@ -618,7 +604,7 @@ function QuoteHeader({
         {/* Price + change */}
         <div className="flex items-end gap-4">
           <div>
-            <div className="eyebrow text-stone-500 mb-1">Last price</div>
+            <div className="eyebrow text-stone-500 mb-1">{t("home.quote.lastPrice")}</div>
             <div className="flex items-baseline gap-1.5">
               <span className="display-num text-[40px] leading-none font-semibold text-ink">
                 {current !== undefined ? formatNumber(current) : "—"}
@@ -637,7 +623,7 @@ function QuoteHeader({
               {dailyChange !== undefined ? formatPercent(dailyChange) : "—"}
               <span className="font-normal opacity-70">1D</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 text-[11.5px] text-ink-3 mono pl-0.5">
+            <span className="inline-flex items-center gap-1.5 text-[11.5px] text-ink-3 mono ps-0.5">
               {weeklyChange !== undefined ? formatPercent(weeklyChange) : "—"}
               <span className="opacity-70">1W</span>
             </span>
@@ -646,7 +632,7 @@ function QuoteHeader({
 
         {/* Signal */}
         <div className="flex flex-col items-end gap-1.5">
-          <div className="eyebrow text-stone-500">Agent verdict</div>
+          <div className="eyebrow text-stone-500">{t("home.quote.agentVerdict")}</div>
           <span
             className={cn(
               "inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[15px] font-semibold uppercase tracking-wide border",
@@ -654,7 +640,7 @@ function QuoteHeader({
             )}
           >
             <SigArrow className="h-4 w-4" />
-            {signal || "—"}
+            {tEnum(t, "signal", signal)}
           </span>
         </div>
       </div>
@@ -677,16 +663,17 @@ function ChartPanel({
   target?: number;
   stop?: number;
 }) {
+  const t = useT();
   const priceLines = useMemo(() => {
     const lines: { price: number; color: string; title: string }[] = [];
     if (typeof target === "number") {
-      lines.push({ price: target, color: "#059669", title: "Target" });
+      lines.push({ price: target, color: "#059669", title: t("home.chart.target") });
     }
     if (typeof stop === "number") {
-      lines.push({ price: stop, color: "#e11d48", title: "Stop" });
+      lines.push({ price: stop, color: "#e11d48", title: t("home.chart.stop") });
     }
     return lines;
-  }, [target, stop]);
+  }, [target, stop, t]);
 
   const hasBars = bars && bars.length > 0;
 
@@ -695,10 +682,10 @@ function ChartPanel({
       <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3 border-b border-stone-200/80 dark:border-[var(--hairline)]">
         <div className="flex items-center gap-2">
           <Activity className="h-4 w-4 text-stone-500" />
-          <span className="text-[14px] font-semibold text-ink">Price action</span>
+          <span className="text-[14px] font-semibold text-ink">{t("home.chart.title")}</span>
           {hasBars && (
             <span className="text-[11.5px] text-ink-3">
-              · last {bars.length} sessions
+              {t("home.chart.sessions", { n: bars.length })}
             </span>
           )}
         </div>
@@ -706,7 +693,7 @@ function ChartPanel({
           {typeof target === "number" && (
             <span className="inline-flex items-center gap-1.5">
               <span className="h-0 w-3.5 border-t-2 border-dashed border-emerald-600" />
-              Target
+              {t("home.chart.target")}
               <span className="mono font-semibold text-emerald-700">
                 {formatNumber(target)}
               </span>
@@ -715,7 +702,7 @@ function ChartPanel({
           {typeof stop === "number" && (
             <span className="inline-flex items-center gap-1.5">
               <span className="h-0 w-3.5 border-t-2 border-dashed border-rose-600" />
-              Stop
+              {t("home.chart.stop")}
               <span className="mono font-semibold text-rose-700">
                 {formatNumber(stop)}
               </span>
@@ -736,13 +723,12 @@ function ChartPanel({
           <div className="h-[344px] flex flex-col items-center justify-center text-center px-6">
             <Activity className="h-6 w-6 text-stone-300 mb-3" />
             <div className="text-[13px] font-medium text-ink-2">
-              No price history for this run
+              {t("home.chart.noHistory")}
             </div>
             <div className="text-[12px] text-ink-3 mt-1 max-w-xs">
-              The quick read returns price history; some tickers may lack a
-              recent OHLCV series.
+              {t("home.chart.noHistoryDesc")}
               {typeof current === "number" &&
-                ` Last known price: ${formatNumber(current)} EGP.`}
+                t("home.chart.lastKnown", { price: formatNumber(current) })}
             </div>
           </div>
         )}
@@ -776,6 +762,8 @@ function VerdictPanel({
   risk?: string;
   timeHorizon?: string;
 }) {
+  const t = useT();
+  const { text: horizonT } = useTranslatedText(timeHorizon);
   const dir = dirOf(signal);
   const head =
     dir === "up"
@@ -790,27 +778,27 @@ function VerdictPanel({
     <section className="card overflow-hidden anim-fade-up flex flex-col">
       {/* Headline verdict */}
       <div className={cn("p-5 text-white relative overflow-hidden", head)}>
-        <div className="eyebrow text-white/70">Recommended action</div>
+        <div className="eyebrow text-white/70">{t("home.verdict.action")}</div>
         <div className="mt-2 flex items-center gap-2.5">
           <Arrow className="h-7 w-7" strokeWidth={2.4} />
           <span className="display text-[34px] font-semibold leading-none">
-            {signal || "—"}
+            {tEnum(t, "signal", signal)}
           </span>
         </div>
         <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 text-[11.5px] font-medium">
           <GaugeIcon className="h-3.5 w-3.5" />
-          {confidence ? `${confidence} confidence` : "Confidence —"}
+          {confidence ? t("home.verdict.confidence", { level: tEnum(t, "conf", confidence) }) : t("home.verdict.confidenceNone")}
         </div>
       </div>
 
       {/* Thesis ladder */}
       <div className="p-5 space-y-3.5 flex-1">
         <LadderRow
-          label="Entry (spot)"
+          label={t("home.ladder.entry")}
           value={current !== undefined ? `${formatNumber(current)} EGP` : "—"}
         />
         <LadderRow
-          label="Price target"
+          label={t("home.ladder.target")}
           value={target !== undefined ? `${formatNumber(target)} EGP` : "—"}
           badge={
             upside !== undefined
@@ -822,7 +810,7 @@ function VerdictPanel({
           }
         />
         <LadderRow
-          label="Protective stop"
+          label={t("home.ladder.stop")}
           value={stop !== undefined ? `${formatNumber(stop)} EGP` : "—"}
           badge={
             downside !== undefined
@@ -831,15 +819,15 @@ function VerdictPanel({
           }
         />
         <div className="pt-3 border-t border-stone-200/80 dark:border-[var(--hairline)] flex items-center justify-between">
-          <span className="eyebrow text-stone-500">Risk profile</span>
+          <span className="eyebrow text-stone-500">{t("home.ladder.risk")}</span>
           <span className="text-[13px] font-medium text-ink capitalize">
-            {risk || "—"}
+            {tEnum(t, "risk", risk)}
           </span>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <span className="eyebrow text-stone-500 shrink-0">Time horizon</span>
-          <span className="text-[13px] font-medium text-ink text-right">
-            {timeHorizon || "—"}
+          <span className="eyebrow text-stone-500 shrink-0">{t("home.ladder.horizon")}</span>
+          <span className="text-[13px] font-medium text-ink text-end" dir="auto">
+            {horizonT || "—"}
           </span>
         </div>
       </div>
@@ -905,14 +893,16 @@ function KeyStats({
   trend?: string;
   timeHorizon?: string;
 }) {
+  const t = useT();
+  const { text: horizonT } = useTranslatedText(timeHorizon);
   const rsiZone =
     rsi === undefined
       ? undefined
       : rsi >= 70
-      ? "Overbought"
+      ? t("home.rsi.overbought")
       : rsi <= 30
-      ? "Oversold"
-      : "Neutral";
+      ? t("home.rsi.oversold")
+      : t("home.rsi.neutral");
 
   const tiles: {
     label: string;
@@ -921,14 +911,14 @@ function KeyStats({
     valueClass?: string;
   }[] = [
     {
-      label: "Current price",
+      label: t("home.stats.current"),
       value: current !== undefined ? `${formatNumber(current)}` : "—",
-      hint: "EGP · spot",
+      hint: t("home.stats.current.hint"),
     },
     {
-      label: "Price target",
+      label: t("home.stats.target"),
       value: target !== undefined ? `${formatNumber(target)}` : "—",
-      hint: "EGP",
+      hint: t("home.stats.target.hint"),
       valueClass:
         upside !== undefined
           ? upside >= 0
@@ -937,9 +927,9 @@ function KeyStats({
           : undefined,
     },
     {
-      label: "Implied upside",
+      label: t("home.stats.upside"),
       value: upside !== undefined ? formatPercent(upside) : "—",
-      hint: "spot → target",
+      hint: t("home.stats.upside.hint"),
       valueClass:
         upside !== undefined
           ? upside >= 0
@@ -948,31 +938,33 @@ function KeyStats({
           : undefined,
     },
     {
-      label: "Protective stop",
+      label: t("home.stats.stop"),
       value: stop !== undefined ? `${formatNumber(stop)}` : "—",
       hint:
-        downside !== undefined ? `${formatPercent(downside)} to stop` : "EGP",
+        downside !== undefined
+          ? t("home.stats.stop.hint", { pct: formatPercent(downside) })
+          : t("home.stats.stop.hintEgp"),
       valueClass: stop !== undefined ? "text-rose-700" : undefined,
     },
     {
-      label: "Risk / reward",
+      label: t("home.stats.rr"),
       value: riskReward !== undefined ? `${riskReward.toFixed(1)} : 1` : "—",
-      hint: "reward per unit risk",
+      hint: t("home.stats.rr.hint"),
     },
     {
-      label: "RSI (14)",
+      label: t("home.stats.rsi"),
       value: rsi !== undefined ? rsi.toFixed(0) : "—",
       hint: rsiZone,
     },
     {
-      label: "Trend",
-      value: trend ? trend : "—",
-      hint: "indicator read",
+      label: t("home.stats.trend"),
+      value: trend ? tEnum(t, "trend", trend) : "—",
+      hint: t("home.stats.trend.hint"),
     },
     {
-      label: "Time horizon",
-      value: timeHorizon || "—",
-      hint: "thesis time-stop",
+      label: t("home.stats.horizon"),
+      value: horizonT || "—",
+      hint: t("home.stats.horizon.hint"),
     },
   ];
 
@@ -980,7 +972,7 @@ function KeyStats({
     <section className="card overflow-hidden anim-fade-up">
       <div className="flex items-center gap-2 px-5 pt-4 pb-3 border-b border-stone-200/80 dark:border-[var(--hairline)]">
         <Scale className="h-4 w-4 text-stone-500" />
-        <span className="text-[14px] font-semibold text-ink">Key levels</span>
+        <span className="text-[14px] font-semibold text-ink">{t("home.keyLevels")}</span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-stone-200/80 dark:bg-[var(--hairline)]">
         {tiles.map((t) => (
@@ -1034,10 +1026,11 @@ function ExecutionPlan({
   risk?: string;
   rationale?: string;
 }) {
+  const t = useT();
   const items = [
     {
-      label: "Action",
-      value: signal || "—",
+      label: t("home.exec.action"),
+      value: tEnum(t, "signal", signal),
       accent:
         signal === "BUY" || signal === "STRONG_BUY"
           ? "text-emerald-700 bg-emerald-50 border-emerald-200"
@@ -1046,15 +1039,15 @@ function ExecutionPlan({
           : "text-stone-700 bg-stone-50 border-stone-200",
     },
     {
-      label: "Entry (spot)",
+      label: t("home.exec.entry"),
       value: current !== undefined ? `${formatNumber(current)} EGP` : "—",
     },
     {
-      label: "Target",
+      label: t("home.exec.target"),
       value: target !== undefined ? `${formatNumber(target)} EGP` : "—",
     },
-    { label: "Stop loss", value: stop !== undefined ? `${formatNumber(stop)} EGP` : "—" },
-    { label: "Risk profile", value: risk || "—" },
+    { label: t("home.exec.stop"), value: stop !== undefined ? `${formatNumber(stop)} EGP` : "—" },
+    { label: t("home.exec.risk"), value: tEnum(t, "risk", risk) },
   ];
 
   return (
@@ -1082,7 +1075,7 @@ function ExecutionPlan({
       </div>
       {rationale && (
         <div className="pt-1">
-          <Markdown variant="paper">{cleanAgentText(rationale)}</Markdown>
+          <TranslatedMarkdown sectioned>{cleanAgentText(rationale)}</TranslatedMarkdown>
         </div>
       )}
     </div>
@@ -1103,13 +1096,19 @@ function recAccent(rec?: string) {
 }
 
 function StyleCard({ rec }: { rec: StyledRecommendation }) {
+  const t = useT();
+  const { text: reasoningText } = useTranslatedText(rec.reasoning);
+  const { text: entryT } = useTranslatedText(rec.entry_zone);
+  const { text: targetT } = useTranslatedText(rec.target);
+  const { text: stopT } = useTranslatedText(rec.stop_loss);
+  const { text: holdingT } = useTranslatedText(rec.holding_period);
   const rows: { label: string; value?: string }[] = [
-    { label: "Entry", value: rec.entry_zone },
-    { label: "Target", value: rec.target },
-    { label: "Stop loss", value: rec.stop_loss },
-    { label: "Holding period", value: rec.holding_period },
-    { label: "Confidence", value: rec.confidence },
-    { label: "Risk level", value: rec.risk_level },
+    { label: t("home.style.entry"), value: entryT },
+    { label: t("home.style.target"), value: targetT },
+    { label: t("home.style.stop"), value: stopT },
+    { label: t("home.style.holding"), value: holdingT },
+    { label: t("home.style.confidence"), value: rec.confidence ? tEnum(t, "conf", rec.confidence) : undefined },
+    { label: t("home.style.riskLevel"), value: rec.risk_level ? tEnum(t, "risk", rec.risk_level) : undefined },
   ].filter((r) => r.value && r.value.toUpperCase() !== "N/A");
 
   return (
@@ -1124,20 +1123,20 @@ function StyleCard({ rec }: { rec: StyledRecommendation }) {
             recAccent(rec.recommendation)
           )}
         >
-          {(rec.recommendation || "—").toUpperCase()}
+          {rec.recommendation ? tEnum(t, "signal", rec.recommendation).toUpperCase() : "—"}
         </span>
       </div>
       <div className="mt-3 space-y-1.5">
         {rows.map((r) => (
           <div key={r.label} className="flex items-baseline justify-between gap-3">
-            <span className="eyebrow text-stone-500">{r.label}</span>
-            <span className="mono text-[13px] text-ink text-right">{r.value}</span>
+            <span className="eyebrow text-stone-500 shrink-0">{r.label}</span>
+            <span className="mono text-[13px] text-ink text-end" dir="auto">{r.value}</span>
           </div>
         ))}
       </div>
       {rec.reasoning && (
-        <p className="mt-3 text-[13px] leading-relaxed text-ink-3">
-          {rec.reasoning}
+        <p className="mt-3 text-[13px] leading-relaxed text-ink-3" dir="auto">
+          {reasoningText}
         </p>
       )}
     </div>
@@ -1145,12 +1144,13 @@ function StyleCard({ rec }: { rec: StyledRecommendation }) {
 }
 
 function StyledRecommendations({ styled }: { styled?: StyledRecs | null }) {
+  const t = useT();
   if (!styled) return null;
   // Fixed display order; only render styles the agent actually returned.
   const order: { key: string; fallback: string }[] = [
-    { key: "swing", fallback: "Swing Trader" },
-    { key: "position", fallback: "Position Trader" },
-    { key: "long_term", fallback: "Long-Term Investor" },
+    { key: "swing", fallback: t("home.style.swing") },
+    { key: "position", fallback: t("home.style.position") },
+    { key: "long_term", fallback: t("home.style.longTerm") },
   ];
   const cards = order
     .map(({ key, fallback }) => {
@@ -1164,7 +1164,7 @@ function StyledRecommendations({ styled }: { styled?: StyledRecs | null }) {
 
   return (
     <div className="mt-6">
-      <div className="eyebrow text-stone-500 mb-3">By trading style</div>
+      <div className="eyebrow text-stone-500 mb-3">{t("home.style.title")}</div>
       <div className="grid gap-3 md:grid-cols-3">
         {cards.map((rec) => (
           <StyleCard key={rec.style} rec={rec} />
@@ -1175,26 +1175,96 @@ function StyledRecommendations({ styled }: { styled?: StyledRecs | null }) {
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   Empty + loading states
+   Hero panel — brand headline + run bar (the primary call-to-action)
    ════════════════════════════════════════════════════════════════════════════ */
 
-function EmptyHero() {
+function HeroPanel({
+  ticker,
+  onChange,
+  onRun,
+  isLoading,
+}: {
+  ticker: string;
+  onChange: (t: string) => void;
+  onRun: () => void;
+  isLoading: boolean;
+}) {
+  const t = useT();
   return (
-    <div className="card overflow-hidden grain">
-      <div className="px-10 py-14 text-center">
-        <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-700 mb-5
-          dark:border-[var(--hairline)] dark:bg-[var(--bg)] dark:text-[var(--ink-2)]">
-          <Sparkles className="h-[18px] w-[18px]" />
+    <section className="card-elevated grain anim-fade-up">
+      {/* Brand accent bar */}
+      <div className="h-1 w-full rounded-t-2xl bg-gradient-to-r from-[var(--brand-navy)] via-[var(--brand-green)] to-[var(--brand-navy)]" />
+      <div className="p-6 md:p-8">
+        <div className="eyebrow mb-3 text-[var(--brand-green)]">
+          {t("home.hero.eyebrow")}
         </div>
-        <h3 className="display text-[22px] font-semibold text-ink">
-          Ready when you are.
-        </h3>
-        <p className="text-[14px] text-ink-3 mt-3 max-w-lg mx-auto leading-relaxed">
-          Pick a ticker above and hit <strong className="text-ink-2">Analyze</strong>. A bull, a bear,
-          a judge, and a portfolio manager will argue over the data and hand you
-          one unified thesis — typically around 20 minutes of deep deliberation.
+        <h1 className="display text-[32px] md:text-[40px] font-semibold leading-[1.06] text-ink max-w-2xl whitespace-pre-line">
+          {t("home.hero.title")}
+        </h1>
+        <p className="text-[14px] text-ink-3 mt-3.5 max-w-xl leading-relaxed">
+          {t("home.hero.desc")}
         </p>
+
+        {/* Run bar */}
+        <div className="mt-6 flex flex-col gap-2">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <div className="flex-1 min-w-[200px]">
+              <TickerPicker value={ticker} onChange={onChange} />
+            </div>
+            <button
+              onClick={onRun}
+              disabled={isLoading}
+              className={cn(
+                "shrink-0 inline-flex items-center gap-2 h-12 px-6 rounded-xl text-white text-[14px] font-semibold",
+                "bg-[var(--brand-navy)] hover:brightness-110 transition-all duration-200",
+                "shadow-[0_6px_16px_-4px_rgba(20,40,74,0.5)]",
+                "disabled:opacity-60 disabled:cursor-not-allowed"
+              )}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t("home.hero.loading")}
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  {t("home.hero.analyze")}
+                  <ArrowRight className="h-4 w-4 ms-1 rtl:rotate-180" />
+                </>
+              )}
+            </button>
+          </div>
+          <p className="px-1 text-[12px] text-ink-3 italic">
+            {t("home.hero.caption")}
+          </p>
+        </div>
       </div>
+    </section>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Market overview — shown before an analysis is run (fills the home screen)
+   ════════════════════════════════════════════════════════════════════════════ */
+
+function MarketOverview({
+  onSelectTicker,
+}: {
+  onSelectTicker?: (ticker: string) => void;
+}) {
+  const t = useT();
+  return (
+    <div className="space-y-6">
+      <SectionLabel index="◆" label={t("home.section.pulse")} />
+      <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+        <TopMovers onSelectTicker={onSelectTicker} />
+        <SectorPerformance />
+      </div>
+      <MacroIndicators />
+      <p className="text-center text-[12px] text-ink-3">
+        {t("home.overview.caption")}
+      </p>
     </div>
   );
 }
@@ -1205,18 +1275,35 @@ function formatElapsed(seconds: number) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-const PIPELINE_STAGES = [
-  "Gathering market, fundamentals, news & social",
-  "Bull vs. bear adversarial debate",
-  "Debate judge reconciles the verdict",
-  "Portfolio manager sizes & risk-checks the trade",
+const PIPELINE_STAGE_KEYS = [
+  "home.loading.stage1",
+  "home.loading.stage2",
+  "home.loading.stage3",
+  "home.loading.stage4",
+];
+
+const FACTS_KEYS = [
+  "home.loading.fact1", "home.loading.fact2", "home.loading.fact3", "home.loading.fact4", "home.loading.fact5",
+  "home.loading.fact6", "home.loading.fact7", "home.loading.fact8", "home.loading.fact9", "home.loading.fact10",
+  "home.loading.fact11", "home.loading.fact12", "home.loading.fact13", "home.loading.fact14", "home.loading.fact15",
+  "home.loading.fact16", "home.loading.fact17", "home.loading.fact18", "home.loading.fact19", "home.loading.fact20",
+  "home.loading.fact21", "home.loading.fact22", "home.loading.fact23", "home.loading.fact24", "home.loading.fact25",
 ];
 
 function LoadingHero({ mode: _mode }: { mode: "quick" | "full" }) {
+  const t = useT();
   const [elapsed, setElapsed] = useState(0);
+  const [factIndex, setFactIndex] = useState(0);
 
   useEffect(() => {
     const id = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setFactIndex((prev) => (prev + 1) % FACTS_KEYS.length);
+    }, 7000);
     return () => clearInterval(id);
   }, []);
 
@@ -1239,12 +1326,11 @@ function LoadingHero({ mode: _mode }: { mode: "quick" | "full" }) {
             <Loader2 className="h-5 w-5 mt-0.5 animate-spin text-stone-500" />
             <div>
               <div className="text-[15px] font-semibold text-ink">
-                Four agents are deliberating
+                {t("home.loading.title")}
               </div>
-              <p className="text-[12.5px] text-ink-3 mt-1 max-w-md leading-relaxed">
-                A bull, a bear, a judge, and a portfolio manager are debating this
-                ticker. This usually takes around 20 minutes — you can leave this tab
-                open and check back.
+              <p key={factIndex} className="text-[12.5px] text-ink-3 mt-1 max-w-md leading-relaxed anim-fade-up">
+                <strong>{t("home.loading.factPrefix")}</strong>
+                {t(FACTS_KEYS[factIndex])}
               </p>
             </div>
           </div>
@@ -1252,12 +1338,13 @@ function LoadingHero({ mode: _mode }: { mode: "quick" | "full" }) {
             <div className="display-num text-[22px] font-semibold text-ink tabular-nums">
               {formatElapsed(elapsed)}
             </div>
-            <div className="eyebrow text-stone-500">Elapsed</div>
+            <div className="eyebrow text-stone-500">{t("home.loading.elapsed")}</div>
           </div>
         </div>
 
         <ol className="mt-5 space-y-3 border-t border-stone-200 pt-5 dark:border-[var(--hairline)]">
-            {PIPELINE_STAGES.map((stage, i) => {
+            {PIPELINE_STAGE_KEYS.map((stageKey, i) => {
+              const stage = t(stageKey);
               const state =
                 i < activeStage
                   ? "done"
@@ -1265,7 +1352,7 @@ function LoadingHero({ mode: _mode }: { mode: "quick" | "full" }) {
                   ? "active"
                   : "pending";
               return (
-                <li key={stage} className="flex items-center gap-3 text-[13px]">
+                <li key={stageKey} className="flex items-center gap-3 text-[13px]">
                   <span
                     className={cn(
                       "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold",

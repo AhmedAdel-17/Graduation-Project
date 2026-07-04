@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Layers } from "lucide-react";
 import { cn, formatNumber, formatPercent } from "../../lib/utils";
+import { useT } from "../../lib/i18n";
 import type { StockBar } from "../../services/api/types";
 
 type PivotMethod = "classic" | "fib";
@@ -71,6 +72,7 @@ export function PivotLevels({
   bars: StockBar[];
   current?: number;
 }) {
+  const t = useT();
   const [method, setMethod] = useState<PivotMethod>("classic");
 
   // Most recent completed session drives the pivots.
@@ -108,8 +110,7 @@ export function PivotLevels({
       <section className="card overflow-hidden anim-fade-up">
         <Header method={method} onMethod={setMethod} />
         <div className="px-5 py-8 text-center text-[13px] text-ink-3">
-          No price history was returned for this run, so support and resistance
-          levels can't be computed.
+          {t("pivots.empty")}
         </div>
       </section>
     );
@@ -128,9 +129,9 @@ export function PivotLevels({
               >
                 <span className="h-2 w-2 rounded-full bg-emerald-400 anim-pulse-dot shrink-0" />
                 <span className="text-[11px] font-semibold tracking-[0.14em] uppercase">
-                  Live price
+                  {t("pivots.live")}
                 </span>
-                <span className="display-num text-[15px] font-semibold ml-auto">
+                <span className="display-num text-[15px] font-semibold ms-auto">
                   {formatNumber(row.value)} EGP
                 </span>
               </div>
@@ -160,9 +161,9 @@ export function PivotLevels({
                 {level.name}
               </span>
               <span className="text-[11.5px] text-ink-3 hidden sm:inline">
-                {style.label}
+                {t(`pivots.band.${level.band}`)}
               </span>
-              <span className="display-num text-[15px] font-semibold text-ink ml-auto">
+              <span className="display-num text-[15px] font-semibold text-ink ms-auto">
                 {formatNumber(level.value)}
               </span>
               <span
@@ -182,9 +183,7 @@ export function PivotLevels({
         })}
       </div>
       <div className="px-5 py-2.5 border-t border-stone-200/80 dark:border-[var(--hairline)] text-[11px] text-ink-3">
-        {method === "classic"
-          ? "Classic floor-trader pivots — derived from the prior session's high, low and close."
-          : "Fibonacci pivots — 38.2% / 61.8% / 100% retracements of the prior session's range."}
+        {method === "classic" ? t("pivots.foot.classic") : t("pivots.foot.fib")}
       </div>
     </section>
   );
@@ -199,26 +198,27 @@ function Header({
   onMethod: (m: PivotMethod) => void;
   barDate?: string;
 }) {
+  const t = useT();
   return (
     <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3 border-b border-stone-200/80 dark:border-[var(--hairline)] flex-wrap">
       <div className="flex items-center gap-2">
         <Layers className="h-4 w-4 text-stone-500" />
         <span className="text-[14px] font-semibold text-ink">
-          Support &amp; resistance
+          {t("pivots.title")}
         </span>
         {barDate && (
-          <span className="text-[11.5px] text-ink-3">· {barDate} session</span>
+          <span className="text-[11.5px] text-ink-3">{t("pivots.session", { date: barDate })}</span>
         )}
       </div>
       <div
         className="inline-flex items-center rounded-lg border border-stone-200 dark:border-[var(--hairline)] p-0.5"
         role="group"
-        aria-label="Pivot method"
+        aria-label={t("pivots.method.aria")}
       >
         {(
           [
-            { id: "classic", label: "Classic" },
-            { id: "fib", label: "Fibonacci" },
+            { id: "classic", label: t("pivots.method.classic") },
+            { id: "fib", label: t("pivots.method.fib") },
           ] as const
         ).map((opt) => {
           const active = method === opt.id;

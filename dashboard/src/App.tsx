@@ -1,9 +1,12 @@
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Shell } from "./components/layout/Shell";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { HomeScreen } from "./features/home/HomeScreen";
 import { BacktestScreen } from "./features/backtest/BacktestScreen";
 import { HistoryScreen } from "./features/history/HistoryScreen";
+import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
 
 // Admin Monitoring Suite — isolated, lazy-loaded, owns its own shell.
 // Lives entirely under /admin/* so the live dashboard below is untouched.
@@ -42,29 +45,45 @@ function PageLoading() {
   );
 }
 
-// The original live dashboard, wrapped in Shell. Stock Prediction now lives at
-// /predict; "/" redirects there so existing bookmarks keep working.
+// The original live dashboard, wrapped in Shell + auth guard.
 function MainApp() {
   return (
-    <Shell>
-      <Suspense fallback={<PageLoading />}>
-        <Routes>
-          <Route path="/" element={<Navigate to="/predict" replace />} />
-          <Route path="/predict" element={<HomeScreen />} />
-          <Route path="/prediction/:sessionId" element={<HomeScreen />} />
-          <Route path="/portfolio" element={<AssistantPage />} />
-          <Route path="/portfolio/__blocks" element={<BlocksDevPage />} />
-          <Route path="/backtest" element={<BacktestScreen />} />
-          <Route path="/history" element={<HistoryScreen />} />
-          <Route path="*" element={<Navigate to="/predict" replace />} />
-        </Routes>
-      </Suspense>
-    </Shell>
+    <ProtectedRoute>
+      <Shell>
+        <Suspense fallback={<PageLoading />}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/predict" replace />} />
+            <Route path="/predict" element={<HomeScreen />} />
+            <Route path="/prediction/:sessionId" element={<HomeScreen />} />
+            <Route path="/portfolio" element={<AssistantPage />} />
+            <Route path="/portfolio/__blocks" element={<BlocksDevPage />} />
+            <Route path="/backtest" element={<BacktestScreen />} />
+            <Route path="/history" element={<HistoryScreen />} />
+            <Route path="*" element={<Navigate to="/predict" replace />} />
+          </Routes>
+        </Suspense>
+      </Shell>
+    </ProtectedRoute>
   );
 }
 
 export default function App() {
-  const isAdmin = useLocation().pathname.startsWith("/admin");
+  const location = useLocation();
+  const isAdmin = location.pathname.startsWith("/admin");
+  const isAuth =
+    location.pathname === "/login" || location.pathname === "/register";
+
+  // Auth pages — no shell, no guard
+  if (isAuth) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+      </Routes>
+    );
+  }
+
+  // Admin suite — its own shell
   if (isAdmin) {
     return (
       <Suspense fallback={<AdminLoading />}>
@@ -72,5 +91,7 @@ export default function App() {
       </Suspense>
     );
   }
+
+  // Main dashboard — wrapped in ProtectedRoute + Shell
   return <MainApp />;
 }

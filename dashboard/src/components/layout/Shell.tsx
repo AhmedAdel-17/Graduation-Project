@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   BarChart3,
   Clock4,
   LineChart,
+  LogOut,
   Menu,
   Moon,
   PanelLeft,
@@ -12,61 +13,64 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import { useAuth } from "../auth/AuthProvider";
 import { ADMIN_NAV } from "../../features/admin/layout/adminNav";
 
-function BrandMark({ className }: { className?: string }) {
-  // Geometric "E" monogram — three horizontal strokes of decreasing length.
-  // Reads as the letter E and as a chart simultaneously. Stroke weight tuned
-  // to match Lucide icons used elsewhere in the shell.
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className={className}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      aria-hidden
-    >
-      <line x1="6.5" y1="6.5" x2="17.5" y2="6.5" />
-      <line x1="6.5" y1="12" x2="13.5" y2="12" />
-      <line x1="6.5" y1="17.5" x2="16" y2="17.5" />
-    </svg>
-  );
-}
+import { BrandLogo } from "../ui/BrandLogo";
+import { LocaleToggle } from "../ui/LocaleToggle";
 import { cn } from "../../lib/utils";
 import { useTheme } from "../../hooks/useTheme";
+import { useLocale, useT } from "../../lib/i18n";
 
 interface NavItem {
   to: string;
-  label: string;
+  labelKey: string;
   icon: LucideIcon;
   end?: boolean;
 }
+
+// Maps each admin route to its i18n key so the sidebar chrome localizes even
+// though the admin *pages* themselves stay English (by design).
+const ADMIN_LABEL_KEYS: Record<string, string> = {
+  "/admin": "admin.nav.overview",
+  "/admin/system-health": "admin.nav.systemHealth",
+  "/admin/pipeline-graph": "admin.nav.pipeline",
+  "/admin/live": "admin.nav.live",
+  "/admin/traces": "admin.nav.traces",
+  "/admin/lineage": "admin.nav.lineage",
+  "/admin/run-explorer": "admin.nav.runExplorer",
+  "/admin/errors": "admin.nav.errors",
+  "/admin/performance": "admin.nav.performance",
+};
 
 // Grouped navigation (design §10): a single app with a USER and an ADMIN
 // section. The ADMIN group reuses ADMIN_NAV (the admin suite's own source of
 // truth) so the two never drift, plus Backtesting which lives in the main app.
 const USER_NAV: NavItem[] = [
-  { to: "/predict", label: "Stock Prediction", icon: LineChart },
-  { to: "/portfolio", label: "Portfolio Assistant", icon: Wallet },
-  { to: "/history", label: "My Analyses", icon: Clock4 },
+  { to: "/predict", labelKey: "shell.nav.predict", icon: LineChart },
+  // { to: "/portfolio", labelKey: "shell.nav.portfolio", icon: Wallet }, // Hidden per user request
+  { to: "/history", labelKey: "shell.nav.history", icon: Clock4 },
 ];
 
 const ADMIN_GROUP: NavItem[] = [
-  ...ADMIN_NAV.map(({ to, label, icon, end }) => ({ to, label, icon, end })),
-  { to: "/backtest", label: "Backtesting", icon: BarChart3 },
+  ...ADMIN_NAV.map(({ to, icon, end }) => ({
+    to,
+    labelKey: ADMIN_LABEL_KEYS[to] ?? to,
+    icon,
+    end,
+  })),
+  { to: "/backtest", labelKey: "shell.nav.backtest", icon: BarChart3 },
 ];
 
-const NAV_GROUPS: { eyebrow: string; items: NavItem[] }[] = [
-  { eyebrow: "User", items: USER_NAV },
-  { eyebrow: "Admin", items: ADMIN_GROUP },
+const NAV_GROUPS: { eyebrowKey: string; items: NavItem[] }[] = [
+  { eyebrowKey: "shell.group.user", items: USER_NAV },
+  { eyebrowKey: "shell.group.admin", items: ADMIN_GROUP },
 ];
 
 const STORAGE_KEY = "egx:sidebar:collapsed";
 
-function todayLong() {
-  return new Date().toLocaleDateString("en-US", {
+function todayLong(locale: string) {
+  return new Date().toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US", {
     weekday: "long",
     month: "short",
     day: "numeric",
@@ -89,7 +93,8 @@ function useCollapsed() {
 }
 
 function NavRow({ item, onItemClick }: { item: NavItem; onItemClick?: () => void }) {
-  const { to, label, icon: Icon, end } = item;
+  const { to, labelKey, icon: Icon, end } = item;
+  const t = useT();
   return (
     <li>
       <NavLink
@@ -109,7 +114,7 @@ function NavRow({ item, onItemClick }: { item: NavItem; onItemClick?: () => void
           <>
             {isActive && (
               <span
-                className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-r-full bg-stone-900 dark:bg-white"
+                className="absolute start-0 top-1.5 bottom-1.5 w-[2px] rounded-e-full bg-stone-900 dark:bg-white"
                 aria-hidden
               />
             )}
@@ -121,7 +126,7 @@ function NavRow({ item, onItemClick }: { item: NavItem; onItemClick?: () => void
                   : "text-stone-500 dark:text-[var(--ink-3)]"
               )}
             />
-            <span className="truncate">{label}</span>
+            <span className="truncate">{t(labelKey)}</span>
           </>
         )}
       </NavLink>
@@ -130,21 +135,19 @@ function NavRow({ item, onItemClick }: { item: NavItem; onItemClick?: () => void
 }
 
 function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
+  const t = useT();
   return (
     <div className="flex flex-col h-full">
       {/* Brand */}
       <div className="flex items-center h-14 px-4 border-b border-stone-200/80 dark:border-[var(--hairline)]">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="h-8 w-8 shrink-0 rounded-md border border-stone-200 bg-white text-stone-900 flex items-center justify-center
-            dark:border-[var(--hairline)] dark:bg-[var(--bg)] dark:text-white">
-            <BrandMark className="h-[16px] w-[16px]" />
-          </div>
+          <BrandLogo className="h-8 w-8 shrink-0" />
           <div className="leading-tight min-w-0">
-            <div className="display text-[14px] font-semibold tracking-tight truncate">
-              EGX Intelligence
+            <div className="display text-[15px] font-semibold tracking-tight truncate text-[var(--brand-navy)]">
+              StockHive
             </div>
             <div className="text-[10.5px] text-stone-500 dark:text-[var(--ink-3)] mt-0.5 truncate">
-              Research console
+              {t("shell.brand.desk")}
             </div>
           </div>
         </div>
@@ -153,9 +156,9 @@ function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
       {/* Nav — grouped USER / ADMIN sections */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
         {NAV_GROUPS.map((group) => (
-          <div key={group.eyebrow}>
+          <div key={group.eyebrowKey}>
             <div className="eyebrow px-2 mb-2 text-stone-400 dark:text-[var(--ink-3)]">
-              {group.eyebrow}
+              {t(group.eyebrowKey)}
             </div>
             <ul className="space-y-0.5">
               {group.items.map((item) => (
@@ -170,13 +173,13 @@ function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
       <div className="border-t border-stone-200/80 dark:border-[var(--hairline)] px-4 py-3.5">
         <div className="flex items-center gap-1.5 text-[10.5px] font-medium tracking-wider uppercase text-stone-500 dark:text-[var(--ink-3)]">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 anim-pulse-dot" />
-          EGX market
+          {t("shell.market")}
         </div>
         <div className="text-[12px] font-medium text-ink mt-1.5 num">
-          10:00 – 14:30 EGT
+          {t("shell.hours")}
         </div>
         <div className="text-[11px] text-stone-500 dark:text-[var(--ink-3)] mt-0.5">
-          Long-only · EGP · T+2
+          {t("shell.constraints")}
         </div>
       </div>
     </div>
@@ -185,6 +188,10 @@ function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { theme, toggle } = useTheme();
+  const t = useT();
+  const locale = useLocale();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useCollapsed();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -213,8 +220,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
         className={cn(
           "hidden md:flex shrink-0 sticky top-0 h-screen overflow-hidden bg-[#FBFAF7] dark:bg-[var(--paper)] transition-[width,border-color] duration-200 ease-out",
           collapsed
-            ? "w-0 border-r-0"
-            : "w-[244px] border-r border-stone-200 dark:border-[var(--hairline)]"
+            ? "w-0 border-e-0"
+            : "w-[244px] border-e border-stone-200 dark:border-[var(--hairline)]"
         )}
         aria-label="Primary"
         aria-hidden={collapsed}
@@ -233,14 +240,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
             aria-hidden
           />
           <aside
-            className="absolute left-0 top-0 h-full w-[260px] bg-[#FBFAF7] dark:bg-[var(--paper)] border-r border-stone-200 dark:border-[var(--hairline)] shadow-xl anim-fade-up"
+            className="absolute start-0 top-0 h-full w-[260px] bg-[#FBFAF7] dark:bg-[var(--paper)] border-e border-stone-200 dark:border-[var(--hairline)] shadow-xl anim-fade-up"
             aria-label="Primary"
           >
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
-              aria-label="Close menu"
-              className="absolute top-3 right-3 h-7 w-7 inline-flex items-center justify-center rounded-md text-stone-500 hover:bg-stone-100 dark:text-[var(--ink-2)] dark:hover:bg-white/5"
+              aria-label={t("shell.closeMenu")}
+              className="absolute top-3 end-3 h-7 w-7 inline-flex items-center justify-center rounded-md text-stone-500 hover:bg-stone-100 dark:text-[var(--ink-2)] dark:hover:bg-white/5"
             >
               <X className="h-4 w-4" aria-hidden />
             </button>
@@ -258,7 +265,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => setMobileOpen(true)}
-                aria-label="Open menu"
+                aria-label={t("shell.openMenu")}
                 className="md:hidden inline-flex items-center justify-center h-8 w-8 rounded-md text-stone-600 hover:bg-stone-100
                   dark:text-[var(--ink-2)] dark:hover:bg-white/5"
               >
@@ -267,8 +274,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => setCollapsed((v) => !v)}
-                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-                title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                aria-label={collapsed ? t("shell.expandSidebar") : t("shell.collapseSidebar")}
+                title={collapsed ? t("shell.expandSidebar") : t("shell.collapseSidebar")}
                 aria-pressed={collapsed}
                 className="hidden md:inline-flex items-center justify-center h-8 w-8 rounded-md text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors
                   dark:text-[var(--ink-3)] dark:hover:text-white dark:hover:bg-white/5"
@@ -277,15 +284,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
               </button>
               <div className="h-4 w-px bg-stone-200 dark:bg-[var(--hairline)] hidden md:block" />
               <div className="text-[12px] text-stone-500 dark:text-[var(--ink-3)] truncate">
-                <span className="text-ink-2">{todayLong()}</span>
+                <span className="text-ink-2">{todayLong(locale)}</span>
               </div>
             </div>
             <div className="flex items-center gap-2.5 text-[11px] text-stone-500 dark:text-[var(--ink-3)]">
+              <LocaleToggle />
               <button
                 type="button"
                 onClick={toggle}
-                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                aria-label={theme === "dark" ? t("shell.toLight") : t("shell.toDark")}
+                title={theme === "dark" ? t("shell.toLight") : t("shell.toDark")}
                 className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-stone-200 bg-white hover:bg-stone-50 text-stone-600 transition-colors
                   dark:bg-[var(--paper)] dark:border-[var(--hairline)] dark:hover:bg-[var(--hairline)] dark:text-[var(--ink-2)]"
               >
@@ -295,17 +303,47 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   <Moon className="h-3.5 w-3.5" aria-hidden />
                 )}
               </button>
-              <span className="hidden sm:inline-flex px-2.5 py-1 rounded-full border border-stone-200 bg-white dark:bg-[var(--paper)] dark:border-[var(--hairline)]">
-                EGX-30
-              </span>
-              <span className="hidden sm:inline-flex px-2.5 py-1 rounded-full border border-stone-200 bg-white dark:bg-[var(--paper)] dark:border-[var(--hairline)]">
-                EGP
-              </span>
-              <span className="inline-flex px-2.5 py-1 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 items-center gap-1.5
-                dark:bg-emerald-900/20 dark:border-emerald-900/40 dark:text-emerald-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 anim-pulse-dot" />
-                Online
-              </span>
+
+
+              {/* ─── User display + logout ──────────────────────── */}
+              {user && (
+                <>
+                  <div className="h-4 w-px bg-stone-200 dark:bg-[var(--hairline)] hidden sm:block" />
+                  <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full border border-stone-200 bg-white dark:bg-[var(--paper)] dark:border-[var(--hairline)]">
+                    {user.photoURL ? (
+                      <img
+                        src={user.photoURL}
+                        alt=""
+                        className="h-5 w-5 rounded-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <span
+                        className="h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                        style={{ background: "var(--brand-green)" }}
+                      >
+                        {(user.displayName || user.email || "U").charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                    <span className="text-[11px] font-medium text-stone-600 dark:text-[var(--ink-2)] max-w-[120px] truncate">
+                      {user.displayName || user.email}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await logout();
+                      navigate("/login", { replace: true });
+                    }}
+                    aria-label="Sign out"
+                    title="Sign out"
+                    className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-stone-200 bg-white hover:bg-red-50 text-stone-500 hover:text-red-600 transition-colors
+                      dark:bg-[var(--paper)] dark:border-[var(--hairline)] dark:hover:bg-red-900/20 dark:text-[var(--ink-3)] dark:hover:text-red-400"
+                  >
+                    <LogOut className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

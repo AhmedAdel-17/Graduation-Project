@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Search } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { useT } from "../../lib/i18n";
 import { useTickers } from "../../hooks/useTickers";
 import {
   EGX_SECTOR_ORDER,
@@ -19,10 +21,53 @@ interface Props {
 }
 
 export function TickerPicker({ value, onChange, disabled, className, label }: Props) {
+  const tr = useT();
   const { data: tickers = [] } = useTickers();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  // Menu is portaled to <body> with fixed positioning so no ancestor's
+  // overflow/stacking context can ever clip it.
+  const [pos, setPos] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    dropUp: boolean;
+    maxH: number;
+  } | null>(null);
+
+  const updatePos = useCallback(() => {
+    const el = buttonRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const gap = 8;
+    // Always open downward. It's portaled with a high z-index, so it renders
+    // over the sections below rather than being clipped by them; we just cap the
+    // list height to the space beneath the trigger so it scrolls internally
+    // instead of running off the bottom of the viewport.
+    const spaceBelow = window.innerHeight - r.bottom - gap - 8;
+    const maxH = Math.max(160, Math.min(420, spaceBelow - 56));
+    setPos({
+      top: r.bottom + gap,
+      left: r.left,
+      width: r.width,
+      dropUp: false,
+      maxH,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    updatePos();
+    window.addEventListener("scroll", updatePos, true);
+    window.addEventListener("resize", updatePos);
+    return () => {
+      window.removeEventListener("scroll", updatePos, true);
+      window.removeEventListener("resize", updatePos);
+    };
+  }, [open, updatePos]);
 
   // Enrich the backend ticker list with English/Arabic names + sector.
   const enriched: EgxTickerMeta[] = useMemo(
@@ -61,9 +106,10 @@ export function TickerPicker({ value, onChange, disabled, className, label }: Pr
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const t = e.target as Node;
+      if (rootRef.current?.contains(t)) return;
+      if (menuRef.current?.contains(t)) return;
+      setOpen(false);
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
@@ -76,6 +122,7 @@ export function TickerPicker({ value, onChange, disabled, className, label }: Pr
     <div className={cn("relative", className)} ref={rootRef}>
       {label && <div className="eyebrow mb-2">{label}</div>}
       <button
+        ref={buttonRef}
         type="button"
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
@@ -91,13 +138,13 @@ export function TickerPicker({ value, onChange, disabled, className, label }: Pr
           <TickerLogo ticker={selectedDisplay.apiTicker} size="sm" />
           <div className="min-w-0">
             <div className="mono text-[14px] font-semibold text-ink leading-tight">
-              {selectedDisplay.symbol || "Select"}
+              {selectedDisplay.symbol || tr("ticker.select")}
             </div>
             {selectedDisplay.nameEn && (
               <div className="text-[11px] text-stone-500 dark:text-[var(--ink-3)] truncate leading-tight mt-0.5">
                 {selectedDisplay.nameEn}
                 {selectedDisplay.nameAr && selectedDisplay.nameAr !== selectedDisplay.symbol && (
-                  <span className="ml-2" dir="rtl">· {selectedDisplay.nameAr}</span>
+                  <span className="ms-2" dir="rtl">· {selectedDisplay.nameAr}</span>
                 )}
               </div>
             )}
@@ -111,8 +158,18 @@ export function TickerPicker({ value, onChange, disabled, className, label }: Pr
         />
       </button>
 
-      {open && (
-        <div className="absolute z-50 mt-2 w-full rounded-xl border border-stone-200 bg-white shadow-[0_12px_32px_-8px_rgba(15,15,15,0.18)] overflow-hidden anim-fade-up
+      {open && pos && createPortal(
+        <div
+          ref={menuRef}
+          style={{
+            position: "fixed",
+            top: pos.dropUp ? undefined : pos.top,
+            bottom: pos.dropUp ? window.innerHeight - pos.top : undefined,
+            left: pos.left,
+            width: pos.width,
+            zIndex: 9999,
+          }}
+          className="rounded-xl border border-stone-200 bg-white shadow-[0_12px_32px_-8px_rgba(15,15,15,0.18)] overflow-hidden anim-fade-up
           dark:bg-[var(--paper)] dark:border-[var(--hairline)] dark:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.6)]">
           <div className="flex items-center gap-2 px-3 h-11 border-b border-stone-100 dark:border-[var(--hairline)]">
             <Search className="h-4 w-4 text-stone-400 dark:text-[var(--ink-3)]" />
@@ -120,14 +177,14 @@ export function TickerPicker({ value, onChange, disabled, className, label }: Pr
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by symbol, English or Arabic name…"
+              placeholder={tr("ticker.search")}
               className="flex-1 bg-transparent focus:outline-none text-sm text-ink placeholder:text-stone-400 dark:placeholder:text-[var(--ink-3)]"
             />
           </div>
-          <div className="max-h-96 overflow-y-auto py-1">
+          <div className="overflow-y-auto py-1" style={{ maxHeight: pos.maxH }}>
             {grouped.length === 0 ? (
               <div className="px-4 py-8 text-center text-xs text-stone-500 dark:text-[var(--ink-3)]">
-                No matches for "{query}"
+                {tr("ticker.noMatches", { query })}
               </div>
             ) : (
               grouped.map((group) => (
@@ -174,7 +231,8 @@ export function TickerPicker({ value, onChange, disabled, className, label }: Pr
               ))
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

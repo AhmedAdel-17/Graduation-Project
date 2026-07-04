@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useMarketIndices, type MarketIndex } from "../../hooks/useMarketIndices";
 import { cn, formatNumber, formatPercent } from "../../lib/utils";
+import { useT } from "../../lib/i18n";
 
 const ICONS: Record<string, LucideIcon> = {
   egx30: Activity,
@@ -17,6 +18,7 @@ const ICONS: Record<string, LucideIcon> = {
 };
 
 function IndexTile({ idx }: { idx: MarketIndex }) {
+  const t = useT();
   const Icon = ICONS[idx.key] ?? Activity;
   const ch = idx.change_pct;
   const dir = ch == null ? "flat" : ch > 0 ? "up" : ch < 0 ? "down" : "flat";
@@ -56,9 +58,9 @@ function IndexTile({ idx }: { idx: MarketIndex }) {
           {idx.change_source === "constituent_basket" && (
             <span
               className="text-[10px] font-normal text-stone-400 dark:text-[var(--ink-3)]"
-              title="Estimated from EGX-30 constituents — Yahoo has no daily series for the index itself."
+              title={t("indices.estTitle")}
             >
-              est.
+              {t("indices.est")}
             </span>
           )}
         </div>
@@ -68,6 +70,7 @@ function IndexTile({ idx }: { idx: MarketIndex }) {
 }
 
 export function MarketIndicesBar({ className }: { className?: string }) {
+  const t = useT();
   const { data, isLoading, isError } = useMarketIndices();
 
   // Non-critical strip — fail quietly rather than showing an error block.
@@ -96,7 +99,7 @@ export function MarketIndicesBar({ className }: { className?: string }) {
 
   return (
     <section
-      aria-label="Market indices"
+      aria-label={t("indices.aria")}
       className={cn(
         "card overflow-hidden grid grid-cols-3 gap-px bg-stone-200/80 dark:bg-[var(--hairline)]",
         className
