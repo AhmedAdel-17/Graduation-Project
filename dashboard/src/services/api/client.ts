@@ -1,6 +1,9 @@
 // Thin fetch wrapper with JSON handling + error normalization.
 // Uses the Vite dev-server proxy configured in vite.config.ts, so
 // all calls hit the FastAPI backend on port 8000 without CORS concerns.
+// Automatically injects Firebase auth token when a user is signed in.
+
+import { auth } from "../../lib/firebase";
 
 const BASE = import.meta.env.VITE_API_BASE ?? "/api";
 
@@ -21,11 +24,24 @@ async function request<T>(
 ): Promise<T> {
   const url = `${BASE}${path.startsWith("/") ? path : `/${path}`}`;
 
+  // Inject Firebase auth token if user is signed in
+  const authHeaders: Record<string, string> = {};
+  try {
+    const user = auth.currentUser;
+    if (user) {
+      const token = await user.getIdToken();
+      authHeaders["Authorization"] = `Bearer ${token}`;
+    }
+  } catch {
+    // Auth not available — proceed without token
+  }
+
   const res = await fetch(url, {
     ...init,
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
+      ...authHeaders,
       ...(init.headers || {}),
     },
   });

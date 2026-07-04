@@ -26,6 +26,8 @@ export interface HealthMemoryBlock {
   chroma_total_documents?: number | null;
   seeded?: Record<string, boolean>;
   min_similarity?: number;
+  embeddings_active?: boolean;
+  retrieval_mode?: string;
 }
 
 export interface HealthPostgresBlock {
@@ -684,4 +686,88 @@ export interface ConfigUpdateRequest {
 export interface ConfigUpdateResponse {
   status: string;
   applied: string[];
+}
+
+// ─── Monitoring: System Status ────────────────────────────────────────
+
+export interface ServiceStatus {
+  status: "up" | "down" | "unknown";
+  url: string;
+  login?: string;
+}
+
+export interface SystemStatus {
+  api_server: ServiceStatus;
+  dashboard: ServiceStatus;
+  grafana: ServiceStatus;
+  prometheus: ServiceStatus;
+  loki: ServiceStatus;
+  redis: ServiceStatus;
+  last_shadow_run: {
+    id: string;
+    ticker: string;
+    signal: string;
+    created_at: string;
+  } | null;
+}
+
+// ─── Data Freshness ───────────────────────────────────────────────────
+
+export interface MacroSubSource {
+  name: string;
+  status: string;
+  age_human: string | null;
+  note: string;
+}
+
+export interface DataSourceFreshness {
+  source: string;
+  latest_timestamp: string | null;
+  age_seconds: number | null;
+  age_human: string | null;
+  status: "Fresh" | "Fresh (market closed)" | "Stale" | "Missing" | "Available";
+  label?: string | null;
+  timestamp_meaning?: string | null;
+  detail?: string;
+  affected_tickers?: string[] | null;
+  cached_tickers?: number;
+  total_files?: number;
+  total_documents?: number;
+  collections?: Record<string, number>;
+  sub_sources?: MacroSubSource[];
+  error?: string;
+}
+
+export interface MarketStatus {
+  is_trading_hours: boolean;
+  last_trading_day: string;
+  current_time_cairo: string;
+  note: string;
+}
+
+export interface DataFreshnessSummary {
+  total_sources: number;
+  fresh: number;
+  stale: number;
+  missing: number;
+  available: number;
+}
+
+export interface DataFreshnessResponse {
+  checked_at: string;
+  market_status: MarketStatus;
+  summary: DataFreshnessSummary;
+  sources: DataSourceFreshness[];
+}
+
+export interface MetricsSummary {
+  active_sessions?: number;
+  active_websockets?: number;
+  pipeline_runs?: number;
+  pipeline_duration_total?: number;
+  avg_pipeline_seconds?: number;
+  server_uptime_seconds?: number;
+  llm_calls?: Record<string, number>;
+  signals?: Record<string, number>;
+  error?: string;
 }

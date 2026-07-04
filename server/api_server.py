@@ -34,7 +34,9 @@ from urllib.parse import urlparse
 logger = logging.getLogger("tradingagents.api_server")
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, BackgroundTasks
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 # Add project root to path so we can import tradingagents
@@ -316,6 +318,19 @@ def _runtime_diagnostics() -> Dict[str, Any]:
     ):
         degraded_reasons.append("chroma_collections_unseeded")
 
+    # Detect whether vector embeddings are active (same logic as memory.py).
+    # When the embeddings provider is unknown/unsupported, memory falls back to
+    # BM25 keyword search — functional but lower quality.
+    embeddings_url = (
+        config.get("embeddings_backend_url")
+        or config.get("backend_url", "")
+    )
+    embeddings_active = (
+        "localhost:11434" in embeddings_url
+        or "127.0.0.1:11434" in embeddings_url
+        or "openai.com" in embeddings_url
+    )
+
     return {
         "memory": {
             "backend": memory_backend,
@@ -327,6 +342,8 @@ def _runtime_diagnostics() -> Dict[str, Any]:
             "chroma_total_documents": chroma_info.get("total_documents"),
             "seeded": seeded,
             "min_similarity": float(config.get("memory_min_similarity", 0.30)),
+            "embeddings_active": embeddings_active,
+            "retrieval_mode": "vector" if embeddings_active else "bm25_keyword",
         },
         "postgres": {
             "configured": bool(postgres_url),
@@ -628,6 +645,17 @@ class InvestorProfileRequest(BaseModel):
     )
 
 
+class TranslateRequest(BaseModel):
+    blocks: List[str] = Field(
+        default_factory=list,
+        description="Text/markdown blocks to translate (agent prose).",
+    )
+    target: str = Field(
+        default="ar",
+        description="Target locale. Only 'ar' (Egyptian Arabic) is supported today.",
+    )
+
+
 # =============================================================================
 # App Lifecycle
 # =============================================================================
@@ -635,6 +663,9 @@ class InvestorProfileRequest(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
+    from tradingagents.observability import setup_logging
+    setup_logging(log_file="./logs/tradingagents.log")
+    logger.info("API server starting (observability initialized)")
     print("="*60)
     print("  TradingAgents Dashboard API Server")
     print(f"  Project root: {PROJECT_ROOT}")
@@ -647,6 +678,8 @@ async def lifespan(app: FastAPI):
 # =============================================================================
 # FastAPI App
 # =============================================================================
+
+_SERVER_START_TIME = time.time()
 
 app = FastAPI(
     title="TradingAgents Dashboard API",
@@ -662,6 +695,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Prometheus HTTP metrics middleware
+from tradingagents.observability.middleware import PrometheusMiddleware
+app.add_middleware(PrometheusMiddleware)
 
 # Portfolio Assistant subsystem (P4). Mounted only when pa_enabled (env
 # PA_ENABLED, default 1); the default service injects the real GraphRunLauncher
@@ -684,6 +721,112 @@ async def health():
         "egx_tools": EGX_TOOLS_AVAILABLE,
         "diagnostics": diagnostics,
     }
+
+
+# =============================================================================
+# Observability Endpoints
+# =============================================================================
+
+@app.get("/metrics")
+async def prometheus_metrics():
+    """Prometheus exposition format endpoint."""
+    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+    from starlette.responses import Response
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.get("/ready")
+async def readiness():
+    """Readiness probe — reports whether critical dependencies are reachable.
+
+    Checks: ChromaDB readable, LLM API key present. Returns 503 if any
+    critical dependency is unavailable. Non-critical services (Redis,
+    Postgres, Grafana) do NOT affect readiness.
+    """
+    checks: Dict[str, bool] = {}
+    reasons: List[str] = []
+
+    # 1. LLM API key present
+    llm_key = os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENAI_API_KEY")
+    checks["llm_api_key"] = bool(llm_key)
+    if not llm_key:
+        reasons.append("No LLM API key (DEEPSEEK_API_KEY / OPENAI_API_KEY)")
+
+    # 2. ChromaDB readable
+    try:
+        config = get_config()
+        chroma_dir = config.get("chroma_persist_dir")
+        if chroma_dir and os.path.isdir(str(chroma_dir)):
+            checks["chroma"] = True
+        elif chroma_dir:
+            checks["chroma"] = False
+            reasons.append(f"ChromaDB path not found: {chroma_dir}")
+        else:
+            checks["chroma"] = True  # in-memory mode, always available
+    except Exception as exc:
+        checks["chroma"] = False
+        reasons.append(f"ChromaDB check failed: {exc}")
+
+    # 3. EGX tools loaded
+    checks["egx_tools"] = EGX_TOOLS_AVAILABLE
+    if not EGX_TOOLS_AVAILABLE:
+        reasons.append("EGX data tools not importable")
+
+    ready = all(checks.values())
+    response = {
+        "ready": ready,
+        "checks": checks,
+        "reasons": reasons,
+        "timestamp": datetime.now().isoformat(),
+    }
+    if not ready:
+        return JSONResponse(status_code=503, content=response)
+    return response
+
+
+@app.get("/live")
+async def liveness():
+    """Liveness probe — lightweight process health check.
+
+    Verifies the event loop is responsive and the process can serve
+    requests. Does NOT check external dependencies (that's /ready).
+    Returns 200 if alive, which tells orchestrators not to restart us.
+    """
+    return {
+        "status": "alive",
+        "pid": os.getpid(),
+        "uptime_seconds": round(time.time() - _SERVER_START_TIME, 1),
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+# =============================================================================
+# Pipeline Event Replay
+# =============================================================================
+
+@app.get("/api/events")
+async def get_pipeline_events(
+    ticker: Optional[str] = Query(None, description="Filter by ticker (e.g. COMI.CA)"),
+    limit: int = Query(50, ge=1, le=200, description="Max events to return"),
+):
+    """
+    Retrieve recent pipeline events from the in-memory ring buffer.
+
+    Events are buffered locally (up to 100 per channel) regardless of
+    Redis availability.  Useful for catching up after connecting
+    mid-pipeline or viewing the last run's event trace.
+    """
+    try:
+        from redis_pubsub import get_buffered_events, get_all_recent_events
+        if ticker:
+            events = get_buffered_events(ticker)
+            # Return in chronological order, capped at limit
+            return {"status": "ok", "ticker": ticker, "events": events[-limit:]}
+        else:
+            events = get_all_recent_events(limit=limit)
+            return {"status": "ok", "events": events}
+    except Exception as exc:
+        return {"status": "ok", "events": [], "error": str(exc)}
 
 
 # =============================================================================
@@ -721,6 +864,40 @@ async def get_market_indices_endpoint(
         return {"status": "ok", **get_market_indices(as_of_date=as_of)}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Indices fetch failed: {exc}")
+
+
+@app.get("/api/market/movers")
+async def get_market_movers_endpoint():
+    """
+    Top gainers & losers across the EGX-30 universe over 1M / 3M / 1Y / 5Y.
+
+    Deterministic, offline: computed from the local per-ticker OHLCV CSVs.
+    Cached in-process for ~15 minutes.
+    """
+    try:
+        from server.market_insights import get_market_movers
+    except Exception:  # pragma: no cover
+        from market_insights import get_market_movers  # type: ignore
+    try:
+        return {"status": "ok", "data": get_market_movers()}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Movers fetch failed: {exc}")
+
+
+@app.get("/api/market/sectors")
+async def get_market_sectors_endpoint():
+    """
+    Sector-average performance across the EGX-30 universe over 1M / 3M / 1Y / 5Y,
+    ranked best-first. Deterministic, offline (local OHLCV CSVs), ~15 min cache.
+    """
+    try:
+        from server.market_insights import get_sector_performance
+    except Exception:  # pragma: no cover
+        from market_insights import get_sector_performance  # type: ignore
+    try:
+        return {"status": "ok", "data": get_sector_performance()}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Sectors fetch failed: {exc}")
 
 
 # =============================================================================
@@ -1259,41 +1436,20 @@ async def get_past_prediction(session_id: str):
             if stop_loss is None and current_price:
                 stop_loss = round(current_price * 0.9, 2)
 
-            # ── Confidence ──────────────────────────────────────────
-            confidence = "MEDIUM"
-            if isinstance(bull_thesis, dict):
-                cv = (bull_thesis.get("conviction_level") or "").upper()
-                if cv in ("HIGH", "MEDIUM", "LOW"):
-                    confidence = cv
-                elif cv == "MODERATE":
-                    confidence = "MEDIUM"
-            # Also check confidence_scores from the state
-            cs = final_state.get("confidence_scores") or {}
-            overall_conf = cs.get("overall")
-            if isinstance(overall_conf, (int, float)):
-                if overall_conf >= 0.7:
-                    confidence = "HIGH"
-                elif overall_conf <= 0.35:
-                    confidence = "LOW"
+            # ── Confidence + risk badges (shared derivation) ────────
+            confidence, risk_profile = _derive_confidence_and_risk(
+                final_state,
+                debate,
+                bull_thesis,
+                current_price=current_price,
+                stop_loss=stop_loss,
+                stop_loss_is_default=stop_loss_is_default,
+                target_price=target_price,
+            )
 
             # ── Execution plan / time horizon ───────────────────────
             raw_plan = final_state.get("execution_plan") or {}
             plan = raw_plan.get("execution_plan", raw_plan) if isinstance(raw_plan, dict) else {}
-
-            risk_action = str(final_state.get("risk_action") or "ALLOW").upper()
-            risk_profile = {
-                "VETO": "HIGH",
-                "THROTTLE": "MEDIUM",
-                "WARN": "MEDIUM",
-                "ALLOW": "LOW",
-            }.get(risk_action, "MEDIUM")
-            
-            if current_price and stop_loss and not stop_loss_is_default:
-                stop_dist_pct = abs((stop_loss - current_price) / current_price) * 100
-                if stop_dist_pct >= 12:
-                    risk_profile = "HIGH"
-                elif stop_dist_pct >= 7 and risk_profile == "LOW":
-                    risk_profile = "MEDIUM"
 
             # Time horizon: try execution_plan.exit_logic.time_stop, then bull_thesis.time_horizon
             time_horizon = None
@@ -2926,6 +3082,87 @@ async def _run_streaming_analysis(
 _QUICK_CONF_MAP = {"HIGH": 0.8, "MEDIUM": 0.55, "MED": 0.55, "LOW": 0.3}
 
 
+def _confidence_label(score: float) -> str:
+    """Map a 0–1 decision confidence to a coarse dashboard label."""
+    if score >= 0.66:
+        return "HIGH"
+    if score <= 0.40:
+        return "LOW"
+    return "MEDIUM"
+
+
+_RISK_ORDER = {"LOW": 0, "MEDIUM": 1, "HIGH": 2}
+_RISK_LABEL = {0: "LOW", 1: "MEDIUM", 2: "HIGH"}
+
+
+def _derive_confidence_and_risk(
+    final_state: dict,
+    debate: dict,
+    bull_thesis: dict,
+    *,
+    current_price: float,
+    stop_loss,
+    stop_loss_is_default: bool,
+    target_price=None,
+) -> tuple[str, str]:
+    """Derive the (confidence, risk) badges shown on the dashboard.
+
+    Confidence reflects the ACTUAL final decision-maker — the Risk Manager's
+    stated confidence in the confirmed decision, then the CIO judge's, then the
+    aggregated analyst confidence. It falls back to the bull researcher's
+    conviction_level ONLY when none of those are present; that legacy source
+    describes the bull thesis (which may have lost the debate), so it pinned
+    every run to MEDIUM and must not be the primary signal.
+
+    Risk is the deterministic scorer bucket, escalated (never downgraded) by how
+    far a REAL protective stop sits from spot and by an unfavourable per-stock
+    reward:risk ratio. The synthetic 10%-below fallback stop is excluded so it
+    cannot pin every run to a fixed value.
+    """
+    # ── Confidence: prefer the decision-maker's own confidence ──────────────
+    confidence: Optional[str] = None
+    risk_assessment = final_state.get("risk_assessment") or {}
+    conf_sources = [
+        risk_assessment.get("risk_confidence") if isinstance(risk_assessment, dict) else None,
+        debate.get("cio_confidence") if isinstance(debate, dict) else None,
+        (final_state.get("confidence_scores") or {}).get("overall"),
+    ]
+    for src in conf_sources:
+        if isinstance(src, (int, float)):
+            confidence = _confidence_label(float(src))
+            break
+    if confidence is None:
+        confidence = "MEDIUM"
+        if isinstance(bull_thesis, dict):
+            cv = (bull_thesis.get("conviction_level") or "").upper()
+            if cv in ("HIGH", "MEDIUM", "LOW"):
+                confidence = cv
+            elif cv == "MODERATE":
+                confidence = "MEDIUM"
+
+    # ── Risk: deterministic bucket, escalated per-stock ─────────────────────
+    risk_action = str(final_state.get("risk_action") or "ALLOW").upper()
+    risk_profile = {
+        "VETO": "HIGH", "THROTTLE": "MEDIUM", "WARN": "MEDIUM", "ALLOW": "LOW",
+    }.get(risk_action, "MEDIUM")
+
+    if current_price and stop_loss and not stop_loss_is_default:
+        stop_dist_pct = abs((stop_loss - current_price) / current_price) * 100
+        if stop_dist_pct >= 12:
+            risk_profile = "HIGH"
+        elif stop_dist_pct >= 7 and risk_profile == "LOW":
+            risk_profile = "MEDIUM"
+        # Unfavourable reward:risk (more downside than upside) → escalate one
+        # level. Grounds the badge in the per-stock thesis, not a fixed bucket.
+        if target_price and current_price:
+            reward = target_price - current_price
+            risk_amt = current_price - stop_loss
+            if risk_amt > 0 and reward > 0 and (reward / risk_amt) < 1.0:
+                risk_profile = _RISK_LABEL[min(2, _RISK_ORDER[risk_profile] + 1)]
+
+    return confidence, risk_profile
+
+
 def _quick_conf_to_float(value: Any) -> Optional[float]:
     """Map a quick-analysis confidence label (or number) to a 0–1 float."""
     if isinstance(value, (int, float)):
@@ -3349,40 +3586,25 @@ async def analyze_full(req: FullAnalyzeRequest):
     if stop_loss is None and current_price:
         stop_loss = round(current_price * 0.9, 2)
 
-    confidence = "MEDIUM"
-    if isinstance(bull_thesis, dict):
-        cv = (bull_thesis.get("conviction_level") or "").upper()
-        if cv in ("HIGH", "MEDIUM", "LOW"):
-            confidence = cv
-
     # Unwrap the trader's structured execution plan (may be double-nested as
     # {"execution_plan": {...}}). It carries per-stock risk controls + the
     # thesis time-stop, both of which we surface instead of hardcoded constants.
     raw_plan = final_state.get("execution_plan") or {}
     plan = raw_plan.get("execution_plan", raw_plan) if isinstance(raw_plan, dict) else {}
 
-    # Risk profile — DERIVED from the deterministic risk scorer + the stop
-    # distance, not a fixed "MEDIUM". This is the real per-stock risk read.
-    # THROTTLE is a position-SIZING adjustment (5-10% ADV), not an inherently
-    # high-risk verdict, so it maps to MEDIUM, not HIGH.
-    risk_action = str(final_state.get("risk_action") or "ALLOW").upper()
-    risk_profile = {
-        "VETO": "HIGH",
-        "THROTTLE": "MEDIUM",
-        "WARN": "MEDIUM",
-        "ALLOW": "LOW",
-    }.get(risk_action, "MEDIUM")
-    # Escalate (never downgrade) by how far the protective stop sits from spot —
-    # a WIDER stop means more capital at risk per trade. Only a REAL thesis stop
-    # may drive this; the synthetic 10%-below fallback must not (it would pin
-    # every fallback run to HIGH). Thresholds account for EGX's ±10% daily band,
-    # so a ~10% stop is normal, not extreme.
-    if current_price and stop_loss and not stop_loss_is_default:
-        stop_dist_pct = abs((stop_loss - current_price) / current_price) * 100
-        if stop_dist_pct >= 12:
-            risk_profile = "HIGH"
-        elif stop_dist_pct >= 7 and risk_profile == "LOW":
-            risk_profile = "MEDIUM"
+    # Confidence + risk badges — DERIVED from the actual decision-maker and the
+    # deterministic risk scorer, not from the bull thesis's conviction. See
+    # _derive_confidence_and_risk for why the legacy bull-conviction source
+    # pinned every run to MEDIUM/HIGH.
+    confidence, risk_profile = _derive_confidence_and_risk(
+        final_state,
+        debate,
+        bull_thesis,
+        current_price=current_price,
+        stop_loss=stop_loss,
+        stop_loss_is_default=stop_loss_is_default,
+        target_price=target_price,
+    )
 
     # Time horizon — from the trader's thesis time-stop when available; None
     # (rendered as "—") rather than a fabricated "2–4 weeks" when it isn't.
@@ -3489,6 +3711,145 @@ async def classify_investor(request: InvestorProfileRequest):
     except Exception as exc:
         logger.error("investor-profile endpoint error: %s", exc, exc_info=True)
         raise HTTPException(500, f"Classification failed: {exc}")
+
+
+@app.post("/api/translate")
+async def translate(request: TranslateRequest):
+    """Translate dynamic agent prose to Egyptian Arabic (cache-first).
+
+    The dashboard calls this only when the user selects Arabic, passing the
+    rendered agent-output blocks (theses, verdicts, reasoning). English is the
+    source of truth; results are cached in Postgres by content hash so repeat
+    views are instant. On any failure the original English is returned per block
+    so the UI never blanks.
+    """
+    if not request.blocks:
+        return {"translations": []}
+    try:
+        from server.translation import translate_blocks
+
+        translations = await run_in_threadpool(
+            translate_blocks, request.blocks, request.target
+        )
+        return {"translations": translations}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    except Exception as exc:
+        logger.error("translate endpoint error: %s", exc, exc_info=True)
+        # Degrade to source text rather than 500 so the UI keeps working.
+        return {"translations": list(request.blocks)}
+
+
+# ─── Monitoring: System Status, Metrics Summary & Data Freshness ─────────
+
+from server.data_freshness import check_all_freshness
+
+
+def _monitoring_system_status() -> Dict[str, Any]:
+    """Aggregate service health via quick TCP probes.
+
+    Service URLs are configurable via environment variables so the
+    monitoring page works outside localhost (e.g. Docker, remote dev):
+        STOCKHIVE_API_URL, STOCKHIVE_DASHBOARD_URL,
+        STOCKHIVE_GRAFANA_URL, STOCKHIVE_PROMETHEUS_URL,
+        STOCKHIVE_LOKI_URL, STOCKHIVE_REDIS_URL
+    """
+    import socket
+    from urllib.parse import urlparse
+
+    api_url        = os.getenv("STOCKHIVE_API_URL",        "http://localhost:8000")
+    dashboard_url  = os.getenv("STOCKHIVE_DASHBOARD_URL",  "http://localhost:5173")
+    grafana_url    = os.getenv("STOCKHIVE_GRAFANA_URL",    "http://localhost:3000")
+    prometheus_url = os.getenv("STOCKHIVE_PROMETHEUS_URL", "http://localhost:9090")
+    loki_url       = os.getenv("STOCKHIVE_LOKI_URL",       "http://localhost:3100")
+    redis_url      = os.getenv("STOCKHIVE_REDIS_URL",      "localhost:6379")
+
+    status: Dict[str, Any] = {
+        "api_server":  {"status": "up",      "url": api_url},
+        "dashboard":   {"status": "unknown", "url": dashboard_url},
+        "grafana":     {"status": "unknown", "url": grafana_url, "login": "admin/admin"},
+        "prometheus":  {"status": "unknown", "url": prometheus_url},
+        "loki":        {"status": "unknown", "url": loki_url},
+        "redis":       {"status": "unknown", "url": redis_url},
+        "last_shadow_run": None,
+    }
+
+    def _extract_host_port(url: str, default_port: int) -> tuple:
+        if "://" in url:
+            parsed = urlparse(url)
+            return (parsed.hostname or "localhost", parsed.port or default_port)
+        parts = url.rsplit(":", 1)
+        host = parts[0]
+        port = int(parts[1]) if len(parts) == 2 else default_port
+        return (host, port)
+
+    svc_probes = [
+        ("dashboard",   dashboard_url,  5173),
+        ("grafana",     grafana_url,    3000),
+        ("prometheus",  prometheus_url, 9090),
+        ("loki",        loki_url,       3100),
+        ("redis",       redis_url,      6379),
+    ]
+    for svc, url, default_port in svc_probes:
+        host, port = _extract_host_port(url, default_port)
+        try:
+            s = socket.create_connection((host, port), timeout=1)
+            s.close()
+            status[svc]["status"] = "up"
+        except (socket.timeout, ConnectionRefusedError, OSError):
+            status[svc]["status"] = "down"
+
+    return status
+
+
+@app.get("/api/system-status")
+async def api_system_status():
+    return _monitoring_system_status()
+
+
+@app.get("/api/metrics-summary")
+async def api_metrics_summary():
+    """Simplified metrics summary for the dashboard native monitoring panel."""
+    try:
+        from prometheus_client import REGISTRY
+        metrics: dict = {}
+        for metric in REGISTRY.collect():
+            if not metric.name.startswith("tradingagents_"):
+                continue
+            for sample in metric.samples:
+                name = sample.name
+                labels = sample.labels
+                value = sample.value
+                if name == "tradingagents_active_analysis_sessions":
+                    metrics["active_sessions"] = value
+                elif name == "tradingagents_llm_calls_total":
+                    metrics.setdefault("llm_calls", {})
+                    agent = labels.get("agent_name", "unknown")
+                    metrics["llm_calls"][agent] = metrics["llm_calls"].get(agent, 0) + value
+                elif name == "tradingagents_pipeline_duration_seconds_count":
+                    metrics["pipeline_runs"] = value
+                elif name == "tradingagents_pipeline_duration_seconds_sum":
+                    metrics["pipeline_duration_total"] = round(value, 1)
+                elif name == "tradingagents_signal_total":
+                    metrics.setdefault("signals", {})
+                    sig = labels.get("signal", "unknown")
+                    metrics["signals"][sig] = metrics["signals"].get(sig, 0) + value
+                elif name == "tradingagents_active_websocket_connections":
+                    metrics["active_websockets"] = value
+        if metrics.get("pipeline_runs") and metrics.get("pipeline_duration_total"):
+            metrics["avg_pipeline_seconds"] = round(
+                metrics["pipeline_duration_total"] / metrics["pipeline_runs"], 1
+            )
+        metrics["server_uptime_seconds"] = round(time.time() - _SERVER_START_TIME, 1)
+        return metrics
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/api/data-freshness")
+async def api_data_freshness():
+    """Per-source data freshness report with market-closed awareness."""
+    return check_all_freshness()
 
 
 if __name__ == "__main__":

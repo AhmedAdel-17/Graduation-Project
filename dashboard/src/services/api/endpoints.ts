@@ -6,11 +6,13 @@ import type {
   ConfigResponse,
   ConfigUpdateRequest,
   ConfigUpdateResponse,
+  DataFreshnessResponse,
   FingerprintsResponse,
   HealthResponse,
   MemoryAgent,
   MemoryEntriesResponse,
   MemorySearchResponse,
+  MetricsSummary,
   PredictionResult,
   PromptsResponse,
   TechnicalPanel,
@@ -23,6 +25,7 @@ import type {
   RunBtRequest,
   SessionTraceResponse,
   StockDataResponse,
+  SystemStatus,
   TickersResponse,
 } from "./types";
 
@@ -35,6 +38,11 @@ export const endpoints = {
   // Mutate config (Settings page). Keys are merged server-side.
   updateConfig: (req: ConfigUpdateRequest) =>
     api.put<ConfigUpdateResponse>("/config", req),
+
+  // On-demand translation of dynamic agent prose (EN → Egyptian Arabic).
+  // Cache-first server-side; returns one translation per input block, in order.
+  translate: (blocks: string[], target: string = "ar") =>
+    api.post<{ translations: string[] }>("/translate", { blocks, target }),
 
   // EGX ticker catalogue
   tickers: () => api.get<TickersResponse>("/test/egx-tickers"),
@@ -162,4 +170,9 @@ export const endpoints = {
     const qs = q.toString();
     return api.get<RlDecisionsResponse>(`/rl/decisions${qs ? `?${qs}` : ""}`);
   },
+
+  // ─── Monitoring ─────────────────────────────────────────────────────
+  systemStatus: () => api.get<SystemStatus>("/system-status"),
+  metricsSummary: () => api.get<MetricsSummary>("/metrics-summary"),
+  dataFreshness: () => api.get<DataFreshnessResponse>("/data-freshness"),
 };
