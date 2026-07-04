@@ -107,8 +107,10 @@ def test_final_gate_allows_strong_buy():
     assert decision == "BUY"
 
 
-def test_final_gate_sell_no_position_still_wins():
-    # The long-only gate must take priority and is unaffected by the cost gate.
+def test_final_gate_sell_survives_flat_portfolio():
+    # SELL is a directional research SIGNAL and is no longer coerced to HOLD when
+    # the portfolio holds no shares — holdings are an execution concern, not a
+    # reason to rewrite the bearish view. (The old long-only Gate 1 was removed.)
     decision, issues = _final_gate(
         "SELL",
         {"symbol": "COMI.CA"},
@@ -116,8 +118,8 @@ def test_final_gate_sell_no_position_still_wins():
         bull_thesis=_bull(20.0),
         min_edge_multiple=2.0,
     )
-    assert decision == "HOLD"
-    assert any("long-only" in i for i in issues)
+    assert decision == "SELL"
+    assert not any("long-only" in i for i in issues)
 
 
 def test_final_gate_backward_compatible_defaults():

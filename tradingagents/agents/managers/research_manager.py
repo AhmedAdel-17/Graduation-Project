@@ -42,24 +42,12 @@ def create_research_manager(llm, memory):
             state, memory, min_similarity=memory_threshold
         )
 
-        current_position = state.get("current_position", {})
-        is_flat = current_position.get("shares", 0) == 0
-        if current_position.get("shares", 0) > 0:
-            position_context = (
-                f"\n\n## CURRENT PORTFOLIO POSITION\n"
-                f"You are currently HOLDING {current_position['shares']:,} shares "
-                f"at avg cost {current_position.get('avg_cost', 0):.2f} EGP.\n"
-                f"Unrealised P&L: {current_position.get('unrealised_pnl', 0):,.2f} EGP.\n"
-                f"Consider this when deciding: SELL to lock in profits/cut losses, "
-                f"or HOLD to let the position ride."
-            )
-        else:
-            position_context = (
-                "\n\n## CURRENT PORTFOLIO POSITION\n"
-                "You have NO open position. You are 100% cash.\n"
-                "A SELL recommendation is NOT actionable (no shares to sell, no short selling on EGX).\n"
-                "Choose BUY to open a new position, or HOLD to stay in cash."
-            )
+        # Portfolio holdings are intentionally NOT an input to the signal. This is
+        # a research / decision-support tool that emits a directional BUY / HOLD /
+        # SELL VIEW on the stock. Whether the user is long, flat, or in cash is an
+        # execution concern for the human PM — never a factor that softens or gates
+        # the thesis. The signal is generated the same way regardless of position.
+        position_context = ""
 
         # Build primary inputs — structured theses preferred, fall back to history
         if bull_thesis:
@@ -172,50 +160,31 @@ most timely evidence you have. Weight it heavily:
 - Only when the technical trend is genuinely flat/ambiguous should the fundamentals break
   the tie."""
         else:
-            if is_flat:
-                # No open position. EGX is long-only, so SELL is NOT a valid
-                # option here — there is nothing to sell and no shorting. The
-                # decision space is exactly {BUY, HOLD}. A bearish read means
-                # HOLD (stay in cash / do not buy), NOT SELL. This is what
-                # prevents the "judge says SELL but verdict is HOLD" contradiction.
-                decision_framework_section = """## Decision Framework (NO open position — long-only EGX)
-You hold NO shares, so the ONLY valid decisions are **BUY** or **HOLD**.
-SELL is NOT available (nothing to sell, no short selling on EGX). If your view is
-bearish, the decision is **HOLD** (stay in cash / do not buy) — never SELL.
+            # Position-agnostic directional view. The decision space is always the
+            # full {BUY, HOLD, SELL} — portfolio holdings do NOT gate it. A bearish
+            # read is a SELL, never a HOLD-because-we-hold-no-shares.
+            decision_framework_section = """## Decision Framework — directional research view
+Emit a directional VIEW on the stock. Portfolio holdings are NOT an input: produce the
+signal the evidence supports regardless of whether the reader is long, flat, or in cash.
 
-Commit to the side the evidence favors; do not hide behind HOLD when the evidence
-actually leans one way.
+- **BUY**: the balance of evidence is bullish — you expect the stock to rise /
+  outperform over the holding window, and the expected upside exceeds the downside
+  after trading costs. A clear, moderate bullish tilt is ENOUGH — you do not need a
+  slam-dunk.
+- **SELL**: the balance of evidence is bearish — you expect the stock to fall /
+  underperform. A bearish read is a SELL, not a HOLD. (Execution note only: EGX is
+  long-only, so acting on SELL means exit/avoid, never short — that is the human PM's
+  concern and must NOT soften your view into HOLD.)
+- **HOLD**: the bull and bear cases are genuinely balanced, or the data is genuinely
+  insufficient to judge — there is no directional edge either way.
 
-- **BUY**: Choose when the bull case is the stronger side AND the expected upside
-  exceeds the downside after trading costs. A clear, moderate bullish tilt with
-  acceptable risk/reward is ENOUGH — you do not need a slam-dunk. Capital
-  preservation matters, but chronically defaulting to HOLD is itself a failure to
-  express a view.
-- **HOLD**: Choose when the bull and bear cases are genuinely balanced, the
-  risk/reward after costs is unattractive, the read is bearish (so you simply do
-  not buy), or the data is insufficient.
+Weigh BUY, SELL and HOLD on the SAME evidentiary bar. HOLD is a real "no edge" verdict
+with its own opportunity cost, not a safe default to hide behind.
 
 ## CRITICAL RULE
-A confident wrong BUY costs real money, so do not manufacture conviction. But equally,
-if the bull case is clearly the stronger side with favorable risk/reward, choosing HOLD
-"to be safe" is the wrong call — make the BUY."""
-            else:
-                decision_framework_section = """## Decision Framework (existing long position)
-You currently HOLD shares. Capital preservation is the default, but commit to the
-side the evidence favors.
-
-- **BUY**: Add to / maintain the position when the bull case is the stronger side AND
-  the expected upside exceeds the downside after trading costs. A clear, moderate
-  bullish tilt with acceptable risk/reward is ENOUGH.
-- **SELL**: Reduce or exit when the bear case is clearly stronger — SELL protects
-  capital already at risk (EGX is long-only; it is not a way to profit from a decline).
-- **HOLD**: Choose when the cases are genuinely balanced, the risk/reward after costs
-  is unattractive, or the data is insufficient.
-
-## CRITICAL RULE
-A confident wrong trade costs real money, so do not manufacture conviction. But do not
-default to HOLD when the evidence clearly leans one way — express the view the evidence
-supports."""
+Commit to the direction the evidence supports. Do not manufacture conviction, but do not
+collapse a genuinely bullish or bearish read into HOLD to feel safe. Decide on the
+evidence, not on which answer feels safer."""
 
         # Technical/price-trend section. The CIO previously read state['market_report']
         # (line ~19) but NEVER showed it, so the timely momentum signal was lost in the
@@ -230,14 +199,9 @@ supports."""
         else:
             technical_section = ""
 
-        # Position-aware option wording (precomputed to avoid nested-quote
-        # f-string expressions, a SyntaxError on Python < 3.12).
-        if is_flat:
-            sec4_options = "BUY or HOLD only (no open position — SELL is not available)"
-            json_decision_options = "BUY|HOLD"
-        else:
-            sec4_options = "BUY, SELL, or HOLD"
-            json_decision_options = "BUY|SELL|HOLD"
+        # Full directional option set — position-agnostic.
+        sec4_options = "BUY, SELL, or HOLD"
+        json_decision_options = "BUY|SELL|HOLD"
 
         prompt = f"""You are the Chief Investment Officer making the FINAL investment decision for {state.get('company_of_interest', 'this stock')}.
 
@@ -286,14 +250,18 @@ Speak naturally, as if presenting to a portfolio committee.{position_context}"""
             response.content, pattern=r'```json\s*(\{[^`]+\})\s*```'
         )
 
-        # Safety: with no open position EGX is long-only, so a CIO SELL is not
-        # actionable. Coerce the structured decision to HOLD so it can never be
-        # passed downstream as SELL (the final risk gate also catches this, but
-        # normalizing here keeps the structured decision self-consistent with the
-        # position-aware framework above).
-        if is_flat and isinstance(decision_json, dict):
-            if str(decision_json.get("decision") or "").strip().upper() == "SELL":
-                decision_json["decision"] = "HOLD"
+        # Capture the CIO's OWN confidence in the final decision. This is the
+        # confidence the dashboard should surface — it describes the decision
+        # that was actually made, unlike the bull researcher's conviction_level
+        # (which describes the bull thesis even when it lost the debate).
+        cio_confidence: float | None = None
+        if isinstance(decision_json, dict):
+            raw_conf = decision_json.get("confidence")
+            if raw_conf is not None:
+                try:
+                    cio_confidence = max(0.0, min(1.0, float(raw_conf)))
+                except (TypeError, ValueError):
+                    cio_confidence = None
 
         new_investment_debate_state = {
             "judge_decision": response.content,
@@ -304,6 +272,7 @@ Speak naturally, as if presenting to a portfolio committee.{position_context}"""
             "bear_thesis": bear_thesis,
             "current_response": response.content,
             "count": investment_debate_state["count"],
+            "cio_confidence": cio_confidence,
         }
 
         return {

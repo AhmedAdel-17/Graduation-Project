@@ -158,15 +158,12 @@ def _final_gate(
     Returns (final_decision, list_of_override_notes).
     """
     issues: List[str] = []
-    _pos = current_position or {}
 
-    # Gate 1: SELL with no open position (long-only, EGX)
-    if decision == "SELL" and _pos.get("shares", 0) == 0:
-        issues.append(
-            "Final gate override: LLM issued SELL but portfolio has no open position "
-            "(EGX long-only constraint — SELL is exit-only). Overriding to HOLD."
-        )
-        return "HOLD", issues
+    # NOTE: This is a directional research SIGNAL, not an order. A SELL is a
+    # bearish VIEW (exit/avoid) and is emitted regardless of whether any position
+    # is held — portfolio holdings are the human PM's execution concern, not a
+    # reason to rewrite the signal. (Historically a Gate here coerced a
+    # flat-portfolio SELL → HOLD; that coupling has been removed by design.)
 
     # Gate 2: BUY on foreign-restricted ticker
     symbol = (exec_plan.get("symbol") or "").upper()
@@ -236,21 +233,17 @@ def create_risk_manager(llm, memory):
             exec_plan = {}
 
         # ── Portfolio context ─────────────────────────────────────────────────
+        # This node critiques a directional research SIGNAL, not an order.
+        # Portfolio holdings are NOT provided and are NOT a factor: BUY / HOLD /
+        # SELL are all valid directional verdicts. A SELL is a bearish VIEW
+        # (exit/avoid); EGX long-only execution is the human PM's concern and must
+        # NOT be used to soften a bearish signal into HOLD.
         current_position = state.get("current_position") or {}
-
-        if current_position.get("shares", 0) > 0:
-            _p = current_position
-            position_context = (
-                f"HOLDING {_p['shares']:,} shares @ avg cost {_p.get('avg_cost', 0):.2f} EGP | "
-                f"Market value: {_p.get('market_value', 0):,.2f} EGP | "
-                f"Unrealised P&L: {_p.get('unrealised_pnl', 0):,.2f} EGP"
-            )
-        else:
-            position_context = (
-                "NO OPEN POSITION — portfolio is 100% cash. "
-                "A SELL recommendation cannot be executed (long-only, EGX). "
-                "Only BUY or HOLD are actionable."
-            )
+        position_context = (
+            "Directional research signal — portfolio holdings are not a factor. "
+            "BUY (bullish), SELL (bearish view: exit/avoid, never short), and HOLD "
+            "(no directional edge) are all valid verdicts regardless of any position."
+        )
 
         # ── Memory context ────────────────────────────────────────────────────
         from tradingagents.default_config import DEFAULT_CONFIG
@@ -338,7 +331,8 @@ Your role is QUALITATIVE critique only:
 - Re-invent or override the scorer's deterministic checks.
 - Invent a qualitative veto if risk_action is ALLOW/WARN/THROTTLE.
 - Be swayed by confident tone without substantive evidence in the debate.
-- Issue a SELL if the position context shows no open shares.
+- Soften a genuinely bearish view into HOLD because of portfolio/long-only
+  concerns — SELL is a valid directional signal here (execution is the PM's job).
 
 **Bias mitigations (Zheng et al. 2023)**:
 - Do not favour a perspective because it appeared first in the debate.
@@ -361,6 +355,10 @@ Replace BUY with SELL or HOLD. Confidence: 0.0 (low) to 1.0 (high).
 
         # ── Parse LLM decision ────────────────────────────────────────────────
         final_trade_decision: Optional[str] = None
+        # Risk Manager's OWN confidence in the confirmed/overridden decision.
+        # This is the final decision-maker's confidence — surfaced to the
+        # dashboard in preference to the (losing) bull thesis's conviction.
+        risk_confidence: Optional[float] = None
 
         # Pattern 1: ```json { "action": "BUY" } ```
         _m = re.search(r"```json\s*(\{[^`]+\})\s*```", response.content, re.DOTALL)
@@ -368,6 +366,9 @@ Replace BUY with SELL or HOLD. Confidence: 0.0 (low) to 1.0 (high).
             try:
                 _obj = json.loads(_m.group(1))
                 final_trade_decision = (_obj.get("action") or "").upper() or None
+                _rc = _obj.get("confidence")
+                if _rc is not None:
+                    risk_confidence = max(0.0, min(1.0, float(_rc)))
             except Exception:
                 pass
 
@@ -408,6 +409,8 @@ Replace BUY with SELL or HOLD. Confidence: 0.0 (low) to 1.0 (high).
         )
         if gate_issues:
             risk_assessment = {**risk_assessment, "final_gate_notes": gate_issues}
+        if risk_confidence is not None:
+            risk_assessment = {**risk_assessment, "risk_confidence": risk_confidence}
 
         # ── Update risk_debate_state ──────────────────────────────────────────
         new_risk_debate_state = {

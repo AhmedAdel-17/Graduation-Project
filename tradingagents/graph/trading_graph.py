@@ -15,6 +15,14 @@ from langgraph.prebuilt import ToolNode
 from tradingagents.agents import *
 from tradingagents.default_config import DEFAULT_CONFIG
 from tradingagents.agents.utils.memory import FinancialSituationMemory
+from tradingagents.observability.llm_metrics import MetricsCallbackHandler
+from tradingagents.observability.logging_config import set_trace_context
+from tradingagents.observability.metrics import (
+    active_analysis_sessions,
+    pipeline_duration_seconds,
+    signal_total,
+    risk_veto_total,
+)
 
 from tradingagents.agents.utils.agent_states import (
     AgentState,
@@ -114,17 +122,23 @@ class TradingAgentsGraph:
             # flaky primary endpoint no longer fails a whole run. This is the
             # SHARED path — live AND backtest both benefit. See llm_failover.py.
             _seed = int(self.config.get("llm_seed", 42))
+            _metrics_cb = MetricsCallbackHandler()
             from tradingagents.agents.utils.llm_failover import build_resilient_llm
             self.deep_thinking_llm = build_resilient_llm(self.config, role="deep", seed=_seed)
             self.quick_thinking_llm = build_resilient_llm(self.config, role="quick", seed=_seed)
+            # Attach metrics callback (BaseChatModel field, not a build_resilient_llm param)
+            self.deep_thinking_llm.callbacks = [_metrics_cb]
+            self.quick_thinking_llm.callbacks = [_metrics_cb]
         elif self.config["llm_provider"].lower() == "anthropic":
             # ChatAnthropic has no seed parameter; temperature=0 is the only knob.
-            self.deep_thinking_llm = ChatAnthropic(model=self.config["deep_think_llm"], base_url=self.config["backend_url"], temperature=0)
-            self.quick_thinking_llm = ChatAnthropic(model=self.config["quick_think_llm"], base_url=self.config["backend_url"], temperature=0)
+            _metrics_cb = MetricsCallbackHandler()
+            self.deep_thinking_llm = ChatAnthropic(model=self.config["deep_think_llm"], base_url=self.config["backend_url"], temperature=0, callbacks=[_metrics_cb])
+            self.quick_thinking_llm = ChatAnthropic(model=self.config["quick_think_llm"], base_url=self.config["backend_url"], temperature=0, callbacks=[_metrics_cb])
         elif self.config["llm_provider"].lower() == "google":
             _seed = int(self.config.get("llm_seed", 42))
-            self.deep_thinking_llm = ChatGoogleGenerativeAI(model=self.config["deep_think_llm"], temperature=0, seed=_seed)
-            self.quick_thinking_llm = ChatGoogleGenerativeAI(model=self.config["quick_think_llm"], temperature=0, seed=_seed)
+            _metrics_cb = MetricsCallbackHandler()
+            self.deep_thinking_llm = ChatGoogleGenerativeAI(model=self.config["deep_think_llm"], temperature=0, seed=_seed, callbacks=[_metrics_cb])
+            self.quick_thinking_llm = ChatGoogleGenerativeAI(model=self.config["quick_think_llm"], temperature=0, seed=_seed, callbacks=[_metrics_cb])
         else:
             raise ValueError(f"Unsupported LLM provider: {self.config['llm_provider']}")
         
@@ -229,6 +243,10 @@ class TradingAgentsGraph:
         session_id = uuid.uuid4().hex
         self.session_id = session_id
 
+        # Observability: set trace context for structured logging correlation
+        set_trace_context(session_id=session_id, ticker=company_name, trade_date=trade_date)
+        active_analysis_sessions.inc()
+
         # Pre-flight data freshness check (zero LLM tokens)
         if (self.config.get("target_market") == "EGX"
                 and self.config.get("auto_refresh_fundamentals", True)
@@ -259,6 +277,23 @@ class TradingAgentsGraph:
         init_agent_state = self.propagator.create_initial_state(
             company_name, trade_date
         )
+
+        # Inject node recorder into state when backtest recording is enabled.
+        # Nodes call get_recorder(state) — returns None when recording is off.
+        # Check both self.config (passed at construction) and get_config() (set
+        # by backtester CLI via set_config) so either activation path works.
+        _effective_cfg = {**self.config, **get_config()}
+        if _effective_cfg.get("backtest_record_outputs", False):
+            from tradingagents.graph.node_record import NodeRecorder
+            from tradingagents.dataflows.symbol_utils import normalize_egx_ticker
+            init_agent_state["_node_recorder"] = NodeRecorder(
+                run_id=session_id,
+                ticker=normalize_egx_ticker(company_name),
+                records_dir=_effective_cfg.get("backtest_records_dir", "./backtest_records"),
+                record_full_prompts=_effective_cfg.get("record_full_prompts", False),
+                config=_effective_cfg,
+            )
+
         args = self.propagator.get_graph_args()
 
         # Redis publisher — real-time event streaming to the WebSocket dashboard.
@@ -290,6 +325,9 @@ class TradingAgentsGraph:
                     "DataPrefetcher failed, falling back to tool-call mode: %s", e
                 )
 
+        import time as _time
+        _pipeline_start = _time.perf_counter()
+
         if self.debug:
             # Debug mode with tracing
             trace = []
@@ -304,6 +342,9 @@ class TradingAgentsGraph:
         else:
             # Standard mode without tracing
             final_state = self.graph.invoke(init_agent_state, **args)
+
+        pipeline_duration_seconds.observe(_time.perf_counter() - _pipeline_start)
+        active_analysis_sessions.dec()
 
         # Compute overall confidence from analyst structured outputs and inject
         # into final_state so the backtester can use it for position sizing.
@@ -325,22 +366,27 @@ class TradingAgentsGraph:
         # (analysis_sessions + agent_events). Never crashes the graph — the
         # writer logs on failure and degrades silently when Postgres is
         # unavailable. See MEMORY.md §G.
+        #
+        # Strip private state keys (e.g. _node_recorder) before serializing
+        # to Postgres — these are infrastructure objects, not audit data.
         try:
             from tradingagents.db import audit_writer
+            from tradingagents.graph.node_record import strip_private_state_keys
 
+            clean_state = strip_private_state_keys(final_state)
             fingerprint = audit_writer.build_model_fingerprint(self.config)
             audit_writer.write_analysis_session(
                 session_id=session_id,
                 ticker=company_name,
                 trade_date=trade_date,
-                final_state=final_state,
+                final_state=clean_state,
                 model_fingerprint=fingerprint,
                 user_id=user_id,
                 run_type=run_type,
             )
             audit_writer.write_agent_events(
                 session_id=session_id,
-                final_state=final_state,
+                final_state=clean_state,
                 model_fingerprint=fingerprint,
             )
         except Exception as _e:
@@ -355,8 +401,14 @@ class TradingAgentsGraph:
             confidence=final_state.get("confidence_scores", {}).get("overall"),
         )
 
+        # Observability: record signal and veto metrics
+        _signal = self.process_signal(final_state["final_trade_decision"])
+        signal_total.labels(signal=_signal).inc()
+        if _signal == "HOLD" and "veto" in final_state.get("final_trade_decision", "").lower():
+            risk_veto_total.labels(veto_reason="risk_manager").inc()
+
         # Return decision and processed signal
-        return final_state, self.process_signal(final_state["final_trade_decision"])
+        return final_state, _signal
 
     def _log_state(self, trade_date, final_state):
         """Log the final state to a JSON file with EGX-specific fields."""

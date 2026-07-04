@@ -107,21 +107,12 @@ def create_trader(llm, memory):
         ticker = state.get("company_of_interest", "")
 
         current_position = state.get("current_position", {})
-        if current_position.get("shares", 0) > 0:
-            position_info = f"""
-## Current Position
-- Shares held: {current_position['shares']:,}
-- Average cost: {current_position.get('avg_cost', 0):.2f} EGP
-- Market value: {current_position.get('market_value', 0):,.2f} EGP
-- Unrealised P&L: {current_position.get('unrealised_pnl', 0):,.2f} EGP
-- SELL is available to close this position
-"""
-        else:
-            position_info = """
-## Current Position
-- NO shares held — portfolio is 100% cash
-- SELL is NOT available (EGX: no short selling)
-- Only BUY or HOLD are actionable
+        position_info = """
+## Directional Signal (portfolio holdings are not a factor)
+- Produce a directional BUY / HOLD / SELL view on the stock regardless of whether
+  any position is held. BUY = bullish, SELL = bearish (exit/avoid), HOLD = no edge.
+- Execution note only: EGX is long-only, so SELL means exit/avoid, never short —
+  this is the human PM's concern and must NOT soften a bearish view into HOLD.
 """
 
         memory_threshold = float(config.get("memory_min_similarity", 0.30))
@@ -184,19 +175,15 @@ def create_trader(llm, memory):
         # Macro overlay: deterministic EGX macro context.
         macro_section = build_macro_section(state)
 
-        # Long-only rule for the per-style block: SELL is only available when the
-        # portfolio actually holds shares. (Precomputed to avoid nested-quote
-        # f-string expressions, which are a SyntaxError on Python < 3.12.)
-        if current_position.get("shares", 0) > 0:
-            style_sell_rule = (
-                "This portfolio currently HOLDS shares, so SELL (exit/trim) is available."
-            )
-        else:
-            style_sell_rule = (
-                "This portfolio holds NO shares and EGX is long-only — you must NOT "
-                "output SELL for any style. Use NO TRADE when there is no setup, or "
-                "BUY/HOLD/ACCUMULATE."
-            )
+        # Per-style block: these are directional research views. SELL is always a
+        # valid bearish call (exit/avoid), independent of any holdings. Use NO TRADE
+        # only when there is genuinely no setup either way.
+        style_sell_rule = (
+            "Each style is a directional VIEW, not an order — SELL (bearish: exit/avoid) "
+            "is always available regardless of holdings. EGX long-only execution is the "
+            "PM's concern; never soften a bearish style into NO TRADE for that reason. "
+            "Use NO TRADE only when there is genuinely no setup either way."
+        )
 
         prompt_context = f"""You are an Institutional Trader generating a detailed EXECUTION PLAN for {company_name}.
 
@@ -207,7 +194,7 @@ def create_trader(llm, memory):
 {position_info}
 ## Your Task
 Based on the investment thesis and analyst reports, create a comprehensive execution plan that includes:
-1. **Decision**: BUY, HOLD, or SELL (remember: no short selling, only reducing/exiting positions)
+1. **Decision**: BUY (bullish), HOLD (no edge), or SELL (bearish view) — a directional call independent of holdings. (Execution note only: EGX is long-only, so SELL means exit/avoid, never short.)
 2. **Position Sizing**: Liquidity-adjusted, respecting ADV constraints
 3. **Entry Logic**: Specific price levels and order types
 4. **Exit Logic**: Take-profit and stop-loss levels
@@ -393,21 +380,11 @@ Always conclude with: FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**"""
         # Long-Term). These live at the top level of the same JSON object so the
         # single LLM call covers them. Surfaced for the dashboard only — they do
         # NOT feed the live BUY/HOLD/SELL decision path (that stays execution_plan
-        # → risk gate). Long-only is enforced post-hoc below for cash portfolios.
+        # → risk gate). These are directional VIEWS, so a bearish SELL is kept as-is
+        # regardless of holdings — no long-only post-hoc coercion.
         styled_recommendations = None
         if isinstance(execution_plan, dict):
             styled_recommendations = execution_plan.get("styled_recommendations")
-        if isinstance(styled_recommendations, dict) and current_position.get("shares", 0) == 0:
-            for _style in styled_recommendations.values():
-                if isinstance(_style, dict):
-                    rec = str(_style.get("recommendation") or "").strip().upper()
-                    if rec == "SELL":
-                        # No shares + EGX long-only → SELL is not actionable.
-                        _style["recommendation"] = "NO TRADE"
-                        _style["reasoning"] = (
-                            "Long-only / no open position — SELL not actionable; "
-                            + str(_style.get("reasoning") or "")
-                        ).strip()
 
         return {
             "messages": [result],
