@@ -69,3 +69,4 @@ tradingagents/dataflows/data_cache/
 .cache/
 pipeline/
 thesis_results/
+agent_docs/
